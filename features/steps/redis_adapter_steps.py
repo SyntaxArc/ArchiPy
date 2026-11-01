@@ -15,7 +15,9 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.adapters.redis.mocks import AsyncRedisMock, RedisMock
+from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig
+from archipy.models.errors import ConfigurationError
 from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
 from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
 from archipy.models.dtos.redis.search.index_schema_dto import (
@@ -3511,3 +3513,96 @@ def step_then_raw_zpop_shape(context, shape):
     expected_flat = shape == "flat"
     is_flat = not isinstance(reply[0], (list, tuple))
     assert is_flat == expected_flat, f"Expected a {shape} reply, got {reply!r}"
+
+
+# TLS and ACL steps
+@when(r'I create the ACL user "(?P<user>[^"]+)" with password "(?P<password>[^"]+)" and connect as that user')
+def step_when_create_acl_user_and_connect(context, user, password):
+    """Create an ACL user on the container and connect with it."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.adapter.client.acl_setuser(
+        user,
+        enabled=True,
+        passwords=[f"+{password}"],
+        commands=["+@all"],
+        keys=["*"],
+    )
+    config = BaseConfig.global_config().REDIS.model_copy(update={"USERNAME": user, "PASSWORD": password})
+    scenario_context.acl_adapter = RedisAdapter(redis_config=config)
+    scenario_context.acl_whoami = scenario_context.acl_adapter.client.acl_whoami()
+
+
+@then(r'the connected Redis user should be "(?P<user>[^"]+)"')
+def step_then_connected_user(context, user):
+    """Verify the ACL user identity seen by the server."""
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.acl_whoami == user, f"Expected user {user}, got {scenario_context.acl_whoami}"
+
+
+@given(r'a Redis config in (?P<mode>standalone|sentinel) mode with TLS and the username "(?P<user>[^"]+)"')
+def step_given_tls_config(context, mode, user):
+    """Build a TLS-enabled Redis config for the given mode."""
+    scenario_context = get_current_scenario_context(context)
+    extra = {}
+    if mode == "sentinel":
+        extra = {"MODE": "SENTINEL", "SENTINEL_NODES": ["localhost:26379"], "SENTINEL_SERVICE_NAME": "mymaster"}
+    scenario_context.tls_config = RedisConfig(
+        USERNAME=user,
+        SSL=True,
+        SSL_CA_CERTS="/certs/ca.pem",
+        SSL_CERTFILE="/certs/client.pem",
+        SSL_KEYFILE="/certs/client.key",
+        **extra,
+    )
+
+
+@when(r"I build the Redis adapter from that config")
+def step_when_build_tls_adapter(context):
+    """Build the adapter; clients connect lazily so no TLS server is needed."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.tls_adapter = RedisAdapter(redis_config=scenario_context.tls_config)
+
+
+@then(
+    r'the client connection should use TLS with the CA bundle "(?P<ca>[^"]+)" and hostname checking enabled',
+)
+def step_then_client_uses_tls(context, ca):
+    """Verify the pool uses an SSL connection class and the TLS kwargs."""
+    scenario_context = get_current_scenario_context(context)
+    pool = scenario_context.tls_adapter.client.connection_pool
+    assert "SSL" in pool.connection_class.__name__, f"Not an SSL connection class: {pool.connection_class}"
+    assert pool.connection_kwargs["ssl_ca_certs"] == ca
+    assert pool.connection_kwargs["ssl_check_hostname"] is True
+    assert pool.connection_kwargs["ssl_certfile"] == "/certs/client.pem"
+    assert pool.connection_kwargs["ssl_keyfile"] == "/certs/client.key"
+
+
+@then(r'the client connection should use the username "(?P<user>[^"]+)"')
+def step_then_client_username(context, user):
+    """Verify the pool carries the ACL username."""
+    scenario_context = get_current_scenario_context(context)
+    pool = scenario_context.tls_adapter.client.connection_pool
+    assert pool.connection_kwargs["username"] == user
+
+
+@when(r"I create a Redis config with (?P<settings>a client certificate but no key|a CA bundle while TLS is disabled)")
+def step_when_invalid_tls_config(context, settings):
+    """Try to build an invalid Redis config and keep the outcome."""
+    scenario_context = get_current_scenario_context(context)
+    kwargs = (
+        {"SSL": True, "SSL_CERTFILE": "/certs/client.pem"}
+        if settings.startswith("a client")
+        else {"SSL": False, "SSL_CA_CERTS": "/certs/ca.pem"}
+    )
+    try:
+        RedisConfig(**kwargs)
+        scenario_context.config_error = None
+    except ConfigurationError as exc:
+        scenario_context.config_error = exc
+
+
+@then(r"the Redis config should be rejected")
+def step_then_config_rejected(context):
+    """Verify the config was rejected."""
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.config_error is not None, "Config was accepted"

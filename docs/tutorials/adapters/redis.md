@@ -46,6 +46,23 @@ config = RedisConfig(
 )
 ```
 
+### TLS and ACL users
+
+Managed Redis often requires TLS and an ACL user. The settings apply to standalone, cluster and sentinel modes.
+
+```bash
+REDIS__USERNAME=app-user
+REDIS__PASSWORD=your-password
+REDIS__SSL=true
+REDIS__SSL_CA_CERTS=/certs/ca.pem
+REDIS__SSL_CERTFILE=/certs/client.pem   # mTLS only, requires SSL_KEYFILE
+REDIS__SSL_KEYFILE=/certs/client.key
+REDIS__SSL_CHECK_HOSTNAME=true
+```
+
+`SSL_CERTFILE` and `SSL_KEYFILE` must be set together. `SSL_CA_CERTS` and `SSL_CERTFILE` require `SSL=true`.
+In sentinel mode the TLS settings also apply to the sentinel nodes.
+
 ## Basic Usage
 
 === "Sync"

@@ -61,6 +61,22 @@ class AsyncRedisMixinBase:
         raise NotImplementedError
 
 
+def _tls_acl_kwargs(configs: RedisConfig) -> dict[str, Any]:
+    """Build ACL username and TLS kwargs; empty when neither is configured."""
+    kwargs: dict[str, Any] = {}
+    if configs.USERNAME:
+        kwargs["username"] = configs.USERNAME
+    if configs.SSL:
+        kwargs["ssl"] = True
+        kwargs["ssl_check_hostname"] = configs.SSL_CHECK_HOSTNAME
+        if configs.SSL_CA_CERTS:
+            kwargs["ssl_ca_certs"] = configs.SSL_CA_CERTS
+        if configs.SSL_CERTFILE and configs.SSL_KEYFILE:
+            kwargs["ssl_certfile"] = configs.SSL_CERTFILE
+            kwargs["ssl_keyfile"] = configs.SSL_KEYFILE
+    return kwargs
+
+
 def _redis_connection_kwargs(configs: RedisConfig, *, decode_responses: bool | None = None) -> dict[str, Any]:
     """Build common Redis client connection kwargs from config."""
     return {
@@ -71,6 +87,7 @@ def _redis_connection_kwargs(configs: RedisConfig, *, decode_responses: bool | N
         "socket_connect_timeout": configs.SOCKET_CONNECT_TIMEOUT,
         "socket_timeout": configs.SOCKET_TIMEOUT,
         "protocol": configs.PROTOCOL,
+        **_tls_acl_kwargs(configs),
     }
 
 
@@ -83,14 +100,18 @@ def _sentinel_redis_kwargs(configs: RedisConfig) -> dict[str, Any]:
         "password": configs.PASSWORD,
         "decode_responses": configs.DECODE_RESPONSES,
         "protocol": configs.PROTOCOL,
+        **_tls_acl_kwargs(configs),
     }
 
 
-def _sentinel_kwargs(configs: RedisConfig) -> dict[str, str] | None:
-    """Build sentinel-node auth kwargs when SENTINEL_PASSWORD is set."""
+def _sentinel_kwargs(configs: RedisConfig) -> dict[str, Any] | None:
+    """Build sentinel-node kwargs: SENTINEL_PASSWORD auth and the TLS settings (sentinels share them)."""
+    kwargs: dict[str, Any] = {}
     if configs.SENTINEL_PASSWORD:
-        return {"password": configs.SENTINEL_PASSWORD}
-    return None
+        kwargs["password"] = configs.SENTINEL_PASSWORD
+    if configs.SSL:
+        kwargs.update({k: v for k, v in _tls_acl_kwargs(configs).items() if k != "username"})
+    return kwargs or None
 
 
 def _normalize_zset_keys(
