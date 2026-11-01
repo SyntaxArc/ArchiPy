@@ -3,7 +3,7 @@
 import logging
 import urllib.parse
 from collections.abc import Callable
-from typing import Any, BinaryIO, NoReturn, TypeVar, override
+from typing import Any, BinaryIO, NoReturn, TypeVar, cast, override
 
 import boto3
 from botocore.client import Config
@@ -189,10 +189,16 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 max_pool_connections=self.configs.MAX_POOL_CONNECTIONS,
                 request_checksum_calculation=self.configs.REQUEST_CHECKSUM_CALCULATION,
                 response_checksum_validation=self.configs.RESPONSE_CHECKSUM_VALIDATION,
+                client_cert=self._client_cert(self.configs),
+                proxies=self.configs.PROXIES,
+                proxies_config=cast("Any", self.configs.PROXIES_CONFIG),
+                tcp_keepalive=self.configs.TCP_KEEPALIVE,
+                user_agent_extra=self.configs.USER_AGENT_EXTRA,
             )
 
             # Create boto3 S3 client
-            self._client = boto3.client(
+            session = boto3.Session(profile_name=self.configs.PROFILE_NAME)
+            self._client = session.client(
                 "s3",
                 endpoint_url=endpoint_url,
                 aws_access_key_id=self.configs.ACCESS_KEY,
@@ -215,6 +221,22 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise NetworkError(service="S3") from e
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             raise InternalError(additional_data={"component": "S3"}) from e
+
+    @staticmethod
+    def _client_cert(configs: MinioConfig) -> str | tuple[str, str] | None:
+        """Resolve the botocore ``client_cert`` argument.
+
+        Args:
+            configs (MinioConfig): MinIO configuration.
+
+        Returns:
+            str | tuple[str, str] | None: The certificate path, a (certificate, key) pair, or None when unset.
+        """
+        if not configs.CLIENT_CERT:
+            return None
+        if configs.CLIENT_KEY:
+            return (configs.CLIENT_CERT, configs.CLIENT_KEY)
+        return configs.CLIENT_CERT
 
     @staticmethod
     def _ssl_verify(configs: MinioConfig) -> bool | str:

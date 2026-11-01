@@ -156,6 +156,26 @@ Feature: MinIO Operations Testing
       | when_supported | when_supported | none      |
       | when_required  | when_required  | certifi   |
 
+  Scenario Outline: Client options <keepalive>/<agent>/<proxy> reach the S3 client
+    Given a MinIO adapter with TCP keepalive "<keepalive>", user agent extra "<agent>", proxy "<proxy>" and client certificate "<cert>"
+    And a bucket named "options-bucket" exists
+    When I upload a file "opt.txt" with content "Options" to bucket "options-bucket"
+    Then downloading "opt.txt" from "options-bucket" should return content "Options"
+    And the S3 client should use the configured client options
+
+    Examples:
+      | keepalive | agent    | proxy | cert |
+      | none      | none     | none  | none |
+      | true      | archipy1 | none  | none |
+
+  Scenario: Proxy and client certificate are wired into the S3 client
+    Given a MinIO adapter with TCP keepalive "true", user agent extra "none", proxy "http://proxy.invalid:3128" and client certificate "pair"
+    Then the S3 client should use the configured client options
+
+  Scenario: Unknown profile is rejected
+    When I create a MinIO adapter with profile "no-such-profile"
+    Then the adapter creation should fail with InternalError
+
   Scenario: Object existence is not served stale after an upload
     Given a bucket named "cache-bucket" exists
     Then object "late.txt" should not exist in bucket "cache-bucket"

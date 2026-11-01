@@ -44,6 +44,27 @@ config = MinioConfig(
 )
 ```
 
+### Client Certificate, Proxy, Keep-Alive and Profile
+
+All of these are optional; unset keeps the previous behavior.
+
+| Setting            | Purpose                                                                                        |
+|--------------------|------------------------------------------------------------------------------------------------|
+| `CLIENT_CERT`      | Client certificate (PEM) for TLS client authentication                                         |
+| `CLIENT_KEY`       | Private key for `CLIENT_CERT`; omit when the key is in the certificate file                    |
+| `PROXIES`          | Proxy URLs by protocol, e.g. `{"https": "http://proxy:3128"}`; may hold credentials            |
+| `PROXIES_CONFIG`   | Extra botocore proxy settings, e.g. `proxy_ca_bundle`                                          |
+| `TCP_KEEPALIVE`    | Enable the TCP keep-alive socket option                                                        |
+| `USER_AGENT_EXTRA` | Text appended to the `User-Agent` header                                                       |
+| `PROFILE_NAME`     | Shared AWS profile; profiles with `role_arn` assume a role through STS. Explicit keys override it |
+
+```bash
+MINIO__PROFILE_NAME=staging
+MINIO__CLIENT_CERT=/etc/ssl/client.pem
+MINIO__CLIENT_KEY=/etc/ssl/client.key
+MINIO__PROXIES='{"https": "http://proxy:3128"}'
+```
+
 ## Basic Usage
 
 ### Initializing the Adapter
