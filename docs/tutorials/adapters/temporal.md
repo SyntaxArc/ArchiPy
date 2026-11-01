@@ -478,8 +478,8 @@ async def run_worker() -> None:
         try:
             # Keep worker running
             await worker_handle.wait_until_stopped()
-        except WorkerShutdownError as e:
-            logger.error(f"Worker shutdown error: {e}")
+        except Exception as e:  # wait_until_stopped re-raises the error that ended the worker's run loop
+            logger.error(f"Worker stopped with an error: {e}")
             raise
         finally:
             # Graceful shutdown
@@ -514,6 +514,16 @@ A non-retryable failure carries only the error type: the original error, with it
 not attached as the cause and so is not sent to the Temporal server. A retryable error is re-raised as is, so its
 message is part of the activity failure. Set `REDACT_RETRYABLE_ERRORS = True` on your activity class to send only
 the error type for those too.
+
+`TemporalAdapter` maps Temporal client errors to ArchiPy errors without exposing the server message:
+`NotFoundError` (missing workflow or schedule), `AlreadyExistsError` (duplicate workflow or schedule ID; for a
+workflow its `additional_data` holds `run_id` and `first_run_id`), `UnavailableError`, `DeadlineExceededError`, and
+`TemporalError` for any other RPC error. `wait_until_stopped()` raises the error that ended the worker's run loop;
+`stop()` and `shutdown_all_workers()` raise `WorkerShutdownError`.
+
+The Temporal `Runtime` is a process-wide singleton: once created, later requests with different metrics, Prometheus or
+tag settings are ignored and logged as a warning. A worker's `stop(grace_period)` only changes how long the call
+waits; the SDK's grace period for running activities is fixed when the worker starts.
 
 ```python
 import asyncio
