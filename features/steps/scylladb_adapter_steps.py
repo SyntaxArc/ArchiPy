@@ -1389,6 +1389,7 @@ class _RaisingSession:
     """Stand-in session whose queries raise a chosen driver exception."""
 
     is_shutdown = False
+    keyspace = None
 
     def __init__(self, error: Exception) -> None:
         self._error = error
