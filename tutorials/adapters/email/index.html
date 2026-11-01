@@ -3881,6 +3881,9 @@ handling and logging.</p>
 <p><code>auto</code> keeps the previous behavior and emits a <code>DeprecationWarning</code>. Set <code>EMAIL__TLS_MODE</code>
 explicitly; the default will change in a future major release.</p>
 </div>
+<p><code>TLS_MODE=none</code> with credentials and <code>TLS_VERIFY=false</code> each emit a <code>DeprecationWarning</code> (clear-text login
+and unverified certificates expose credentials to interception); both will be rejected in a future major
+release. A login over a session without TLS is also logged as a warning.</p>
 <p><code>USERNAME</code> and <code>PASSWORD</code> must be set together. A half-set pair raises <code>ConfigurationError</code> when
 <code>TLS_MODE</code> is not <code>auto</code>; in <code>auto</code> mode login is skipped with a <code>DeprecationWarning</code>.</p>
 <p><code>EMAIL__LOCAL_HOSTNAME</code> sets the name sent in <code>EHLO</code>, and <code>EMAIL__SOURCE_ADDRESS</code> with
