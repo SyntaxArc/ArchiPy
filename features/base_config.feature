@@ -162,29 +162,31 @@ Feature: Base Configuration System
     Then the configuration should be <outcome>
 
     Examples: Configuration checks
-      | section  | problem                                 | outcome  |
-      | Kafka    | SASL_SSL without credentials            | rejected |
-      | Kafka    | SASL_SSL with credentials               | accepted |
-      | Kafka    | auto commit and no offset reset         | rejected |
-      | Kafka    | a heartbeat longer than the session     | rejected |
-      | Redis    | cluster mode without nodes              | rejected |
-      | Redis    | cluster mode with nodes                 | accepted |
-      | Redis    | sentinel mode without a service name    | rejected |
-      | Redis    | standalone mode without a host          | rejected |
-      | ScyllaDB | no contact points                       | rejected |
-      | ScyllaDB | a username without a password           | rejected |
-      | ScyllaDB | a minimum pool above the maximum        | rejected |
-      | ScyllaDB | a client certificate without a key      | rejected |
-      | ScyllaDB | a CA file with TLS disabled             | rejected |
-      | ScyllaDB | TLS enabled with a CA file              | accepted |
-      | Temporal | only a client certificate               | rejected |
-      | Temporal | only a CA certificate                   | accepted |
-      | Temporal | a client key without a certificate      | rejected |
-      | Temporal | a run timeout above the execution one   | rejected |
-      | Temporal | a keep alive timeout above the interval | rejected |
-      | Temporal | a task timeout above the run timeout    | accepted |
-      | Temporal | a verification name without a CA        | rejected |
-      | Temporal | a verification name with a CA           | accepted |
+      | section  | problem                                            | outcome  |
+      | Kafka    | SASL_SSL without credentials                       | rejected |
+      | Kafka    | SASL_SSL with credentials                          | accepted |
+      | Kafka    | auto commit and no offset reset                    | rejected |
+      | Kafka    | a heartbeat longer than the session                | rejected |
+      | Redis    | cluster mode without nodes                         | rejected |
+      | Redis    | cluster mode with nodes                            | accepted |
+      | Redis    | sentinel mode without a service name               | rejected |
+      | Redis    | standalone mode without a host                     | rejected |
+      | ScyllaDB | no contact points                                  | rejected |
+      | ScyllaDB | a username without a password                      | rejected |
+      | ScyllaDB | a minimum pool above the maximum                   | rejected |
+      | ScyllaDB | a client certificate without a key                 | rejected |
+      | ScyllaDB | a CA file with TLS disabled                        | rejected |
+      | ScyllaDB | TLS enabled with a CA file                         | accepted |
+      | ScyllaDB | an exponential reconnection base above the maximum | rejected |
+      | ScyllaDB | an exponential reconnection within bounds          | accepted |
+      | Temporal | only a client certificate                          | rejected |
+      | Temporal | only a CA certificate                              | accepted |
+      | Temporal | a client key without a certificate                 | rejected |
+      | Temporal | a run timeout above the execution one              | rejected |
+      | Temporal | a keep alive timeout above the interval            | rejected |
+      | Temporal | a task timeout above the run timeout               | accepted |
+      | Temporal | a verification name without a CA                   | rejected |
+      | Temporal | a verification name with a CA                      | accepted |
 
   Scenario Outline: A ScyllaDB configuration with <tls> builds <context>
     When a ScyllaDB TLS context is built with <tls>
