@@ -1063,6 +1063,64 @@ def step_use_transaction_settings(context, mode, setting):
         )
 
 
+@when("I poll an async consumer subscribed to an invalid topic pattern twice")
+def step_async_consumer_invalid_subscription(context):
+    """A failed first subscription must not leave a consumer that silently polls without a subscription."""
+    config = _get_kafka_config(context)
+
+    async def run():
+        consumer = AsyncKafkaConsumerAdapter("invalid-pattern-group", topic_list=["^("], kafka_configs=config)
+        errors = []
+        for _ in range(2):
+            try:
+                await consumer.poll(timeout=1)
+            except Exception as error:
+                errors.append(error)
+        return errors
+
+    errors = asyncio.run(run())
+    get_current_scenario_context(context).store("kafka_operation_error", errors[0] if len(errors) == 2 else None)
+
+
+def _rdkafka_thread_count():
+    """Count the native librdkafka threads of this process (they are named ``rdk:*``)."""
+    import os
+
+    count = 0
+    for task in os.listdir("/proc/self/task"):
+        with open(f"/proc/self/task/{task}/comm") as comm:
+            count += comm.read().startswith("rdk:")
+    return count
+
+
+@when("I create {count:d} sync consumers that fail with {failure}")
+def step_create_failing_consumers(context, count, failure):
+    """Create consumers that fail, keeping their errors (and so their frames) alive."""
+    config = _get_kafka_config(context)
+    if failure == "no topics":
+        arguments = {"topic_list": None, "partition_list": None}
+    else:
+        arguments = {"topic_list": ["^("], "partition_list": None}
+    before = _rdkafka_thread_count()
+    errors = []
+    for _ in range(count):
+        try:
+            KafkaConsumerAdapter("failing-init-group", kafka_configs=config, **arguments)
+        except Exception as error:
+            errors.append(error)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_failed_consumers", errors)
+    scenario_context.store("kafka_rdkafka_threads_added", _rdkafka_thread_count() - before)
+    scenario_context.store("kafka_operation_error", errors[0] if len(errors) == count else None)
+
+
+@then("no librdkafka client should be left running")
+def step_no_client_left(context):
+    """A failed consumer construction must close the client it created."""
+    added = get_current_scenario_context(context).get("kafka_rdkafka_threads_added")
+    assert added == 0, f"{added} librdkafka threads are still running"
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""
