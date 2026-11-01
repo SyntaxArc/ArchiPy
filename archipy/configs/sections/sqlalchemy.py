@@ -65,6 +65,18 @@ class SQLiteSQLAlchemyConfig(SQLAlchemyConfig):
     DATABASE: str = Field(default=":memory:", description="SQLite database path")  # ty: ignore[invalid-mutable-override]  # SQLite always has a path; narrows the base str | None
     ISOLATION_LEVEL: str | None = Field(default=None, description="SQLite isolation level")
     PORT: int | None = Field(default=None, description="Not used for SQLite")
+    TIMEOUT: float | None = Field(
+        default=None,
+        ge=0,
+        description="Seconds a connection waits for a lock before 'database is locked' (the sqlite3 'timeout', "
+        "i.e. the busy timeout). None: the sqlite3 default of 5 seconds",
+    )
+    CHECK_SAME_THREAD: bool | None = Field(
+        default=None,
+        description="The sqlite3 'check_same_thread' option of the sync driver. False lets a connection be used "
+        "from several threads (the caller must serialize access). None: the driver default. "
+        "The async driver ignores it",
+    )
 
 
 class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
@@ -90,6 +102,33 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
     )
     SSL_CERT: str | None = Field(default=None, description="Path to the client certificate file (libpq sslcert)")
     SSL_KEY: str | None = Field(default=None, description="Path to the client private key file (libpq sslkey)")
+    APPLICATION_NAME: str | None = Field(
+        default=None,
+        description="Name shown in pg_stat_activity (libpq application_name). None: no name is sent",
+    )
+    STATEMENT_TIMEOUT_MS: int | None = Field(
+        default=None,
+        ge=0,
+        description="Milliseconds after which the server aborts a statement (session statement_timeout; 0 "
+        "disables it). None: the server default",
+    )
+    LOCK_TIMEOUT_MS: int | None = Field(
+        default=None,
+        ge=0,
+        description="Milliseconds a statement waits for a lock before it is aborted (session lock_timeout; 0 "
+        "disables it). None: the server default",
+    )
+    PREPARE_THRESHOLD: int | None = Field(
+        default=None,
+        ge=0,
+        description="Number of executions of a query after which psycopg prepares it (0 prepares immediately). "
+        "None: the psycopg default (5)",
+    )
+    DISABLE_PREPARED_STATEMENTS: bool = Field(
+        default=False,
+        description="Never use server-side prepared statements (psycopg prepare_threshold=None). Needed behind "
+        "pgbouncer in transaction pooling mode. Takes precedence over PREPARE_THRESHOLD",
+    )
 
     @model_validator(mode="after")
     def validate_ssl_client_pair(self) -> Self:
@@ -207,6 +246,34 @@ class MySQLSQLAlchemyConfig(SQLAlchemyConfig):
     )
     SSL_CERT: str | None = Field(default=None, description="Path to the client certificate file")
     SSL_KEY: str | None = Field(default=None, description="Path to the client private key file")
+    CONNECT_TIMEOUT: int | None = Field(
+        default=None,
+        ge=1,
+        description="Seconds to wait for the connection to be established (None: the driver default of 10)",
+    )
+    READ_TIMEOUT: int | None = Field(
+        default=None,
+        ge=1,
+        description="Seconds to wait for a read from the server (None: wait indefinitely)",
+    )
+    WRITE_TIMEOUT: int | None = Field(
+        default=None,
+        ge=1,
+        description="Seconds to wait for a write to the server (None: wait indefinitely). "
+        "The async driver (asyncmy) has no write timeout and ignores it",
+    )
+    STATEMENT_TIMEOUT_MS: int | None = Field(
+        default=None,
+        ge=0,
+        description="Milliseconds after which the server aborts a read-only SELECT (session max_execution_time; "
+        "0 disables it; MySQL 5.7.8+, not MariaDB). None: the server default",
+    )
+    LOCK_WAIT_TIMEOUT_SECONDS: int | None = Field(
+        default=None,
+        ge=1,
+        description="Seconds an InnoDB statement waits for a row lock (session innodb_lock_wait_timeout). "
+        "None: the server default",
+    )
 
     @model_validator(mode="after")
     def validate_ssl_options(self) -> Self:

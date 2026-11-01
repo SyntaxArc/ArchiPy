@@ -41,19 +41,46 @@ def _patch_mysql_uuid_mapping() -> None:
 _patch_mysql_uuid_mapping()
 
 
-def _build_connect_args(configs: MySQLSQLAlchemyConfig) -> dict[str, Any]:
+def _build_connect_args(configs: MySQLSQLAlchemyConfig, *, supports_write_timeout: bool) -> dict[str, Any]:
     """Build the pymysql and asyncmy connection arguments from the configuration.
 
     Both drivers accept an ``ssl.SSLContext`` as ``ssl``.
 
     Args:
         configs: MySQL configuration.
+        supports_write_timeout: Whether the driver accepts ``write_timeout`` (pymysql does, asyncmy does not).
 
     Returns:
-        dict[str, Any]: ``ssl`` when SSL_MODE is set, otherwise empty (the driver default applies).
+        dict[str, Any]: Only the options that are configured (the driver defaults apply to the rest).
     """
-    if configs.SSL_MODE is None:
-        return {}
+    connect_args: dict[str, Any] = {}
+    if configs.CONNECT_TIMEOUT is not None:
+        connect_args["connect_timeout"] = configs.CONNECT_TIMEOUT
+    if configs.READ_TIMEOUT is not None:
+        connect_args["read_timeout"] = configs.READ_TIMEOUT
+    if supports_write_timeout and configs.WRITE_TIMEOUT is not None:
+        connect_args["write_timeout"] = configs.WRITE_TIMEOUT
+    session_settings = {
+        "max_execution_time": configs.STATEMENT_TIMEOUT_MS,
+        "innodb_lock_wait_timeout": configs.LOCK_WAIT_TIMEOUT_SECONDS,
+    }
+    assignments = [f"{name}={int(value)}" for name, value in session_settings.items() if value is not None]
+    if assignments:
+        connect_args["init_command"] = "SET SESSION " + ", ".join(assignments)
+    if configs.SSL_MODE is not None:
+        connect_args["ssl"] = _build_ssl_context(configs)
+    return connect_args
+
+
+def _build_ssl_context(configs: MySQLSQLAlchemyConfig) -> ssl.SSLContext:
+    """Build the TLS context for the configured SSL_MODE.
+
+    Args:
+        configs: MySQL configuration with SSL_MODE set.
+
+    Returns:
+        ssl.SSLContext: The context for the mode, with the client certificate loaded when configured.
+    """
     context = ssl.create_default_context(cafile=configs.SSL_CA)
     if configs.SSL_MODE == "required":
         context.check_hostname = False
@@ -62,7 +89,7 @@ def _build_connect_args(configs: MySQLSQLAlchemyConfig) -> dict[str, Any]:
         context.check_hostname = False
     if configs.SSL_CERT is not None and configs.SSL_KEY is not None:
         context.load_cert_chain(configs.SSL_CERT, configs.SSL_KEY)
-    return {"ssl": context}
+    return context
 
 
 class MySQLSQlAlchemySessionManager(BaseSQLAlchemySessionManager[MySQLSQLAlchemyConfig], metaclass=Singleton):
@@ -114,9 +141,9 @@ class MySQLSQlAlchemySessionManager(BaseSQLAlchemySessionManager[MySQLSQLAlchemy
         """Return the driver connection arguments.
 
         Returns:
-            dict[str, Any]: ``ssl`` when TLS is configured, otherwise empty.
+            dict[str, Any]: The configured timeouts, session settings and TLS context, otherwise empty.
         """
-        return _build_connect_args(self._configs)
+        return _build_connect_args(self._configs, supports_write_timeout=True)
 
     @override
     def _create_url(self, configs: MySQLSQLAlchemyConfig) -> URL:
@@ -198,9 +225,9 @@ class AsyncMySQLSQlAlchemySessionManager(
         """Return the driver connection arguments.
 
         Returns:
-            dict[str, Any]: ``ssl`` when TLS is configured, otherwise empty.
+            dict[str, Any]: The configured timeouts, session settings and TLS context, otherwise empty.
         """
-        return _build_connect_args(self._configs)
+        return _build_connect_args(self._configs, supports_write_timeout=False)
 
     @override
     def _create_url(self, configs: MySQLSQLAlchemyConfig) -> URL:

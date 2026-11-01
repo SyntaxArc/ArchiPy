@@ -31,6 +31,15 @@ SQLITE_SQLALCHEMY__POOL_SIZE=20
 SQLITE_SQLALCHEMY__POOL_TIMEOUT=30
 ```
 
+### Busy Timeout and Thread Check
+
+```bash
+SQLITE_SQLALCHEMY__TIMEOUT=10             # seconds to wait for a lock (sqlite3 timeout, default 5)
+SQLITE_SQLALCHEMY__CHECK_SAME_THREAD=false  # sync driver only; the caller must serialize access
+```
+
+Unset keeps the sqlite3 defaults. `CHECK_SAME_THREAD` is ignored by the async driver.
+
 ### Direct Configuration
 
 ```python

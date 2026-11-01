@@ -603,3 +603,12 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
       | db_type | mode  | statement_kind |
       | sqlite  | async | execute        |
       | sqlite  | async | scalars        |
+
+  Scenario Outline: The <kind> driver applies the busy timeout from the configuration
+    When I read busy_timeout from a <kind> sqlite connection configured with TIMEOUT <value>
+    Then the session setting should be <expected>
+
+    Examples: Busy timeout
+      | kind  | value | expected |
+      | sync  | 2.5   | 2500     |
+      | async | 2.5   | 2500     |

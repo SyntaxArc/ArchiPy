@@ -54,6 +54,25 @@ MYSQL_SQLALCHEMY__SSL_KEY=/etc/ssl/client.key
     `required` encrypts the connection but does not verify the server. Use `verify_ca` to verify the certificate and
     `verify_identity` to also check the host name. `SSL_CA`, `SSL_CERT` and `SSL_KEY` need `SSL_MODE` to be set.
 
+### Timeouts
+
+Every option is optional; unset keeps the driver and server defaults.
+
+```bash
+MYSQL_SQLALCHEMY__CONNECT_TIMEOUT=10             # seconds to establish the connection
+MYSQL_SQLALCHEMY__READ_TIMEOUT=30                # seconds to wait for a read
+MYSQL_SQLALCHEMY__WRITE_TIMEOUT=30               # seconds to wait for a write (sync driver only)
+MYSQL_SQLALCHEMY__STATEMENT_TIMEOUT_MS=30000     # session max_execution_time (0 disables)
+MYSQL_SQLALCHEMY__LOCK_WAIT_TIMEOUT_SECONDS=10   # session innodb_lock_wait_timeout
+```
+
+The connect, read and write timeouts are driver options. The statement and lock timeouts are set per connection with
+`init_command` (`SET SESSION ...`).
+
+!!! note
+    `asyncmy` has no write timeout, so the async manager ignores `WRITE_TIMEOUT`. `max_execution_time` only limits
+    read-only `SELECT` statements and does not exist on MariaDB.
+
 ### Direct Configuration
 
 ```python

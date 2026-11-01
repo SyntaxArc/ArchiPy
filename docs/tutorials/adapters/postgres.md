@@ -63,6 +63,26 @@ POSTGRES_SQLALCHEMY__SSL_KEY=/etc/ssl/client.key
     Only `require` enforces encryption, and only `verify-ca` and `verify-full` verify the server certificate
     (`verify-full` also checks the host name). `prefer` silently falls back to an unencrypted connection.
 
+### Timeouts and Connection Options
+
+Every option is optional; unset keeps the driver and server defaults. They apply to both the sync and async managers.
+
+```bash
+POSTGRES_SQLALCHEMY__CONNECT_TIMEOUT=10          # seconds to establish the connection
+POSTGRES_SQLALCHEMY__STATEMENT_TIMEOUT_MS=30000  # session statement_timeout (0 disables)
+POSTGRES_SQLALCHEMY__LOCK_TIMEOUT_MS=5000        # session lock_timeout (0 disables)
+POSTGRES_SQLALCHEMY__APPLICATION_NAME=billing    # shown in pg_stat_activity
+POSTGRES_SQLALCHEMY__PREPARE_THRESHOLD=5         # executions before psycopg prepares a query
+POSTGRES_SQLALCHEMY__DISABLE_PREPARED_STATEMENTS=true
+```
+
+The statement and lock timeouts are sent as the libpq `options` string (`-c statement_timeout=... -c lock_timeout=...`).
+
+!!! warning
+    Behind pgbouncer in transaction pooling mode set `DISABLE_PREPARED_STATEMENTS=true` (psycopg
+    `prepare_threshold=None`); server-side prepared statements break there. It takes precedence over
+    `PREPARE_THRESHOLD`.
+
 ### Direct Configuration
 
 ```python

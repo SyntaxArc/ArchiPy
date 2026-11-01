@@ -73,6 +73,25 @@ def _sqlite_pool_kwargs(configs: SQLiteSQLAlchemyConfig, pool_kwargs: dict[str, 
     return {key: value for key, value in pool_kwargs.items() if key not in dropped}
 
 
+def _build_connect_args(configs: SQLiteSQLAlchemyConfig, *, sync_driver: bool) -> dict[str, Any]:
+    """Build the sqlite3 connection arguments from the configuration.
+
+    Args:
+        configs: SQLite configuration.
+        sync_driver: Whether the sync driver is used (``check_same_thread`` has no meaning for aiosqlite,
+            which runs its own connection thread).
+
+    Returns:
+        dict[str, Any]: Only the options that are configured (the sqlite3 defaults apply to the rest).
+    """
+    connect_args: dict[str, Any] = {}
+    if configs.TIMEOUT is not None:
+        connect_args["timeout"] = configs.TIMEOUT
+    if sync_driver and configs.CHECK_SAME_THREAD is not None:
+        connect_args["check_same_thread"] = configs.CHECK_SAME_THREAD
+    return connect_args
+
+
 class SQLiteSQLAlchemySessionManager(BaseSQLAlchemySessionManager[SQLiteSQLAlchemyConfig], metaclass=Singleton):
     """Synchronous SQLAlchemy session manager for SQLite.
 
@@ -96,6 +115,7 @@ class SQLiteSQLAlchemySessionManager(BaseSQLAlchemySessionManager[SQLiteSQLAlche
             orm_config: SQLite-specific configuration. If None, uses global config.
         """
         configs = orm_config or self._default_config()
+        self._configs = configs  # read by _get_connect_args, which the base initializer calls
         super().__init__(configs)
 
     @override
@@ -115,6 +135,15 @@ class SQLiteSQLAlchemySessionManager(BaseSQLAlchemySessionManager[SQLiteSQLAlche
             str: The name of the database ('sqlite').
         """
         return "sqlite"
+
+    @override
+    def _get_connect_args(self) -> dict[str, Any]:
+        """Return the sqlite3 connection arguments.
+
+        Returns:
+            dict[str, Any]: The configured busy timeout and thread check, otherwise empty.
+        """
+        return _build_connect_args(self._configs, sync_driver=True)
 
     @override
     def _get_pool_kwargs(self, configs: SQLiteSQLAlchemyConfig) -> dict[str, Any]:
@@ -179,6 +208,7 @@ class AsyncSQLiteSQLAlchemySessionManager(
             orm_config: SQLite-specific configuration. If None, uses global config.
         """
         configs = orm_config or self._default_config()
+        self._configs = configs  # read by _get_connect_args, which the base initializer calls
         super().__init__(configs)
 
     @override
@@ -198,6 +228,15 @@ class AsyncSQLiteSQLAlchemySessionManager(
             str: The name of the database ('sqlite').
         """
         return "sqlite"
+
+    @override
+    def _get_connect_args(self) -> dict[str, Any]:
+        """Return the sqlite3 connection arguments.
+
+        Returns:
+            dict[str, Any]: The configured busy timeout, otherwise empty.
+        """
+        return _build_connect_args(self._configs, sync_driver=False)
 
     @override
     def _get_pool_kwargs(self, configs: SQLiteSQLAlchemyConfig) -> dict[str, Any]:

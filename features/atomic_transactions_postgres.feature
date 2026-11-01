@@ -600,3 +600,21 @@ Feature: SQLAlchemy Atomic Transactions on PostgreSQL
       | kind  | tls_mode | outcome     |
       | async | prefer   | unencrypted |
       | async | require  | rejected    |
+
+  Scenario Outline: The <kind> driver applies <setting> from the configuration
+    When I read <setting> from a <kind> postgres connection configured with <field> <value>
+    Then the session setting should be <expected>
+
+    Examples: Sync driver
+      | kind | setting           | field                       | value | expected |
+      | sync | statement_timeout | STATEMENT_TIMEOUT_MS        | 5000  | 5s       |
+      | sync | lock_timeout      | LOCK_TIMEOUT_MS             | 1500  | 1500ms   |
+      | sync | application_name  | APPLICATION_NAME            | "api" | api      |
+      | sync | prepare_threshold | PREPARE_THRESHOLD           | 0     | 0        |
+      | sync | prepare_threshold | DISABLE_PREPARED_STATEMENTS | true  | None     |
+
+    Examples: Async driver
+      | kind  | setting           | field                       | value | expected |
+      | async | statement_timeout | STATEMENT_TIMEOUT_MS        | 5000  | 5s       |
+      | async | lock_timeout      | LOCK_TIMEOUT_MS             | 1500  | 1500ms   |
+      | async | prepare_threshold | DISABLE_PREPARED_STATEMENTS | true  | None     |

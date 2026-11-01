@@ -30,8 +30,31 @@ def _build_connect_args(configs: PostgresSQLAlchemyConfig) -> dict[str, Any]:
         "sslrootcert": configs.SSL_ROOT_CERT,
         "sslcert": configs.SSL_CERT,
         "sslkey": configs.SSL_KEY,
+        "application_name": configs.APPLICATION_NAME,
+        "options": _build_server_options(configs),
+        "prepare_threshold": configs.PREPARE_THRESHOLD,
     }
-    return {name: value for name, value in candidates.items() if value is not None}
+    connect_args: dict[str, Any] = {name: value for name, value in candidates.items() if value is not None}
+    if configs.DISABLE_PREPARED_STATEMENTS:
+        connect_args["prepare_threshold"] = None  # psycopg: None never prepares
+    return connect_args
+
+
+def _build_server_options(configs: PostgresSQLAlchemyConfig) -> str | None:
+    """Build the libpq ``options`` string that sets the session timeouts.
+
+    Args:
+        configs: PostgreSQL configuration.
+
+    Returns:
+        str | None: e.g. ``-c statement_timeout=5000 -c lock_timeout=1000``, or None when neither is set.
+    """
+    settings = {
+        "statement_timeout": configs.STATEMENT_TIMEOUT_MS,
+        "lock_timeout": configs.LOCK_TIMEOUT_MS,
+    }
+    options = [f"-c {name}={value}" for name, value in settings.items() if value is not None]
+    return " ".join(options) or None
 
 
 class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLAlchemyConfig], metaclass=Singleton):
@@ -83,7 +106,7 @@ class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLA
         """Return the psycopg connection arguments.
 
         Returns:
-            dict[str, Any]: The configured ``connect_timeout`` and TLS options, otherwise empty.
+            dict[str, Any]: The configured connect timeout, TLS, application name, session timeout and prepare options.
         """
         return _build_connect_args(self._configs)
 
@@ -167,7 +190,7 @@ class AsyncPostgresSQlAlchemySessionManager(
         """Return the psycopg connection arguments.
 
         Returns:
-            dict[str, Any]: The configured ``connect_timeout`` and TLS options, otherwise empty.
+            dict[str, Any]: The configured connect timeout, TLS, application name, session timeout and prepare options.
         """
         return _build_connect_args(self._configs)
 
