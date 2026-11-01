@@ -3574,7 +3574,9 @@ def step_given_redis_mock_with_protocol(context, protocol):
     get_current_scenario_context(context).adapter = RedisMock(redis_config=redis_config)
 
 
-@when(r'I pop the highest member of sorted set "(?P<name>[^"]+)" holding "(?P<member>[^"]+)" with score (?P<score>[\d.]+)')
+@when(
+    r'I pop the highest member of sorted set "(?P<name>[^"]+)" holding "(?P<member>[^"]+)" with score (?P<score>[\d.]+)',
+)
 def step_when_pop_highest_raw(context, name, member, score):
     """Add one member and keep the raw ZPOPMAX reply."""
     adapter = get_current_scenario_context(context).adapter
@@ -3669,7 +3671,7 @@ def _resilience_config(mode, **extra):
 
 
 @given(
-    r'a Redis config in (?P<mode>standalone|sentinel) mode with (?P<retries>\d+) retries, TCP keepalive, '
+    r"a Redis config in (?P<mode>standalone|sentinel) mode with (?P<retries>\d+) retries, TCP keepalive, "
     r'the client name "(?P<name>[^"]+)" and the sentinel username "(?P<user>[^"]+)"',
 )
 def step_given_resilience_config(context, mode, retries, name, user):
@@ -3694,7 +3696,7 @@ def step_given_default_resilience_config(context):
 
 
 @then(
-    r'the client connection should retry (?P<retries>\d+) times, use TCP keepalive and carry the client name '
+    r"the client connection should retry (?P<retries>\d+) times, use TCP keepalive and carry the client name "
     r'"(?P<name>[^"]+)"',
 )
 def step_then_client_resilience(context, retries, name):
@@ -3807,7 +3809,9 @@ def step_then_bytes_plain(context, tag):
     assert [_plain(m) for m in adapter.zrange(f"{tag}:z", 0, -1)] == [f"{tag}-m"]
 
 
-@when(r'I write bytes keys, fields and members tagged "(?P<tag>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I write bytes keys, fields and members tagged "(?P<tag>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
+)
 async def step_when_write_bytes_async(context, tag, adapter_type):
     """Write bytes keys, hash fields and sorted-set members asynchronously."""
     adapter = get_current_scenario_context(context).async_adapter
@@ -3865,10 +3869,21 @@ async def step_when_use_async_context_manager(context):
         assert not _pool_is_closed(adapter.client.connection_pool)
 
 
+@when(r"I close the async container adapter directly")
+async def step_when_close_async_directly(context):
+    """Call close() on the async adapter and record both pools before it disconnects them."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.async_adapter
+    await adapter.set("bdd-close:direct", "1")
+    await adapter.list_search_indexes()
+    store_result(context, "closed_pools", [adapter.client.connection_pool, adapter._search_client.connection_pool])
+    await adapter.close()
+
+
 @then(r"the async client pool and the search client pool should be closed")
 async def step_then_async_pools_closed(context):
     """Verify the async pools were disconnected and the search client dropped."""
     adapter = get_current_scenario_context(context).async_adapter
     assert adapter._search_client is None
     for pool in get_result(context, "closed_pools"):
-        assert _pool_is_closed(pool), "connection pool still holds connections after aclose"
+        assert _pool_is_closed(pool), "connection pool still holds connections after close"

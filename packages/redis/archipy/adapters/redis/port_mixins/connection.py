@@ -132,7 +132,7 @@ class AsyncRedisConnectionPort:
     """Async Redis port for connection operations."""
 
     @abstractmethod
-    async def aclose(self) -> None:
+    async def close(self) -> None:
         """Close every client and connection pool the adapter opened asynchronously.
 
         Raises:
@@ -146,7 +146,7 @@ class AsyncRedisConnectionPort:
 
     async def __aexit__(self, *exc_info: object) -> None:
         """Close the adapter when leaving the async context manager."""
-        await self.aclose()
+        await self.close()
 
     @abstractmethod
     async def ping(self) -> bool:

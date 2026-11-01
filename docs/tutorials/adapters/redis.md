@@ -160,7 +160,7 @@ REDIS__SENTINEL_USERNAME=sentinel-user  # sentinel ACL user, used with SENTINEL_
 
 ### Closing the adapter
 
-Call `close()` (or `await aclose()` on the async adapter) when you are done. It closes the write, read-only and RediSearch
+Call `close()` (or `await close()` on the async adapter) when you are done. It closes the write, read-only and RediSearch
 clients and their connection pools. Both adapters also work as context managers:
 
 ```python

@@ -611,7 +611,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         unique: dict[int, AsyncRedis | AsyncRedisCluster] = {id(c): c for c in candidates if c is not None}
         return list(unique.values())
 
-    async def aclose(self) -> None:
+    async def close(self) -> None:
         """Close the write, read-only and search clients and their connection pools.
 
         Safe to call more than once. A search client created later is rebuilt on demand.
@@ -629,7 +629,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
 
     async def __aexit__(self, *exc_info: object) -> None:
         """Close the clients when leaving the async context manager."""
-        await self.aclose()
+        await self.close()
 
     async def ping(self) -> bool:
         """Ping the Redis server asynchronously.
