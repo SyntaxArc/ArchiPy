@@ -1337,6 +1337,22 @@ Feature: Redis Testing
       | standalone |
       | sentinel   |
 
+  Scenario Outline: Retry, keepalive and client name settings reach the <mode> client
+    Given a Redis config in <mode> mode with 3 retries, TCP keepalive, the client name "archipy-app" and the sentinel username "sentinel-user"
+    When I build the Redis adapter from that config
+    Then the client connection should retry 3 times, use TCP keepalive and carry the client name "archipy-app"
+    And the sentinel connection should use the username "sentinel-user" when the mode is sentinel
+
+    Examples: Modes
+      | mode       |
+      | standalone |
+      | sentinel   |
+
+  Scenario: Unset retry settings keep the redis-py defaults
+    Given a Redis config in standalone mode with default resilience settings
+    When I build the Redis adapter from that config
+    Then the client connection should not carry a client name or extra retry errors
+
   Scenario Outline: Invalid TLS settings are rejected
     When I create a Redis config with <settings>
     Then the Redis config should be rejected

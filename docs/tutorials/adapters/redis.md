@@ -63,6 +63,22 @@ REDIS__SSL_CHECK_HOSTNAME=true
 `SSL_CERTFILE` and `SSL_KEYFILE` must be set together. `SSL_CA_CERTS` and `SSL_CERTFILE` require `SSL=true`.
 In sentinel mode the TLS settings also apply to the sentinel nodes.
 
+### Retries, keepalive and client name
+
+All settings are optional; unset ones keep the redis-py defaults. They apply to standalone, cluster and sentinel modes.
+
+```bash
+REDIS__RETRY_ATTEMPTS=3          # retries per command with exponential backoff
+REDIS__RETRY_BACKOFF_BASE=0.008  # base delay in seconds
+REDIS__RETRY_BACKOFF_CAP=0.512   # maximum delay in seconds
+REDIS__RETRY_ON_TIMEOUT=true     # also retry on socket timeouts
+REDIS__SOCKET_KEEPALIVE=true     # detect dead peers behind NAT
+REDIS__CLIENT_NAME=my-service    # shown in CLIENT LIST
+REDIS__SENTINEL_USERNAME=sentinel-user  # sentinel ACL user, used with SENTINEL_PASSWORD
+```
+
+`RETRY_ON_TIMEOUT` adds `TimeoutError` to the retried errors. The backoff settings take effect once `RETRY_ATTEMPTS` is set.
+
 ## Basic Usage
 
 === "Sync"

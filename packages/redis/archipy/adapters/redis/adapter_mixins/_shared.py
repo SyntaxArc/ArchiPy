@@ -5,6 +5,11 @@ from __future__ import annotations
 from collections.abc import Awaitable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
+from redis.asyncio.retry import Retry as AsyncRetry
+from redis.backoff import ExponentialBackoff
+from redis.exceptions import TimeoutError as RedisTimeoutError
+from redis.retry import Retry
+
 if TYPE_CHECKING:
     from redis import RedisCluster
     from redis.asyncio import RedisCluster as AsyncRedisCluster
@@ -77,7 +82,28 @@ def _tls_acl_kwargs(configs: RedisConfig) -> dict[str, Any]:
     return kwargs
 
 
-def _redis_connection_kwargs(configs: RedisConfig, *, decode_responses: bool | None = None) -> dict[str, Any]:
+def _resilience_kwargs(configs: RedisConfig, *, is_async: bool = False) -> dict[str, Any]:
+    """Build retry, keepalive and client-name kwargs; empty when none is configured."""
+    kwargs: dict[str, Any] = {}
+    if configs.RETRY_ATTEMPTS is not None:
+        backoff = ExponentialBackoff(cap=configs.RETRY_BACKOFF_CAP, base=configs.RETRY_BACKOFF_BASE)
+        retry_class = AsyncRetry if is_async else Retry
+        kwargs["retry"] = retry_class(backoff, configs.RETRY_ATTEMPTS)
+    if configs.RETRY_ON_TIMEOUT:
+        kwargs["retry_on_error"] = [RedisTimeoutError]
+    if configs.SOCKET_KEEPALIVE is not None:
+        kwargs["socket_keepalive"] = configs.SOCKET_KEEPALIVE
+    if configs.CLIENT_NAME:
+        kwargs["client_name"] = configs.CLIENT_NAME
+    return kwargs
+
+
+def _redis_connection_kwargs(
+    configs: RedisConfig,
+    *,
+    decode_responses: bool | None = None,
+    is_async: bool = False,
+) -> dict[str, Any]:
     """Build common Redis client connection kwargs from config."""
     return {
         "password": configs.PASSWORD,
@@ -88,10 +114,11 @@ def _redis_connection_kwargs(configs: RedisConfig, *, decode_responses: bool | N
         "socket_timeout": configs.SOCKET_TIMEOUT,
         "protocol": configs.PROTOCOL,
         **_tls_acl_kwargs(configs),
+        **_resilience_kwargs(configs, is_async=is_async),
     }
 
 
-def _sentinel_redis_kwargs(configs: RedisConfig) -> dict[str, Any]:
+def _sentinel_redis_kwargs(configs: RedisConfig, *, is_async: bool = False) -> dict[str, Any]:
     """Build Redis kwargs for sentinel master_for/slave_for connections."""
     return {
         "socket_timeout": configs.SOCKET_TIMEOUT,
@@ -101,12 +128,15 @@ def _sentinel_redis_kwargs(configs: RedisConfig) -> dict[str, Any]:
         "decode_responses": configs.DECODE_RESPONSES,
         "protocol": configs.PROTOCOL,
         **_tls_acl_kwargs(configs),
+        **_resilience_kwargs(configs, is_async=is_async),
     }
 
 
 def _sentinel_kwargs(configs: RedisConfig) -> dict[str, Any] | None:
-    """Build sentinel-node kwargs: SENTINEL_PASSWORD auth and the TLS settings (sentinels share them)."""
+    """Build sentinel-node kwargs: sentinel username, password and the shared TLS settings."""
     kwargs: dict[str, Any] = {}
+    if configs.SENTINEL_USERNAME:
+        kwargs["username"] = configs.SENTINEL_USERNAME
     if configs.SENTINEL_PASSWORD:
         kwargs["password"] = configs.SENTINEL_PASSWORD
     if configs.SSL:

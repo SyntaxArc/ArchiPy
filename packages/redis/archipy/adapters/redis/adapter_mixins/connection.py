@@ -20,6 +20,7 @@ from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
     SyncRedisMixinBase,
     _redis_connection_kwargs,
+    _resilience_kwargs,
     _sentinel_kwargs,
     _sentinel_redis_kwargs,
     _tls_acl_kwargs,
@@ -122,6 +123,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
             protocol=configs.PROTOCOL,
             **_tls_acl_kwargs(configs),
+            **_resilience_kwargs(configs, is_async=False),
             **cluster_kwargs,
         )
 
@@ -149,12 +151,12 @@ class RedisConnectionMixin(SyncRedisMixinBase):
 
         self.client = sentinel.master_for(
             sentinel_service_name,
-            **_sentinel_redis_kwargs(configs),
+            **_sentinel_redis_kwargs(configs, is_async=False),
         )
 
         self.read_only_client = sentinel.slave_for(
             sentinel_service_name,
-            **_sentinel_redis_kwargs(configs),
+            **_sentinel_redis_kwargs(configs, is_async=False),
         )
 
     @staticmethod
@@ -173,7 +175,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             host=host,
             port=configs.PORT,
             db=configs.DATABASE,
-            **_redis_connection_kwargs(configs, decode_responses=decode_responses),
+            **_redis_connection_kwargs(configs, decode_responses=decode_responses, is_async=False),
         )
 
     def _build_binary_client(self, configs: RedisConfig) -> Redis | RedisCluster:
@@ -207,6 +209,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
                 require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
                 protocol=configs.PROTOCOL,
                 **_tls_acl_kwargs(configs),
+                **_resilience_kwargs(configs, is_async=False),
                 **cluster_kwargs,
             )
 
@@ -369,6 +372,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
             protocol=configs.PROTOCOL,
             **_tls_acl_kwargs(configs),
+            **_resilience_kwargs(configs, is_async=True),
             **cluster_kwargs,
         )
 
@@ -396,12 +400,12 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
 
         self.client = sentinel.master_for(
             sentinel_service_name,
-            **_sentinel_redis_kwargs(configs),
+            **_sentinel_redis_kwargs(configs, is_async=True),
         )
 
         self.read_only_client = sentinel.slave_for(
             sentinel_service_name,
-            **_sentinel_redis_kwargs(configs),
+            **_sentinel_redis_kwargs(configs, is_async=True),
         )
 
     @staticmethod
@@ -420,7 +424,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             host=host,
             port=configs.PORT,
             db=configs.DATABASE,
-            **_redis_connection_kwargs(configs, decode_responses=decode_responses),
+            **_redis_connection_kwargs(configs, decode_responses=decode_responses, is_async=True),
         )
 
     def _build_binary_client(self, configs: RedisConfig) -> AsyncRedis | AsyncRedisCluster:
@@ -454,6 +458,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
                 protocol=configs.PROTOCOL,
                 **_tls_acl_kwargs(configs),
+                **_resilience_kwargs(configs, is_async=True),
                 **cluster_kwargs,
             )
 

@@ -42,6 +42,7 @@ class RedisConfig(BaseModel):
     SENTINEL_SERVICE_NAME: str | None = Field(default=None, description="Master service name for sentinel")
     SENTINEL_SOCKET_TIMEOUT: float = Field(default=0.1, description="Sentinel socket timeout")
     SENTINEL_PASSWORD: str | None = Field(default=None, description="Password for sentinel nodes (if distinct)")
+    SENTINEL_USERNAME: str | None = Field(default=None, description="ACL username for sentinel nodes (if distinct)")
 
     # Common settings
     PORT: int = Field(default=6379, description="Default Redis server port")
@@ -58,6 +59,21 @@ class RedisConfig(BaseModel):
     SSL_CERTFILE: str | None = Field(default=None, description="Path to the client certificate (mTLS)")
     SSL_KEYFILE: str | None = Field(default=None, description="Path to the client private key (mTLS)")
     SSL_CHECK_HOSTNAME: bool = Field(default=True, description="Verify the server hostname against its certificate")
+
+    # Resilience and observability (unset keeps the redis-py defaults)
+    RETRY_ATTEMPTS: int | None = Field(
+        default=None,
+        ge=0,
+        description="Retries per command with exponential backoff on connection errors; None keeps redis-py defaults",
+    )
+    RETRY_BACKOFF_BASE: float = Field(default=0.008, gt=0, description="Exponential backoff base delay in seconds")
+    RETRY_BACKOFF_CAP: float = Field(default=0.512, gt=0, description="Exponential backoff maximum delay in seconds")
+    RETRY_ON_TIMEOUT: bool = Field(default=False, description="Also retry commands that hit a socket timeout")
+    SOCKET_KEEPALIVE: bool | None = Field(
+        default=None,
+        description="TCP keepalive to detect dead peers behind NAT; None keeps the redis-py default",
+    )
+    CLIENT_NAME: str | None = Field(default=None, description="Connection name shown in CLIENT LIST")
 
     # Connection pooling
     MAX_CONNECTIONS: int = Field(default=50, description="Maximum connections per node")
