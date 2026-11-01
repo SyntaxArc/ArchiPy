@@ -456,6 +456,22 @@ Feature: ScyllaDB Adapter
       | rf_two_as | 2      | not contain |
 
   @needs-scylladb
+  Scenario Outline: An explicit replication factor applies under the default NetworkTopologyStrategy configuration
+    Given a ScyllaDB adapter is configured
+    When I create the keyspace "<keyspace>" with an explicit replication factor <factor> under the default configuration
+    Then the keyspace replication should have factor <factor> in every datacenter
+
+    Examples: Sync
+      | keyspace | factor |
+      | rf_ex_s1 | 1      |
+      | rf_ex_s3 | 3      |
+
+    @async
+    Examples: Async
+      | keyspace | factor |
+      | rf_ex_a1 | 1      |
+      | rf_ex_a3 | 3      |
+
   Scenario Outline: Connection and protocol failures are mapped, not leaked
     When I run ScyllaDB operation "<operation>" on an adapter whose session raises "<kind>"
     Then the ScyllaDB call should raise <error>

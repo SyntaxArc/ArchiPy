@@ -1385,6 +1385,42 @@ def step_single_replica_warning(context: Context, expectation: str) -> None:
     assert found is (expectation == "contain"), messages
 
 
+@when(
+    'I create the keyspace "{keyspace}" with an explicit replication factor {factor:d} under the default configuration',
+)
+async def step_create_keyspace_explicit_factor(context: Context, keyspace: str, factor: int) -> None:
+    """Create a keyspace with an explicit factor and read its replication back from the system schema.
+
+    Args:
+        context (Context): Behave context.
+        keyspace (str): Keyspace name.
+        factor (int): Explicit replication factor.
+    """
+    adapter = get_scylladb_adapter(context)
+    await _call_adapter(adapter, "create_keyspace", keyspace, factor)
+    result = await _call_adapter(
+        adapter,
+        "execute",
+        "SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = %s",
+        (keyspace,),
+    )
+    _get_scenario_context(context).scylla_replication = dict(result.one().replication)
+
+
+@then("the keyspace replication should have factor {factor:d} in every datacenter")
+def step_keyspace_replication_factor(context: Context, factor: int) -> None:
+    """Assert every datacenter in the stored replication map has the expected factor.
+
+    Args:
+        context (Context): Behave context.
+        factor (int): Expected replication factor.
+    """
+    replication = _get_scenario_context(context).scylla_replication
+    factors = {key: value for key, value in replication.items() if key not in {"class", "replication_factor"}}
+    assert factors, replication
+    assert all(int(value) == factor for value in factors.values()), replication
+
+
 class _RaisingSession:
     """Stand-in session whose queries raise a chosen driver exception."""
 
