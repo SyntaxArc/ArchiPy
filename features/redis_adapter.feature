@@ -1458,6 +1458,79 @@ Feature: Redis Testing
     When I close the async container adapter directly
     Then the async client pool and the search client pool should be closed
 
+  Scenario Outline: The mock cluster uses the real CRC16 key slot
+    When I ask the mock cluster for the slot of key "<key>" using the <mode> client
+    Then the mock cluster slot should be <slot>
+
+    Examples: Keys
+      | mode  | key      | slot  |
+      | sync  | foo      | 12182 |
+      | sync  | {foo}bar | 12182 |
+      | async | bar      | 5061  |
+      | async | {bar}baz | 5061  |
+
+  Scenario Outline: Invalid node addresses are rejected
+    When I create a Redis <mode> config with the node "<node>"
+    Then the Redis config should be rejected
+
+    Examples: Nodes
+      | mode     | node      |
+      | sentinel | sentinel1 |
+      | sentinel | host:port |
+      | cluster  | host:abc  |
+      | cluster  | :7000     |
+
+  Scenario Outline: Credentials stay out of the config repr and risky TLS settings warn
+    When I create a Redis config with the password "s3cr3t-pw" and <settings>
+    Then the Redis config repr should not contain the password
+    And the Redis config should log a warning about "<warning>"
+
+    Examples: Settings
+      | settings                            | warning            |
+      | TLS disabled                        | without SSL        |
+      | TLS enabled without hostname checks | SSL_CHECK_HOSTNAME |
+
+  Scenario Outline: upsert_hash writes one atomic HSET and deprecates replace False
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
+    When I upsert the hash document "<prefix>:1" with replace <replace>
+    Then the hash document "<prefix>:1" should be stored and the deprecation warning should be <warned>
+
+    Examples: Replace flags
+      | index_name  | prefix | replace | warned |
+      | upsert-true | upt    | True    | absent |
+      | upsert-off  | upf    | False   | raised |
+
+  Scenario Outline: Server errors surface as CacheError and stay redis-py errors
+    Given a configured <adapter_type>
+    When I increment the non-numeric key "{bdd-s-err}:k" in <adapter_type>
+    Then the Redis failure should be a CacheError and still a redis-py ResponseError
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Async server errors surface as CacheError and stay redis-py errors
+    Given a configured async <adapter_type>
+    When I increment the non-numeric key "{bdd-a-err}:k" in async <adapter_type>
+    Then the Redis failure should be a CacheError and still a redis-py ResponseError
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario: Connection failures surface as CacheError
+    When I read a key from an unreachable Redis server
+    Then the Redis failure should be a CacheError and still a redis-py ConnectionError
+
+  Scenario: Async connection failures surface as CacheError
+    When I read a key from an unreachable Redis server asynchronously
+    Then the Redis failure should be a CacheError and still a redis-py ConnectionError
+
   Scenario Outline: Untrusted text is matched literally by escaped queries
     Given a configured container
     And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents

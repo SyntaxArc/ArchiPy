@@ -82,6 +82,10 @@ REDIS__SENTINEL_USERNAME=sentinel-user  # sentinel ACL user, used with SENTINEL_
 
 `RETRY_ON_TIMEOUT` adds `TimeoutError` to the retried errors. The backoff settings take effect once `RETRY_ATTEMPTS` is set.
 
+`PASSWORD` and `SENTINEL_PASSWORD` are hidden from the config `repr`. A warning is logged when a password is set without
+`SSL` or when `SSL_CHECK_HOSTNAME` is disabled. `SENTINEL_NODES` entries must be `host:port` and `CLUSTER_NODES` ports
+must be numeric; malformed entries raise `ConfigurationError`.
+
 ## Basic Usage
 
 === "Sync"
@@ -634,6 +638,9 @@ handle.upsert_hash_dto(
 logger.info("HASH documents indexed")
 ```
 
+`upsert_hash` writes all fields with one atomic `HSET` and merges them into the existing hash. The `replace` argument
+is ignored; passing `replace=False` emits a `DeprecationWarning`.
+
 JSON documents store the full payload at a JSON path (default `$`):
 
 ```python
@@ -936,7 +943,10 @@ handle.delete_document("product:1", delete_actual_document=True)
 
 ## Error Handling
 
-The Redis adapter maps connection and command failures to `CacheError`:
+The Redis adapter (and the RediSearch handles) map `redis.exceptions.RedisError` failures to `CacheError`. The raised
+error is also an instance of the original redis-py type (for example `ConnectionError` or `ResponseError`), so existing
+`except redis.exceptions.*` handlers keep working; the original exception is available as `__cause__`. Lazy results
+such as `scan_iter`, pipelines and pub/sub objects are not wrapped.
 
 ```python
 import logging
