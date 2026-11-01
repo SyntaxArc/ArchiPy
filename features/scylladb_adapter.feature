@@ -372,6 +372,30 @@ Feature: ScyllaDB Adapter
       | asyn |
 
   @needs-scylladb
+  Scenario Outline: The cluster applies the TLS settings
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with TLS enabled <enabled>, host name check <hostname>, client certificate <mtls>, server name "<server_name>" and session cache <cache>
+    Then the ScyllaDB cluster should <expectation> TLS with a verified server certificate
+    And the TLS server name should be "<expected_name>" and the session cache should be <expected_cache>
+
+    Examples: TLS settings
+      | enabled | hostname | mtls | server_name | cache | expectation | expected_name | expected_cache |
+      | no      | yes      | no   | -           | yes   | not use     | -             | yes            |
+      | yes     | yes      | no   | -           | yes   | use         | -             | yes            |
+      | yes     | yes      | yes  | db.internal | no    | use         | db.internal   | no             |
+      | yes     | no       | no   | -           | yes   | use         | -             | yes            |
+
+  @needs-scylladb
+  Scenario Outline: A client certificate and key must be given together
+    When I build a ScyllaDB config with only a client <part>
+    Then building the config should fail with InvalidArgumentError
+
+    Examples: Incomplete pairs
+      | part        |
+      | certificate |
+      | key         |
+
+  @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
     When I build a ScyllaDB cluster with <setting> set to <value>
     Then the default execution profile should use the configured request timeout and retry policy

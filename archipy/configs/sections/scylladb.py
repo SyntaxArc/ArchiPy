@@ -37,6 +37,37 @@ class ScyllaDBConfig(BaseModel):
         default=None,
         description="Password for authentication",
     )
+    SSL_ENABLED: bool = Field(
+        default=False,
+        description="Encrypt client connections with TLS; the server certificate is always verified",
+    )
+    SSL_CA_FILE: str | None = Field(
+        default=None,
+        description="Path to the CA bundle that verifies the server certificate; system CAs when unset",
+    )
+    SSL_CERT_FILE: str | None = Field(
+        default=None,
+        description="Path to the client certificate (PEM) for mutual TLS; requires SSL_KEY_FILE",
+    )
+    SSL_KEY_FILE: str | None = Field(
+        default=None,
+        description="Path to the client private key (PEM) for mutual TLS; requires SSL_CERT_FILE",
+    )
+    SSL_VERIFY_HOSTNAME: bool = Field(
+        default=True,
+        description="Check that the server certificate matches the host name; disable only in tests",
+    )
+    SSL_SERVER_NAME: str | None = Field(
+        default=None,
+        description="Host name to verify the certificate against, when it differs from the contact point address",
+    )
+    SSL_SESSION_CACHE_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "Reuse TLS sessions. A resumed session skips the certificate check, so a revoked or expired "
+            "certificate can be accepted until the cached session expires; disable to check on every connection"
+        ),
+    )
     PROTOCOL_VERSION: int = Field(
         default=4,
         ge=3,
@@ -184,6 +215,16 @@ class ScyllaDBConfig(BaseModel):
             raise InvalidArgumentError(
                 argument_name="authentication",
                 additional_data={"error": "Both username and password must be provided together"},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_ssl(self) -> Self:
+        """Validate that the client certificate and key are provided together."""
+        if (self.SSL_CERT_FILE is None) != (self.SSL_KEY_FILE is None):
+            raise InvalidArgumentError(
+                argument_name="ssl",
+                additional_data={"error": "SSL_CERT_FILE and SSL_KEY_FILE must be provided together"},
             )
         return self
 

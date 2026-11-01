@@ -40,6 +40,22 @@ SCYLLADB__CONNECT_TIMEOUT=10
 SCYLLADB__REQUEST_TIMEOUT=10
 ```
 
+### TLS and mutual TLS
+
+Credentials and data are sent in plaintext unless TLS is enabled. The server certificate is always verified.
+
+```bash
+SCYLLADB__SSL_ENABLED=true
+SCYLLADB__SSL_CA_FILE=/etc/ssl/scylla/ca.pem        # system CAs when unset
+SCYLLADB__SSL_CERT_FILE=/etc/ssl/scylla/client.pem  # mutual TLS, needs SSL_KEY_FILE
+SCYLLADB__SSL_KEY_FILE=/etc/ssl/scylla/client.key
+SCYLLADB__SSL_SERVER_NAME=db.internal               # when the certificate name differs from the contact point
+```
+
+`SSL_VERIFY_HOSTNAME` defaults to `true`; turn it off only in tests. A resumed TLS session skips the certificate check,
+so a revoked certificate can be accepted until the cached session expires. Set `SSL_SESSION_CACHE_ENABLED=false` to
+check on every connection.
+
 ### Direct Configuration
 
 ```python

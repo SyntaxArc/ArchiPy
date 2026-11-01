@@ -7,6 +7,7 @@ supporting both synchronous and asynchronous database operations.
 import asyncio
 import logging
 import re
+import ssl
 import time
 import warnings
 from typing import Any, Final, NoReturn, TypedDict, override
@@ -86,6 +87,34 @@ def _warn_ignored_pool_settings(config: ScyllaDBConfig) -> None:
             DeprecationWarning,
             stacklevel=3,
         )
+
+
+def _ssl_cluster_kwargs(config: ScyllaDBConfig) -> dict[str, Any]:
+    """Build the TLS arguments for ``Cluster`` from the configuration.
+
+    The server certificate is always verified (``CERT_REQUIRED``). Hostname checking, a client certificate for
+    mutual TLS and TLS session resumption follow the ``SSL_*`` settings.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+
+    Returns:
+        dict[str, Any]: Keyword arguments for ``Cluster``; empty when TLS is disabled.
+    """
+    if not config.SSL_ENABLED:
+        return {}
+    context = ssl.create_default_context(cafile=config.SSL_CA_FILE)
+    if config.SSL_CERT_FILE and config.SSL_KEY_FILE:
+        context.load_cert_chain(certfile=config.SSL_CERT_FILE, keyfile=config.SSL_KEY_FILE)
+    if not config.SSL_VERIFY_HOSTNAME:
+        logger.warning("ScyllaDB TLS host name verification is disabled")
+        context.check_hostname = False
+    kwargs: dict[str, Any] = {"ssl_context": context}
+    if config.SSL_SERVER_NAME:
+        kwargs["ssl_options"] = {"server_hostname": config.SSL_SERVER_NAME}
+    if not config.SSL_SESSION_CACHE_ENABLED:
+        kwargs["ssl_session_cache"] = None
+    return kwargs
 
 
 class _HostPoolStat(TypedDict):
@@ -322,6 +351,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             },
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
+            **_ssl_cluster_kwargs(self.config),
         )
         _warn_ignored_pool_settings(self.config)
 
@@ -937,6 +967,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             },
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
+            **_ssl_cluster_kwargs(self.config),
         )
         _warn_ignored_pool_settings(self.config)
 

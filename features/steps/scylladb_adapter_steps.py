@@ -1335,6 +1335,166 @@ def step_build_scylladb_cluster(context: Context, setting: str, value: int) -> N
     context.cluster_warnings = [str(item.message) for item in caught if issubclass(item.category, DeprecationWarning)]
 
 
+def _write_test_certificates(directory: str) -> tuple[str, str, str]:
+    """Write a throwaway CA plus a client certificate and key signed by it.
+
+    Args:
+        directory (str): Directory to write the PEM files into.
+
+    Returns:
+        tuple[str, str, str]: Paths of the CA certificate, client certificate and client key.
+    """
+    import datetime
+    from pathlib import Path
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.x509.oid import NameOID
+
+    now = datetime.datetime.now(datetime.UTC)
+
+    def make(common_name: str, key: ec.EllipticCurvePrivateKey, issuer: x509.Name | None, signer: Any, ca: bool) -> Any:  # noqa: ANN401
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)])
+        return (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(issuer or name)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now - datetime.timedelta(minutes=1))
+            .not_valid_after(now + datetime.timedelta(hours=1))
+            .add_extension(x509.BasicConstraints(ca=ca, path_length=None), critical=True)
+            .sign(signer, hashes.SHA256())
+        )
+
+    ca_key = ec.generate_private_key(ec.SECP256R1())
+    ca_cert = make("scylla-test-ca", ca_key, None, ca_key, ca=True)
+    client_key = ec.generate_private_key(ec.SECP256R1())
+    client_cert = make("scylla-test-client", client_key, ca_cert.subject, ca_key, ca=False)
+
+    paths = (Path(directory) / "ca.pem", Path(directory) / "client.pem", Path(directory) / "client.key")
+    paths[0].write_bytes(ca_cert.public_bytes(serialization.Encoding.PEM))
+    paths[1].write_bytes(client_cert.public_bytes(serialization.Encoding.PEM))
+    paths[2].write_bytes(
+        client_key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.TraditionalOpenSSL,
+            serialization.NoEncryption(),
+        ),
+    )
+    return str(paths[0]), str(paths[1]), str(paths[2])
+
+
+@when(
+    "I build a ScyllaDB cluster with TLS enabled {enabled}, host name check {hostname}, client certificate {mtls}, "
+    'server name "{server_name}" and session cache {cache}',
+)
+def step_build_scylladb_tls_cluster(
+    context: Context,
+    enabled: str,
+    hostname: str,
+    mtls: str,
+    server_name: str,
+    cache: str,
+) -> None:
+    """Build the cluster without connecting, with TLS settings, and keep it for assertions.
+
+    Args:
+        context (Context): Behave context.
+        enabled (str): "yes" or "no" for SSL_ENABLED.
+        hostname (str): "yes" or "no" for SSL_VERIFY_HOSTNAME.
+        mtls (str): "yes" to load a client certificate and key.
+        server_name (str): SSL_SERVER_NAME, or "-" for none.
+        cache (str): "yes" or "no" for SSL_SESSION_CACHE_ENABLED.
+    """
+    import tempfile
+
+    from archipy.adapters.scylladb.adapters import ScyllaDBAdapter
+    from archipy.configs.config_template import ScyllaDBConfig
+
+    with tempfile.TemporaryDirectory() as directory:
+        ca_file, cert_file, key_file = _write_test_certificates(directory)
+        updates: dict[str, Any] = {
+            "SSL_ENABLED": enabled == "yes",
+            "SSL_CA_FILE": ca_file,
+            "SSL_VERIFY_HOSTNAME": hostname == "yes",
+            "SSL_SERVER_NAME": None if server_name == "-" else server_name,
+            "SSL_SESSION_CACHE_ENABLED": cache == "yes",
+        }
+        if mtls == "yes":
+            updates |= {"SSL_CERT_FILE": cert_file, "SSL_KEY_FILE": key_file}
+        config = ScyllaDBConfig.model_validate(get_scylladb_adapter(context).config.model_dump() | updates)
+        adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
+        adapter.config = config
+        context.cluster = adapter._create_cluster()
+    context.cluster_config = config
+
+
+@then("the ScyllaDB cluster should {expectation} TLS with a verified server certificate")
+def step_cluster_tls_state(context: Context, expectation: str) -> None:
+    """Check whether the cluster carries a TLS context that requires and loads a CA certificate.
+
+    Args:
+        context (Context): Behave context.
+        expectation (str): "use" or "not use".
+    """
+    import ssl
+
+    ssl_context = context.cluster.ssl_context
+    if expectation == "not use":
+        assert ssl_context is None, ssl_context
+        return
+    assert ssl_context is not None
+    assert ssl_context.verify_mode == ssl.CERT_REQUIRED, ssl_context.verify_mode
+    assert ssl_context.cert_store_stats()["x509_ca"] == 1, ssl_context.cert_store_stats()
+    assert ssl_context.check_hostname is context.cluster_config.SSL_VERIFY_HOSTNAME, ssl_context.check_hostname
+
+
+@then('the TLS server name should be "{server_name}" and the session cache should be {cache}')
+def step_cluster_tls_options(context: Context, server_name: str, cache: str) -> None:
+    """Check the TLS server name option and whether session resumption stays enabled.
+
+    Args:
+        context (Context): Behave context.
+        server_name (str): Expected server name, or "-" for none.
+        cache (str): "yes" if the cache stays enabled, "no" if disabled.
+    """
+    options = context.cluster.ssl_options or {}
+    expected = None if server_name == "-" else server_name
+    assert options.get("server_hostname") == expected, options
+    if context.cluster.ssl_context is not None:  # without TLS the driver keeps no session cache at all
+        assert (context.cluster.ssl_session_cache is None) is (cache == "no"), context.cluster.ssl_session_cache
+
+
+@when("I build a ScyllaDB config with only a client {part}")
+def step_build_config_partial_mtls(context: Context, part: str) -> None:
+    """Try to build a config with a client certificate or key but not both, and record the error.
+
+    Args:
+        context (Context): Behave context.
+        part (str): "certificate" or "key".
+    """
+    from archipy.configs.config_template import ScyllaDBConfig
+
+    field = "SSL_CERT_FILE" if part == "certificate" else "SSL_KEY_FILE"
+    context.config_error = None
+    try:
+        ScyllaDBConfig(SSL_ENABLED=True, **{field: "/tmp/unused.pem"})
+    except Exception as e:  # noqa: BLE001
+        context.config_error = e
+
+
+@then("building the config should fail with InvalidArgumentError")
+def step_config_invalid_argument(context: Context) -> None:
+    """Assert the config rejected the incomplete client certificate pair.
+
+    Args:
+        context (Context): Behave context.
+    """
+    assert isinstance(context.config_error, errors.InvalidArgumentError), context.config_error
+
+
 @then("the default execution profile should use the configured request timeout and retry policy")
 def step_default_profile_configured(context: Context) -> None:
     """Check the default execution profile carries the configured timeout and a retry policy.
