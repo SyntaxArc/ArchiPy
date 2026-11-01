@@ -4902,12 +4902,11 @@ is left out, since it can carry internals such as database URLs.</p>
 configured for each method based on how frequently the data typically changes:</p>
 <ul>
 <li>Public keys and certificate information: 1 hour</li>
-<li>User information from tokens: 30 seconds</li>
 <li>User details and role information: 5 minutes</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Token validation is never cached. Write operations such as user creation and updates clear the relevant caches.</p>
+<p>Token validation, <code>get_userinfo</code> and <code>check_permissions_batch</code> are never cached by the adapters. Write operations such as user creation and updates clear the relevant caches.</p>
 </div>
 <p>You can clear all caches if needed. <code>clear_all_caches()</code> works with or without admin mode: it never builds the admin
 client or logs in to Keycloak.</p>
