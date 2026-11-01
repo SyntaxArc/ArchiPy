@@ -1385,6 +1385,79 @@ def step_single_replica_warning(context: Context, expectation: str) -> None:
     assert found is (expectation == "contain"), messages
 
 
+@when('I select every row of "{table}" after inserting {count:d} rows with a fetch size of {fetch_size:d}')
+async def step_select_paged(context: Context, table: str, count: int, fetch_size: int) -> None:
+    """Insert rows, shrink the fetch size so the result spans several pages and select them all.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        count (int): Number of rows to insert.
+        fetch_size (int): Driver fetch size for the session.
+    """
+    adapter = get_scylladb_adapter(context)
+    for row_id in range(count):
+        await _call_adapter(adapter, "insert", table, {"id": row_id, "name": f"n{row_id}", "age": row_id})
+    adapter._session.default_fetch_size = fetch_size
+    rows = await _call_adapter(adapter, "select", table)
+    _get_scenario_context(context).scylla_result = str(len(rows))
+
+
+@when(
+    "I build a ScyllaDB cluster with credentials {credentials}, TLS {tls} and verification {verify} and capture the log",
+)
+def step_build_cluster_capture_security_log(context: Context, credentials: str, tls: str, verify: str) -> None:
+    """Build the cluster without connecting and keep the warnings the adapter logged.
+
+    Args:
+        context (Context): Behave context.
+        credentials (str): "set" or "unset".
+        tls (str): "on" or "off".
+        verify (str): "CERT_REQUIRED" or "CERT_NONE".
+    """
+    from pydantic import SecretStr
+
+    from archipy.adapters.scylladb.adapters import ScyllaDBAdapter
+
+    updates: dict[str, Any] = {
+        "USERNAME": "user" if credentials == "set" else None,
+        "PASSWORD": SecretStr("secret") if credentials == "set" else None,
+        "TLS_ENABLED": tls == "on",
+        "TLS_VERIFY_MODE": verify,
+    }
+    config = get_scylladb_adapter(context).config.model_copy(update=updates)
+    adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
+    adapter.config = config
+    records: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record.getMessage())
+
+    handler = _Capture(level=logging.WARNING)
+    adapter_logger = logging.getLogger("archipy.adapters.scylladb.adapters")
+    adapter_logger.addHandler(handler)
+    try:
+        adapter._create_cluster()
+    finally:
+        adapter_logger.removeHandler(handler)
+    _get_scenario_context(context).scylla_log = records
+
+
+@then("the adapter log should {expectation} the {kind} warning")
+def step_security_warning(context: Context, expectation: str, kind: str) -> None:
+    """Assert whether a plaintext credentials or disabled verification warning was logged.
+
+    Args:
+        context (Context): Behave context.
+        expectation (str): "contain" or "not contain".
+        kind (str): "plaintext credentials" or "disabled verification".
+    """
+    needle = "plain text" if kind == "plaintext credentials" else "verification is disabled"
+    messages = _get_scenario_context(context).scylla_log
+    assert any(needle in message for message in messages) is (expectation == "contain"), messages
+
+
 @when(
     'I create the keyspace "{keyspace}" with an explicit replication factor {factor:d} under the default configuration',
 )

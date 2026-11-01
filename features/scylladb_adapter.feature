@@ -456,6 +456,24 @@ Feature: ScyllaDB Adapter
       | rf_two_as | 2      | not contain |
 
   @needs-scylladb
+  Scenario Outline: Select returns every page of a multi-page result
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "page_<mode>"
+    When I select every row of "page_<mode>" after inserting 25 rows with a fetch size of 7
+    Then the ScyllaDB result should be "25"
+
+  Scenario Outline: Insecure connection settings log a warning
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with credentials <credentials>, TLS <tls> and verification <verify> and capture the log
+    Then the adapter log should <plain> the plaintext credentials warning
+    And the adapter log should <noverify> the disabled verification warning
+
+    Examples: Settings
+      | credentials | tls | verify        | plain       | noverify    |
+      | set         | off | CERT_REQUIRED | contain     | not contain |
+      | set         | on  | CERT_REQUIRED | not contain | not contain |
+      | unset       | off | CERT_REQUIRED | not contain | not contain |
+      | set         | on  | CERT_NONE     | not contain | contain     |
+
   Scenario Outline: An explicit replication factor applies under the default NetworkTopologyStrategy configuration
     Given a ScyllaDB adapter is configured
     When I create the keyspace "<keyspace>" with an explicit replication factor <factor> under the default configuration
