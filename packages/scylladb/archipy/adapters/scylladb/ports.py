@@ -160,6 +160,7 @@ class ScyllaDBPort(ABC):
         table: str,
         columns: list[str] | None = None,
         conditions: dict[str, Any] | None = None,
+        limit: int | None = None,
     ) -> list[Any]:
         """Select data from a table.
 
@@ -167,6 +168,8 @@ class ScyllaDBPort(ABC):
             table (str): The name of the table.
             columns (list[str] | None): List of columns to select. If None, selects all (*).
             conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+            limit (int | None): Maximum number of rows to return. If None, returns every matching row, which can be
+                large; pass a limit on big tables.
 
         Returns:
             list[Any]: List of result rows.
@@ -261,6 +264,8 @@ class ScyllaDBPort(ABC):
     @abstractmethod
     def count(self, table: str, conditions: dict[str, Any] | None = None) -> int:
         """Count rows in a table.
+
+        With conditions this runs with ``ALLOW FILTERING``, which scans the table; prefer partition key conditions.
 
         Args:
             table (str): The name of the table.
@@ -450,6 +455,7 @@ class AsyncScyllaDBPort(ABC):
         table: str,
         columns: list[str] | None = None,
         conditions: dict[str, Any] | None = None,
+        limit: int | None = None,
     ) -> list[Any]:
         """Select data from a table asynchronously.
 
@@ -457,6 +463,8 @@ class AsyncScyllaDBPort(ABC):
             table (str): The name of the table.
             columns (list[str] | None): List of columns to select. If None, selects all (*).
             conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+            limit (int | None): Maximum number of rows to return. If None, returns every matching row, which can be
+                large; pass a limit on big tables.
 
         Returns:
             list[Any]: List of result rows.
@@ -551,6 +559,8 @@ class AsyncScyllaDBPort(ABC):
     @abstractmethod
     async def count(self, table: str, conditions: dict[str, Any] | None = None) -> int:
         """Count rows in a table asynchronously.
+
+        With conditions this runs with ``ALLOW FILTERING``, which scans the table; prefer partition key conditions.
 
         Args:
             table (str): The name of the table.
