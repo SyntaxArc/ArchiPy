@@ -366,6 +366,19 @@ def step_then_postgres_parts(context, user, password, host, port, database):
     assert actual == (user, password, host, port, database), actual
 
 
+@then(
+    'the PostgreSQL options should be SSL_MODE "{ssl_mode}", SSL_ROOT_CERT "{root_cert}", '
+    'APPLICATION_NAME "{app}" and CONNECT_TIMEOUT "{timeout}"',
+)
+def step_then_postgres_options(context, ssl_mode, root_cert, app, timeout):
+    config = get_current_scenario_context(context).get("postgres_config")
+    actual = tuple(
+        "(none)" if value is None else str(value)
+        for value in (config.SSL_MODE, config.SSL_ROOT_CERT, config.APPLICATION_NAME, config.CONNECT_TIMEOUT)
+    )
+    assert actual == (ssl_mode, root_cert, app, timeout), actual
+
+
 @then('an invalid PostgreSQL configuration with password "{password}" should not echo it in its error')
 def step_then_postgres_error_hides_password(context, password):
     try:
