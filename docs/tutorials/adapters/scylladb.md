@@ -65,17 +65,16 @@ config = ScyllaDBConfig(
 )
 ```
 
-### Connection Pool Configuration
+### Connection Pool Monitoring
+
+`scylla-driver` keeps one connection per host (per shard when shard-aware), so there is no pool to size.
+`MAX_CONNECTIONS_PER_HOST`, `MIN_CONNECTIONS_PER_HOST`, `CORE_CONNECTIONS_PER_HOST` and `MAX_REQUESTS_PER_CONNECTION` have
+no effect, are deprecated and will be removed in 6.0.0. To watch the connections, turn on monitoring:
 
 ```python
 config = ScyllaDBConfig(
     CONTACT_POINTS=["localhost"],
     PORT=9042,
-    # Connection pool settings (recommended: 1-3 connections per CPU core)
-    MAX_CONNECTIONS_PER_HOST=2,
-    MIN_CONNECTIONS_PER_HOST=1,
-    CORE_CONNECTIONS_PER_HOST=1,
-    MAX_REQUESTS_PER_CONNECTION=100,
     ENABLE_CONNECTION_POOL_MONITORING=True,
 )
 ```
@@ -640,28 +639,30 @@ logger = logging.getLogger(__name__)
 
 adapter = ScyllaDBAdapter()
 
-try:
-    result = adapter.select("nonexistent_table")
-except NotFoundError as e:
-    # The adapter's exception handler will have already
-    # converted the exception with proper chaining using `from e`
-    logger.error(f"Table not found: {e}")
-    raise
-except DatabaseQueryError as e:
-    logger.error(f"Query error: {e}")
-    raise
-except ServiceUnavailableError as e:
-    logger.error(f"ScyllaDB unavailable: {e}")
-    raise
-except ConnectionTimeoutError as e:
-    logger.error(f"Connection timeout: {e}")
-    raise
-except DatabaseConnectionError as e:
-    logger.error(f"Connection error: {e}")
-    raise
-else:
-    logger.info(f"Query executed successfully, found {len(result)} rows")
-    return result
+
+def read_rows(table: str) -> list:
+    """Select every row of a table and log how it went."""
+    try:
+        result = adapter.select(table)
+    except NotFoundError as e:
+        # The adapter's exception handler already chained the driver error with `from e`
+        logger.error(f"Table not found: {e}")
+        raise
+    except ServiceUnavailableError as e:
+        logger.error(f"ScyllaDB unavailable: {e}")
+        raise
+    except ConnectionTimeoutError as e:
+        logger.error(f"Connection timeout: {e}")
+        raise
+    except DatabaseConnectionError as e:
+        logger.error(f"Connection error: {e}")
+        raise
+    except DatabaseQueryError as e:
+        logger.error(f"Query error: {e}")
+        raise
+    else:
+        logger.info(f"Query executed successfully, found {len(result)} rows")
+        return result
 ```
 
 ## Complete Example
