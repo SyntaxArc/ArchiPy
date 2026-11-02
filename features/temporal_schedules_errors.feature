@@ -104,6 +104,16 @@ Feature: Temporal Schedules, Timeouts and Errors
     When I try to list workflows with query "this is not a valid query ((("
     Then the error should be the ArchiPy TemporalError
 
+  Scenario Outline: A managed worker whose shutdown <outcome> leads the manager to <tracking> it
+    Given a Temporal worker manager is configured
+    When I stop a managed worker whose shutdown <outcome>
+    Then the manager should <tracking> the worker
+
+    Examples: Shutdown outcomes
+      | outcome   | tracking |
+      | times out | keep     |
+      | succeeds  | forget   |
+
   Scenario: Starting a running workflow ID again raises AlreadyExistsError
     Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
     When I start workflow "SignalQueryWorkflow" with workflow id "dup-start-1"

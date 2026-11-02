@@ -19,28 +19,11 @@ from typing import Any, TypeVar
 
 import httpx2
 from behave import given, then, when
-from temporalio.client import Interceptor as ClientInterceptor
-from temporalio.client import OutboundInterceptor, StartWorkflowInput, WithStartWorkflowOperation, WorkflowFailureError
-from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput, WorkflowInterceptorClassInput
-from temporalio.worker import Interceptor as WorkerInterceptor
-from temporalio.common import WorkflowIDConflictPolicy
-from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
-from temporalio.worker import WorkerDeploymentConfig, WorkerDeploymentVersion
-from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
-
-from archipy.adapters.temporal import runtime as temporal_runtime_module
-from archipy.adapters.temporal.adapters import TemporalAdapter
-from archipy.adapters.temporal.base import AtomicActivity, BaseActivity
-from archipy.adapters.temporal.runtime import TemporalRuntimeManager
-from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
-from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
-from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import OtelMetricsExporter, TemporalConfig
-from archipy.models.errors import BaseError, ConfigurationError, InvalidArgumentError
 from features.steps.elastic_apm_steps import apm_endpoint, wait_for_apm_metric
 from features.test_helpers import get_current_scenario_context
 from features.test_helpers_otel import CollectorTelemetry
 from features.test_workflows.temporal_activities import (
+    OrderPayload,
     calculation_activity,
     charge_payment,
     counter_activity,
@@ -48,7 +31,6 @@ from features.test_workflows.temporal_activities import (
     failing_activity,
     greeting_activity,
     long_running_activity,
-    OrderPayload,
     notify_customer,
     refund_payment,
     release_inventory,
@@ -57,9 +39,9 @@ from features.test_workflows.temporal_activities import (
     status_activity,
 )
 from features.test_workflows.temporal_workflows import (
-    ChangedGreetingWorkflow,
     BaseGreetingWorkflow,
     CalculatorWorkflow,
+    ChangedGreetingWorkflow,
     ConcurrentActivitiesWorkflow,
     DailyReminderWorkflow,
     DataProcessingWorkflow,
@@ -74,6 +56,39 @@ from features.test_workflows.temporal_workflows import (
     TimeoutWorkflow,
     ValueErrorWorkflow,
 )
+from temporalio.client import (
+    Interceptor as ClientInterceptor,
+    OutboundInterceptor,
+    ScheduleIntervalSpec,
+    ScheduleOverlapPolicy,
+    SchedulePolicy,
+    ScheduleSpec,
+    StartWorkflowInput,
+    WithStartWorkflowOperation,
+    WorkflowFailureError,
+)
+from temporalio.common import WorkflowIDConflictPolicy
+from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
+from temporalio.worker import (
+    ActivityInboundInterceptor,
+    ExecuteActivityInput,
+    Interceptor as WorkerInterceptor,
+    WorkerDeploymentConfig,
+    WorkerDeploymentVersion,
+    WorkflowInterceptorClassInput,
+)
+
+from archipy.adapters.temporal import runtime as temporal_runtime_module
+from archipy.adapters.temporal.adapters import TemporalAdapter
+from archipy.adapters.temporal.base import AtomicActivity, BaseActivity
+from archipy.adapters.temporal.ports import WorkerHandle as PortWorkerHandle
+from archipy.adapters.temporal.runtime import TemporalRuntimeManager
+from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
+from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
+from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import OtelMetricsExporter, TemporalConfig
+from archipy.models.errors import BaseError, ConfigurationError, InvalidArgumentError
+from archipy.models.errors.temporal_errors import WorkerShutdownError
 
 T = TypeVar("T")
 
@@ -433,7 +448,7 @@ def step_start_workflow_with_id(context, workflow_name, arg, workflow_id):
     assert workflow_class is not None, f"Unknown workflow: {workflow_name}"
 
     # Treat empty string as no argument
-    effective_arg = arg if arg else None
+    effective_arg = arg or None
 
     async def run():
         return await adapter.start_workflow(
@@ -620,7 +635,7 @@ def step_start_workflow_with_metadata(context, workflow_name, arg):
             workflow_class,
             arg,
             task_queue="test-queue",
-            memo=memo if memo else None,
+            memo=memo or None,
         )
         return handle
 
@@ -1708,7 +1723,7 @@ def step_processed_data_should_have_item_count(context, count):
 def step_temporal_adapter_config_should_have_client_identity(context, identity: str) -> None:
     """Verify Temporal adapter config has the expected client identity."""
     adapter = get_temporal_adapter(context)
-    assert adapter.config.CLIENT_IDENTITY == identity, (
+    assert identity == adapter.config.CLIENT_IDENTITY, (
         f"Expected CLIENT_IDENTITY {identity}, got {adapter.config.CLIENT_IDENTITY}"
     )
     context.logger.info("Temporal adapter config has client identity %s", identity)
@@ -2790,3 +2805,40 @@ def step_runtime_different_settings(context):
 def step_runtime_warning(context):
     warnings_logged = get_current_scenario_context(context).get("runtime_warnings")
     assert any("ignoring different settings: global_tags" in message for message in warnings_logged), warnings_logged
+
+
+class StubbornWorkerHandle(PortWorkerHandle):
+    """Worker handle whose stop fails (as after a shutdown timeout) while it keeps running."""
+
+    def __init__(self, fail_stop: bool) -> None:
+        self.worker_id = "stubborn-worker"
+        self.task_queue = "stubborn-queue"
+        self.is_running = True
+        self.fail_stop = fail_stop
+
+    async def stop(self, grace_period: int = 30) -> None:
+        if self.fail_stop:
+            raise WorkerShutdownError()
+        self.is_running = False
+
+
+@when("I stop a managed worker whose shutdown {outcome}")
+def step_stop_stubborn_worker(context, outcome):
+    manager = get_temporal_worker_manager(context)
+    handle = StubbornWorkerHandle(fail_stop=outcome == "times out")
+    manager._workers[handle.worker_id] = handle
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("stubborn_handle", handle)
+    try:
+        run_async(context, manager.stop_worker(handle))
+    except WorkerShutdownError as error:
+        scenario_context.error = error
+
+
+@then("the manager should {tracking} the worker")
+def step_manager_tracking(context, tracking):
+    manager = get_temporal_worker_manager(context)
+    handle = get_current_scenario_context(context).get("stubborn_handle")
+    tracked = handle.worker_id in manager._workers
+    manager._workers.pop(handle.worker_id, None)  # keep the scenario cleanup from stopping the stub
+    assert tracked == (tracking == "keep"), f"tracked={tracked}"
