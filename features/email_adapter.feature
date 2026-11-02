@@ -207,6 +207,22 @@ Feature: Email adapter
     Then the local HTTP server was asked for "/remote.pdf"
     And the delivered email has attachment "remote.pdf" of type "application/pdf" with content "url body"
 
+  Scenario Outline: A URL attachment source is restricted
+    Given no SMTP server is configured
+    And the URL attachment hosts "allowed.example.org" are allowed
+    When I try to create a URL attachment from "<url>"
+    Then the attachment is rejected as an invalid argument with reason "<reason>"
+
+    Examples:
+      | url                       | reason                 |
+      | file:///etc/passwd        | unsupported_url_scheme |
+      | http://127.0.0.1:9/secret | url_host_not_allowed   |
+
+  Scenario: A URL attachment larger than the maximum size is rejected while streaming
+    Given no SMTP server is configured
+    When I try to create a URL attachment of 20 bytes with a maximum size of 10 bytes
+    Then the attachment is rejected as an invalid argument with reason "url_content_too_large"
+
   Scenario: Reject an attachment larger than the explicit maximum size
     When I try to create a BINARY attachment "big.bin" of 20 bytes with a maximum size of 10 bytes
     Then the attachment is rejected as an invalid argument for exceeding the maximum size
@@ -258,6 +274,22 @@ Feature: Email adapter
     And the adapter holds no open SMTP session
 
   # Fault injection: see above.
+  # Fault injection: a real server would reject the message the same way, but Mailpit accepts every message.
+  Scenario: A permanent rejection is not retried
+    Given the Mailpit SMTP server is configured
+    And every SMTP send is rejected with code 550
+    And an email adapter
+    When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then an unavailable error is raised for "SMTP"
+    And the SMTP server was tried 1 time
+
+  Scenario: A subject with a line break is rejected as an invalid argument
+    Given the Mailpit SMTP server is configured
+    And an email adapter
+    When I try to send an email to "alice@example.com" with a subject containing a line break
+    Then an invalid argument error is raised for "message"
+    And Mailpit holds 0 emails
+
   Scenario: Transient send failure closes the broken session and retries on a new one
     Given the Mailpit SMTP server is configured
     And the next 1 SMTP sends fail
