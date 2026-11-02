@@ -18,7 +18,7 @@ from archipy.adapters.redis.mocks import AsyncRedisMock, RedisMock
 from pydantic import ValidationError
 
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import RedisConfig
+from archipy.configs.config_template import RedisConfig, RedisMode
 from archipy.models.errors import CacheError, ConfigurationError
 from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
 from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
@@ -118,6 +118,30 @@ def step_given_configured_adapter(context, adapter_type):
         redis_adapter = RedisAdapter(redis_config=cluster_container.cluster_config)
         scenario_context.adapter = redis_adapter
         logger.info("Redis cluster adapter configured successfully")
+
+
+@given(r"a configured cluster mock")
+def step_given_configured_cluster_mock(context):
+    """Set up a cluster-mode RedisMock without a real cluster."""
+    scenario_context = get_current_scenario_context(context)
+    redis_config = RedisConfig(
+        MODE=RedisMode.CLUSTER,
+        CLUSTER_NODES=["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"],
+        DECODE_RESPONSES=True,
+    )
+    scenario_context.adapter = RedisMock(redis_config=redis_config)
+
+
+@given(r"a configured async cluster mock")
+def step_given_configured_async_cluster_mock(context):
+    """Set up a cluster-mode AsyncRedisMock without a real cluster."""
+    scenario_context = get_current_scenario_context(context)
+    redis_config = RedisConfig(
+        MODE=RedisMode.CLUSTER,
+        CLUSTER_NODES=["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"],
+        DECODE_RESPONSES=True,
+    )
+    scenario_context.async_adapter = AsyncRedisMock(redis_config=redis_config)
 
 
 @given(r"a configured async (?P<adapter_type>mock|container|cluster)")
@@ -804,6 +828,13 @@ def step_when_get_cluster_slot_for_key(context, key):
     logger.info(f"Getting cluster slot for key '{key}'")
     slot = redis_adapter.cluster_key_slot(key)
     store_result(context, "cluster_slot", slot)
+
+
+@then(r"the cluster slot should be (?P<slot>[0-9]+)")
+def step_then_exact_cluster_slot(context, slot):
+    """Verify the stored cluster slot uses CRC16."""
+    stored_slot = get_result(context, "cluster_slot")
+    assert stored_slot == int(slot), f"Expected slot {slot}, got {stored_slot}"
 
 
 @then(r"the slot should be between 0 and 16383")

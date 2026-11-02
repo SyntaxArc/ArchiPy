@@ -971,7 +971,8 @@ else:
 
 Test Redis code against a real Redis started by `testcontainers` (tag the feature `@needs-redis`; the image comes from
 `REDIS__IMAGE` in `.env.test`). `RedisMock` and `fakeredis` are secondary options for logic-only scenarios; they do
-not reproduce every command. See [BDD Testing](../testing_strategy.md).
+not reproduce every command. A cluster-mode `RedisMock` answers `cluster_info`, `cluster_nodes`,
+`cluster_slots` and the CRC16 `cluster_key_slot`, so cluster logic can be tested without a cluster. See [BDD Testing](../testing_strategy.md).
 
 ## See Also
 

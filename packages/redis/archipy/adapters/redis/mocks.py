@@ -32,6 +32,28 @@ def _fake_cluster_info() -> dict[str, Any]:
     }
 
 
+def _fake_cluster_nodes() -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]]:
+    """Return fake cluster nodes info: three masters and three replicas."""
+    nodes: dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] = {}
+    for index in range(3):
+        nodes[f"127.0.0.1:700{index}"] = {
+            "host": "127.0.0.1",
+            "port": str(7000 + index),
+            "flags": "myself,master" if index == 0 else "master",
+            "master": "-",
+            "role": "master",
+        }
+    for index in range(3):
+        nodes[f"127.0.0.1:700{index + 3}"] = {
+            "host": "127.0.0.1",
+            "port": str(7003 + index),
+            "flags": "slave",
+            "master": f"127.0.0.1:700{index}",
+            "role": "replica",
+        }
+    return nodes
+
+
 def _fake_cluster_slots() -> list[tuple[int, int, list[str]]]:
     """Return fake cluster slots mapping."""
     slot1: tuple[int, int, list[str]] = (0, 5460, ["127.0.0.1", "7000"])
@@ -47,9 +69,9 @@ class FakeRedisClusterWrapper(fakeredis.FakeRedis):
         """Return fake cluster info."""
         return _fake_cluster_info()
 
-    def cluster_nodes(self) -> str:
+    def cluster_nodes(self) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]]:
         """Return fake cluster nodes info."""
-        return "fake cluster nodes info"
+        return _fake_cluster_nodes()
 
     def cluster_slots(self) -> list[tuple[int, int, list[str]]]:
         """Return fake cluster slots info."""
@@ -75,9 +97,9 @@ class FakeAsyncRedisClusterWrapper(FakeAsyncRedis):
         """Return fake cluster info."""
         return _fake_cluster_info()
 
-    async def cluster_nodes(self) -> str:
+    async def cluster_nodes(self) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]]:
         """Return fake cluster nodes info."""
-        return "fake cluster nodes info"
+        return _fake_cluster_nodes()
 
     async def cluster_slots(self) -> list[tuple[int, int, list[str]]]:
         """Return fake cluster slots info."""
