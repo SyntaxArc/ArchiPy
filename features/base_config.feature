@@ -139,6 +139,44 @@ Feature: Base Configuration System
       | SERIALIZABLE    | rejected |
       | REPEATABLE READ | rejected |
 
+  Scenario Outline: StarRocks CONNECT_TIMEOUT <connect> and READ_TIMEOUT <read> are <outcome>
+    When a StarRocks configuration is built with CONNECT_TIMEOUT <connect> and READ_TIMEOUT <read>
+    Then the StarRocks configuration should be <outcome>
+
+    Examples: Timeouts
+      | connect | read | outcome  |
+      | 10      | null | accepted |
+      | 5       | 30   | accepted |
+      | 0       | null | rejected |
+      | 10      | 0    | rejected |
+
+  Scenario: The StarRocks sync driver passes READ_TIMEOUT only when configured
+    When I build the sync starrocks driver options with READ_TIMEOUT set to 5
+    Then the driver options should be {"autocommit": false, "init_command": "SET enable_sql_transaction = TRUE", "connect_timeout": 10, "read_timeout": 5}
+
+  Scenario Outline: A PostgreSQL SSL_ROOT_CERT with SSL_MODE <mode> is <outcome> with a warning
+    When a PostgreSQL configuration is built with SSL_MODE "<mode>" and SSL_ROOT_CERT "<root_cert>"
+    Then a root certificate warning should be <outcome>
+
+    Examples: SSL modes
+      | mode        | root_cert   | outcome     |
+      | none        | /etc/ca.pem | emitted     |
+      | require     | /etc/ca.pem | emitted     |
+      | verify-ca   | /etc/ca.pem | not emitted |
+      | verify-full | /etc/ca.pem | not emitted |
+      | require     | none        | not emitted |
+
+  Scenario Outline: SQLite foreign key enforcement follows FOREIGN_KEYS <value> on the <kind> driver
+    When I read foreign_keys from a <kind> sqlite session manager with FOREIGN_KEYS <value>
+    Then the session setting should be <expected>
+
+    Examples: Foreign keys
+      | kind  | value | expected |
+      | sync  | false | 0        |
+      | sync  | true  | 1        |
+      | async | false | 0        |
+      | async | true  | 1        |
+
   Scenario Outline: A Vault client is refused when <problem>
     When a Vault client is built for <auth_method> auth when <problem>
     Then a ConfigurationError should be raised
@@ -193,31 +231,40 @@ Feature: Base Configuration System
     Then the configuration should be <outcome>
 
     Examples: Configuration checks
-      | section  | problem                                            | outcome  |
-      | Kafka    | SASL_SSL without credentials                       | rejected |
-      | Kafka    | SASL_SSL with credentials                          | accepted |
-      | Kafka    | auto commit and no offset reset                    | rejected |
-      | Kafka    | a heartbeat longer than the session                | rejected |
-      | Redis    | cluster mode without nodes                         | rejected |
-      | Redis    | cluster mode with nodes                            | accepted |
-      | Redis    | sentinel mode without a service name               | rejected |
-      | Redis    | standalone mode without a host                     | rejected |
-      | ScyllaDB | no contact points                                  | rejected |
-      | ScyllaDB | a username without a password                      | rejected |
-      | ScyllaDB | a minimum pool above the maximum                   | rejected |
-      | ScyllaDB | a client certificate without a key                 | rejected |
-      | ScyllaDB | a CA file with TLS disabled                        | rejected |
-      | ScyllaDB | TLS enabled with a CA file                         | accepted |
-      | ScyllaDB | an exponential reconnection base above the maximum | rejected |
-      | ScyllaDB | an exponential reconnection within bounds          | accepted |
-      | Temporal | only a client certificate                          | rejected |
-      | Temporal | only a CA certificate                              | accepted |
-      | Temporal | a client key without a certificate                 | rejected |
-      | Temporal | a run timeout above the execution one              | rejected |
-      | Temporal | a keep alive timeout above the interval            | rejected |
-      | Temporal | a task timeout above the run timeout               | accepted |
-      | Temporal | a verification name without a CA                   | rejected |
-      | Temporal | a verification name with a CA                      | accepted |
+      | section       | problem                                            | outcome  |
+      | Kafka         | SASL_SSL without credentials                       | rejected |
+      | Kafka         | SASL_SSL with credentials                          | accepted |
+      | Kafka         | auto commit and no offset reset                    | rejected |
+      | Kafka         | a heartbeat longer than the session                | rejected |
+      | Redis         | cluster mode without nodes                         | rejected |
+      | Redis         | cluster mode with nodes                            | accepted |
+      | Redis         | sentinel mode without a service name               | rejected |
+      | Redis         | standalone mode without a host                     | rejected |
+      | ScyllaDB      | no contact points                                  | rejected |
+      | ScyllaDB      | a username without a password                      | rejected |
+      | ScyllaDB      | a minimum pool above the maximum                   | rejected |
+      | ScyllaDB      | a client certificate without a key                 | rejected |
+      | ScyllaDB      | a CA file with TLS disabled                        | rejected |
+      | ScyllaDB      | TLS enabled with a CA file                         | accepted |
+      | ScyllaDB      | an exponential reconnection base above the maximum | rejected |
+      | ScyllaDB      | an exponential reconnection within bounds          | accepted |
+      | Elasticsearch | only a username                                    | rejected |
+      | Elasticsearch | only a password                                    | rejected |
+      | Elasticsearch | only an API key                                    | rejected |
+      | Elasticsearch | only an API secret                                 | rejected |
+      | Elasticsearch | a username and password                            | accepted |
+      | Elasticsearch | a client key without a certificate                 | rejected |
+      | Elasticsearch | a client certificate and key                       | accepted |
+      | Elasticsearch | an unknown node selector                           | rejected |
+      | Elasticsearch | the random node selector                           | accepted |
+      | Temporal      | only a client certificate                          | rejected |
+      | Temporal      | only a CA certificate                              | accepted |
+      | Temporal      | a client key without a certificate                 | rejected |
+      | Temporal      | a run timeout above the execution one              | rejected |
+      | Temporal      | a keep alive timeout above the interval            | rejected |
+      | Temporal      | a task timeout above the run timeout               | accepted |
+      | Temporal      | a verification name without a CA                   | rejected |
+      | Temporal      | a verification name with a CA                      | accepted |
 
   Scenario Outline: A ScyllaDB configuration with <tls> builds <context>
     When a ScyllaDB TLS context is built with <tls>
@@ -267,9 +314,22 @@ Feature: Base Configuration System
     Then the client retry backoff should be <expected>
 
     Examples: Retry backoff
-      | base | cap  | expected  |
-      | none | none | default   |
-      | 0.5  | 8    | 0.5 and 8 |
+      | base | cap  | expected   |
+      | none | none | default    |
+      | 0.5  | 8    | 0.5 and 8  |
+      | 0.5  | none | 0.5 and 30 |
+      | 45   | none | 45 and 45  |
+
+  Scenario Outline: The Elasticsearch config warns about credentials with <transport>
+    When an Elasticsearch config is built with <credential> and <transport>
+    Then the Elasticsearch config should log <count> security warning
+
+    Examples: Insecure transport
+      | credential     | transport              | count |
+      | credentials    | an http host           | 1     |
+      | credentials    | verification disabled  | 1     |
+      | credentials    | https and verification | 0     |
+      | no credentials | an http host           | 0     |
 
   Scenario Outline: The Elasticsearch config rejects bearer auth combined with <other> auth
     When I validate an Elasticsearch config with BEARER_AUTH and <other> auth

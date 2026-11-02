@@ -2,6 +2,7 @@
 
 from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
 from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
+from archipy.models.dtos.redis.search.escaping import escape_tag, escape_text, quote_phrase
 from archipy.models.dtos.redis.search.index_schema_dto import (
     IndexSchemaDTO,
     NumericFieldConfig,
@@ -25,4 +26,7 @@ __all__ = [
     "TagFieldConfig",
     "TextFieldConfig",
     "VectorFieldConfig",
+    "escape_tag",
+    "escape_text",
+    "quote_phrase",
 ]

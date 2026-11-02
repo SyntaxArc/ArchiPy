@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import logging
 import time
@@ -256,6 +257,8 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         self._admin_adapter: KeycloakAdmin | None = None
         self._admin_token_expiry: float = 0.0
         self._uma_adapter: KeycloakUMA | None = None
+        # Serializes admin token refreshes so concurrent coroutines trigger a single login.
+        self._admin_lock = asyncio.Lock()
 
         # Initialize admin client if admin mode is enabled and credentials are provided
         if self.configs.IS_ADMIN_MODE_ENABLED and (
@@ -350,6 +353,67 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
             self._admin_adapter = None
             self._admin_token_expiry = 0
             self._handle_keycloak_exception(e, "_initialize_admin_client")
+
+    def _admin_credentials_configured(self) -> bool:
+        """Tell whether admin mode is on and credentials exist for an admin client."""
+        return bool(
+            self.configs.IS_ADMIN_MODE_ENABLED
+            and (self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD)),
+        )
+
+    def _admin_is_fresh(self) -> bool:
+        return self._admin_adapter is not None and time.time() < self._admin_token_expiry
+
+    async def _ensure_admin(self) -> None:
+        """Refresh the admin client without blocking the event loop when its token is missing or about to expire.
+
+        Concurrent callers wait on one lock, so only the first of them logs in. The sync ``admin_adapter`` property
+        stays as it was and finds a fresh client afterwards.
+
+        Raises:
+            UnauthenticatedError: If the admin login is rejected.
+            ConnectionTimeoutError: If Keycloak cannot be reached.
+        """
+        if not self._admin_credentials_configured() or self._admin_is_fresh():
+            return
+        async with self._admin_lock:
+            if self._admin_is_fresh():
+                return
+            await self._a_initialize_admin_client()
+
+    async def _a_initialize_admin_client(self) -> None:
+        """Async variant of ``_initialize_admin_client``."""
+        if self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD:
+            # KeycloakAdmin logs in while it is built, so build it in a worker thread.
+            await asyncio.to_thread(self._initialize_admin_client)
+            return
+        try:
+            token = await self.openid_adapter.a_token(grant_type="client_credentials")
+            self._admin_token_expiry = time.time() + token.get("expires_in", 60) - 30
+            self._admin_adapter = with_sync_proxies(
+                KeycloakAdmin(
+                    server_url=self.configs.SERVER_URL,
+                    realm_name=self.configs.REALM_NAME,
+                    token=token,
+                    **client_options(self.configs, with_proxies=False),
+                ),
+                self.configs,
+            )
+            logger.debug("Admin client initialized with client credentials")
+        except KeycloakAuthenticationError as e:
+            self._admin_adapter = None
+            self._admin_token_expiry = 0
+            raise UnauthenticatedError(
+                additional_data={"detail": "Failed to authenticate with Keycloak service account"},
+            ) from e
+        except KeycloakConnectionError as e:
+            self._admin_adapter = None
+            self._admin_token_expiry = 0
+            raise ConnectionTimeoutError(service="keycloak") from e
+        except KeycloakError as e:
+            self._admin_adapter = None
+            self._admin_token_expiry = 0
+            self._handle_keycloak_exception(e, "_a_initialize_admin_client")
 
     @property
     def admin_adapter(self) -> KeycloakAdmin:

@@ -59,6 +59,22 @@ CONNECTION_EXCEPTIONS = (
 )
 
 
+OBJECT_OPERATIONS = frozenset(
+    {
+        "copy_object",
+        "get_object",
+        "get_object_stream",
+        "get_object_tags",
+        "object_exists",
+        "remove_object_tags",
+        "remove_object_version",
+        "set_object_tags",
+        "stat_object",
+        "presigned_get_object",
+    },
+)
+
+
 def _raise_invalid_argument(argument_name: str) -> NoReturn:
     """Raise InvalidArgumentError outside try bodies (TRY301)."""
     raise InvalidArgumentError(argument_name=argument_name)
@@ -80,8 +96,13 @@ class MinioExceptionHandlerMixin:
         """
         error_code = exception.response.get("Error", {}).get("Code", "")
 
+        # A bare 404 (e.g. from HEAD requests) is ambiguous: use the operation to tell objects from buckets
+        if error_code == "404":
+            resource_type = "object" if operation in OBJECT_OPERATIONS else "bucket"
+            raise NotFoundError(resource_type=resource_type) from exception
+
         # Bucket existence errors
-        if error_code in ("NoSuchBucket", "404"):
+        if error_code == "NoSuchBucket":
             raise NotFoundError(resource_type="bucket") from exception
 
         # Object existence errors

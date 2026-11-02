@@ -179,6 +179,10 @@ else:
     `ENABLE_IDEMPOTENCE` requires `ACKS="all"` (the default), and `TRANSACTIONAL_ID` requires `ENABLE_IDEMPOTENCE`.
     Other combinations raise a `ConfigurationError` when the config is validated.
 
+!!! note
+    `SECURITY_PROTOCOL` and `SASL_MECHANISM` are case-insensitive (`ssl` equals `SSL`). `SECURITY_PROTOCOL` must be
+    `PLAINTEXT`, `SSL`, `SASL_PLAINTEXT` or `SASL_SSL`; any other value raises a `ConfigurationError`.
+
 ```python
 import logging
 
@@ -205,7 +209,8 @@ except InternalError as e:
 else:
     logger.info("Message enqueued successfully")
 
-# Publish with a message key (for partition affinity)
+# Publish with a message key (for partition affinity). Without a key the message is currently sent with an empty
+# key (b""), which emits a DeprecationWarning; set KAFKA.EMPTY_KEY_FOR_MISSING_KEY=False to send no key (None).
 try:
     producer.produce("Hello, Kafka with key!", key="user-123")
 except InternalError as e:
@@ -213,6 +218,15 @@ except InternalError as e:
     raise
 else:
     logger.info("Keyed message enqueued")
+
+# Observe the delivery outcome: the callback runs while the producer is polled (later produce calls and flush).
+# A failed delivery is also logged with topic, partition and key length, never with the payload.
+def on_delivery(error, message):
+    if error is not None:
+        logger.error("Delivery to %s failed: %s", message.topic(), error)
+
+
+producer.produce("Hello, Kafka with callback!", on_delivery=on_delivery)
 
 # Flush to ensure all pending messages are delivered
 try:
@@ -222,6 +236,9 @@ except InternalError as e:
     raise
 else:
     logger.info("All messages flushed")
+finally:
+    # close() flushes for at most the delivery timeout, logs the messages it had to drop and releases the client
+    producer.close()
 ```
 
 !!! warning
@@ -295,7 +312,8 @@ consumer = KafkaConsumerAdapter(
     topic_list=["my-topic"],
 )
 
-# Batch consume — returns list[Message], skips messages with errors
+# Batch consume — returns list[Message]. Messages that carry a harmless error (end of partition, unknown topic)
+# are skipped; fatal, authentication and authorization errors and a lost connection to all brokers are raised.
 try:
     messages = consumer.batch_consume(messages_number=10, timeout=5)
 except ServiceUnavailableError as e:
@@ -317,6 +335,26 @@ else:
 msg = consumer.poll(timeout=1)
 if msg is not None:
     logger.info("Polled: %s", msg.value().decode("utf-8"))
+
+# Always close the consumer: it leaves the group and commits pending offsets
+consumer.close()
+```
+
+#### Commit callbacks and rebalance hooks
+
+Asynchronous commits report their outcome only through a callback, so pass `on_commit` to see failures (they are
+always logged at warning level). `subscribe` accepts `on_assign` and `on_revoke` hooks that run during `poll` when the
+group rebalances; use `on_revoke` to commit offsets before partitions move. The async consumer expects coroutine
+functions for the rebalance hooks.
+
+```python
+def on_commit(error, partitions):
+    if error is not None:
+        logger.error("Commit failed: %s", error)
+
+
+consumer = KafkaConsumerAdapter(group_id="my-consumer-group", topic_list=["my-topic"], on_commit=on_commit)
+consumer.subscribe(["my-topic"], on_revoke=lambda consumer, partitions: logger.info("Revoked %s", partitions))
 ```
 
 ### Assign to Specific Partitions
@@ -653,7 +691,7 @@ async def publish_event(event: EventMessage) -> dict[str, str]:
         raise HTTPException(status_code=502, detail="Network error") from e
     except InternalError as e:
         logger.error("Failed to publish event: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="Internal error") from e
     else:
         logger.info("Event published to 'events' topic")
         return {"message": "Event published successfully"}
@@ -674,7 +712,7 @@ async def list_topics() -> dict[str, list[str]]:
         cluster_metadata = admin.list_topics()
     except InternalError as e:
         logger.error("Failed to list topics: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="Internal error") from e
     else:
         logger.info("Retrieved topic list")
         return {"topics": list(cluster_metadata.topics.keys())}

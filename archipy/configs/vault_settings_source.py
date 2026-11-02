@@ -51,6 +51,7 @@ VaultAuthMethod = Literal[
 logger = logging.getLogger(__name__)
 
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
+_FALSY = frozenset({"0", "false", "no", "off"})
 
 
 def _read_file_secret(path: str) -> str:
@@ -68,9 +69,10 @@ def _read_file_secret(path: str) -> str:
     try:
         return Path(path).read_text(encoding="utf-8").strip()
     except OSError as e:
+        logger.warning("Failed to read secret file '%s': %s", path, e)
         raise ConfigurationError(
             operation="vault_read_secret_file",
-            reason=f"Failed to read secret file '{path}': {e}",
+            reason="Failed to read secret file",
         ) from e
 
 
@@ -227,9 +229,10 @@ def create_vault_client(config: VaultConfig) -> hvac.Client:
     except ConfigurationError:
         raise
     except Exception as e:
+        logger.warning("Vault authentication failed (%s): %s", config.AUTH_METHOD, e)
         raise ConfigurationError(
             operation="vault_auth",
-            reason=f"Vault authentication failed ({config.AUTH_METHOD}): {e}",
+            reason=f"Vault authentication failed ({config.AUTH_METHOD})",
         ) from e
 
     if not client.is_authenticated():
@@ -530,6 +533,21 @@ def _env_mount(name: str, default: str) -> str:
     return os.environ.get(name, default) or default
 
 
+def _parse_verify_ssl(raw: str | None) -> bool:
+    """Parse ``VAULT__VERIFY_SSL``; unknown spellings fail closed instead of disabling TLS checks."""
+    if raw is None or raw.strip() == "":
+        return True
+    value = raw.strip().lower()
+    if value in _TRUTHY:
+        return True
+    if value in _FALSY:
+        return False
+    raise ConfigurationError(
+        operation="vault_config",
+        reason="Invalid VAULT__VERIFY_SSL: use one of 1/true/yes/on or 0/false/no/off",
+    )
+
+
 def _vault_config_from_env() -> VaultConfig:
     """Build a ``VaultConfig`` from raw ``VAULT__*`` environment variables.
 
@@ -544,7 +562,7 @@ def _vault_config_from_env() -> VaultConfig:
         )
 
     verify_raw = os.environ.get("VAULT__VERIFY_SSL")
-    verify_ssl = True if verify_raw is None or verify_raw.strip() == "" else verify_raw.strip().lower() in _TRUTHY
+    verify_ssl = _parse_verify_ssl(verify_raw)
 
     return VaultConfig(
         ENABLED=_env_truthy("VAULT__ENABLED"),
@@ -683,7 +701,8 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
         except ConfigurationError:
             raise
         except Exception as e:
-            raise ConfigurationError(operation="vault_connect", reason=str(e)) from e
+            logger.warning("Vault connection failed: %s", e)
+            raise ConfigurationError(operation="vault_connect", reason="Failed to connect to Vault") from e
 
         merged: dict[str, Any] = {}
         for path in config.SECRET_PATHS:
@@ -694,9 +713,10 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
                     raise_on_deleted_version=True,
                 )
             except Exception as e:
+                logger.warning("Failed to read Vault secret at '%s/%s': %s", config.MOUNT_POINT, path, e)
                 raise ConfigurationError(
                     operation="vault_read_secret",
-                    reason=f"Failed to read Vault secret at '{config.MOUNT_POINT}/{path}': {e}",
+                    reason=f"Failed to read Vault secret at '{config.MOUNT_POINT}/{path}'",
                 ) from e
 
             secret_data = response.get("data", {}).get("data") or {}

@@ -2,7 +2,7 @@
 
 from typing import Any, override
 
-from sqlalchemy import URL
+from sqlalchemy import URL, Engine, event
 from sqlalchemy.exc import SQLAlchemyError
 
 from archipy.adapters.base.sqlalchemy.session_managers import (
@@ -92,6 +92,18 @@ def _build_connect_args(configs: SQLiteSQLAlchemyConfig, *, sync_driver: bool) -
     return connect_args
 
 
+def _enable_foreign_keys(engine: Engine) -> None:
+    """Turn on foreign key enforcement for every connection the engine opens (SQLite has it off by default)."""
+
+    @event.listens_for(engine, "connect")
+    def set_foreign_keys_pragma(dbapi_connection: Any, _connection_record: object) -> None:  # noqa: ANN401
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=ON")
+        finally:
+            cursor.close()
+
+
 class SQLiteSQLAlchemySessionManager(BaseSQLAlchemySessionManager[SQLiteSQLAlchemyConfig], metaclass=Singleton):
     """Synchronous SQLAlchemy session manager for SQLite.
 
@@ -117,6 +129,8 @@ class SQLiteSQLAlchemySessionManager(BaseSQLAlchemySessionManager[SQLiteSQLAlche
         configs = orm_config or self._default_config()
         self._configs = configs  # read by _get_connect_args, which the base initializer calls
         super().__init__(configs)
+        if configs.FOREIGN_KEYS:
+            _enable_foreign_keys(self.engine)
 
     @override
     def _expected_config_type(self) -> type[SQLiteSQLAlchemyConfig]:
@@ -210,6 +224,8 @@ class AsyncSQLiteSQLAlchemySessionManager(
         configs = orm_config or self._default_config()
         self._configs = configs  # read by _get_connect_args, which the base initializer calls
         super().__init__(configs)
+        if configs.FOREIGN_KEYS:
+            _enable_foreign_keys(self.engine.sync_engine)
 
     @override
     def _expected_config_type(self) -> type[SQLiteSQLAlchemyConfig]:
