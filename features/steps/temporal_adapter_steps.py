@@ -2711,6 +2711,15 @@ def step_activity_names_distinct(context, expected):
     assert names[-1] == expected, names
 
 
+@when('I try to list workflows with query "{query}"')
+def step_try_list_workflows(context, query):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        run_async(context, get_temporal_adapter(context).list_workflows(query=query))
+    except BaseError as error:
+        scenario_context.error = error
+
+
 class SecretRaisingActivity(BaseActivity[str, str]):
     """Activity raising an ArchiPy error whose additional data holds a secret."""
 
