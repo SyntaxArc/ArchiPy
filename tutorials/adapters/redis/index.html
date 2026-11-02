@@ -5168,7 +5168,8 @@ such as <code>scan_iter</code>, pipelines and pub/sub objects are not wrapped.</
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <p>Test Redis code against a real Redis started by <code>testcontainers</code> (tag the feature <code>@needs-redis</code>; the image comes from
 <code>REDIS__IMAGE</code> in <code>.env.test</code>). <code>RedisMock</code> and <code>fakeredis</code> are secondary options for logic-only scenarios; they do
-not reproduce every command. See <a href="../../testing_strategy/">BDD Testing</a>.</p>
+not reproduce every command. A cluster-mode <code>RedisMock</code> answers <code>cluster_info</code>, <code>cluster_nodes</code>,
+<code>cluster_slots</code> and the CRC16 <code>cluster_key_slot</code>, so cluster logic can be tested without a cluster. See <a href="../../testing_strategy/">BDD Testing</a>.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
