@@ -1463,6 +1463,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#closing-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Closing Adapters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#complete-fastapi-example" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3859,6 +3870,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#closing-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Closing Adapters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#complete-fastapi-example" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4147,6 +4169,14 @@ amount you stored when the payment was initiated, so the gateway checks them for
 <p>Debug logs name only the reservation number and the amount. The phone number, card hash, redirect URL and tokens
 are never logged.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Timeout and Neo-PG redirect</p>
+<p><code>SAMAN_SHAPARAK__TIMEOUT</code> (seconds, default 30) bounds every gateway call. A read timeout on verify or reverse
+leaves the outcome unknown: query the transaction before retrying. The Neo-PG payment page URL (<code>X-IPG-Url</code>) must
+be https and belong to <code>SAMAN_SHAPARAK__ALLOWED_IPG_HOSTS</code> (default <code>["shaparak.ir"]</code>, subdomains included);
+otherwise <code>InvalidArgumentError</code> is raised, and a successful token reply without the header raises
+<code>FailedPreconditionError</code>.</p>
+</div>
 <h3 id="initializing-the-adapter_1">Initializing the Adapter<a class="headerlink" href="#initializing-the-adapter_1" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
@@ -4261,6 +4291,9 @@ are never logged.</p>
 </span><span id="__span-14-18"><a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Reversal failed: </span><span class="si">{</span><span class="n">reverse_response</span><span class="o">.</span><span class="n">result_code</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">reverse_response</span><span class="o">.</span><span class="n">result_description</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
+<h2 id="closing-adapters">Closing Adapters<a class="headerlink" href="#closing-adapters" title="Permanent link">&para;</a></h2>
+<p>Both gateways hold HTTP connections. Close adapters you create yourself with <code>close()</code> / <code>await aclose()</code>, or use
+them as context managers (<code>with</code> for sync adapters, <code>async with</code> for async adapters).</p>
 <h2 id="complete-fastapi-example">Complete FastAPI Example<a class="headerlink" href="#complete-fastapi-example" title="Permanent link">&para;</a></h2>
 <p>The callback query parameters come from the user's browser, so never trust them alone. Store the order id and amount
 when the payment is initiated, confirm against the stored values and fulfil the order only once. The example keeps
