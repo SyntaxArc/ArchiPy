@@ -4026,7 +4026,7 @@ works and emits a <code>DeprecationWarning</code>. The old import path will be r
 </span></code></pre></div>
 <h3 id="nested-atomic-calls-and-savepoints">Nested atomic calls and savepoints<a class="headerlink" href="#nested-atomic-calls-and-savepoints" title="Permanent link">&para;</a></h3>
 <p>A nested atomic call joins the outer transaction. By default a nested failure rolls back the whole transaction, and
-the outer block raises <code>DatabaseTransactionError</code> even when the nested error was caught. Pass <code>savepoint=True</code> to
+the outer block re-raises the original exception even when the nested error was caught. Pass <code>savepoint=True</code> to
 isolate the nested call instead:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.base.sqlalchemy.atomic</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
@@ -4045,6 +4045,8 @@ isolate the nested call instead:</p>
 <ul>
 <li>With <code>savepoint=True</code>, a caught nested failure rolls back only that savepoint; the outer transaction and other
   successful nested calls commit.</li>
+<li>The decorator does not translate logic exceptions: a <code>ValueError</code> from your code stays a <code>ValueError</code>. Only
+  SQLAlchemy failures become <code>Database*Error</code> values; <code>DatabaseTransactionError</code> is reserved for transaction failures.</li>
 <li>Savepoints stack: a failure at level N rolls back level N only; a parent savepoint can catch it and continue.</li>
 <li>A <code>savepoint=False</code> call anywhere in the chain aborts the whole transaction; an enclosing savepoint cannot contain
   it.</li>
