@@ -3424,6 +3424,11 @@
 </thead>
 <tbody>
 <tr>
+<td><a href="5.26.1/">5.26.1</a></td>
+<td>2026-11-02</td>
+<td>Nested <code>atomic()</code> failures roll back the outer transaction and raise <code>DatabaseTransactionError</code> instead of committing around a swallowed error</td>
+</tr>
+<tr>
 <td><a href="5.26.0/">5.26.0</a></td>
 <td>2026-11-02</td>
 <td>Security and correctness audit across Redis, Kafka, Keycloak, MinIO, Vault, Temporal, email, SQL and payment adapters; config secrets become <code>SecretStr</code>; Redis and Kafka gain close and transaction APIs</td>
