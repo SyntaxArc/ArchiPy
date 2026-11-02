@@ -3940,7 +3940,7 @@ on any exception:</p>
 <blockquote>
 <p><strong>Note:</strong> Logic layer collaboration rules:</p>
 <ul>
-<li>Logic classes <strong>may call other logic classes</strong> — nested <code>@atomic</code> calls reuse the open session. A nested call that fails rolls back the whole transaction, and the outer block raises <code>DatabaseTransactionError</code> even if the nested error was caught.</li>
+<li>Logic classes <strong>may call other logic classes</strong> — nested <code>@atomic</code> calls reuse the open session. By default a nested failure rolls back the whole transaction and the outer block raises <code>DatabaseTransactionError</code> even if the error was caught. Pass <code>savepoint=True</code> to a nested call to roll back only that savepoint and keep the outer transaction usable; a default call inside the chain still aborts everything. StarRocks has no savepoints.</li>
 <li>
 <p>Logic classes <strong>must never import or call a repository from another domain directly</strong>.
   Cross-domain reads must go through the other domain's logic class.</p>
