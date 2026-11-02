@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.26.1](5.26.1.md) | 2026-11-02 | Nested `atomic()` failures roll back the outer transaction and raise `DatabaseTransactionError` instead of committing around a swallowed error |
 | [5.26.0](5.26.0.md) | 2026-11-02 | Security and correctness audit across Redis, Kafka, Keycloak, MinIO, Vault, Temporal, email, SQL and payment adapters; config secrets become `SecretStr`; Redis and Kafka gain close and transaction APIs |
 | [5.25.0](5.25.0.md) | 2026-11-01 | Adapter and config settings from an audit: TLS and mTLS for Redis, ScyllaDB, Postgres, MySQL, gRPC and email, applied Kafka and Elasticsearch settings, Keycloak and MinIO client options, a `UVICORN` config section; **behavior:** Kafka `list_topics` waits 5 seconds, Elasticsearch sniff delay is 60 seconds; the uvicorn fields of `FASTAPI` and the ScyllaDB pool fields are deprecated |
 | [5.24.0](5.24.0.md) | 2026-11-01 | OpenTelemetry: per-signal OTLP headers, OTLP TLS and mTLS options, and span and attribute limits, all readable from the standard `OTEL_*` variables |
