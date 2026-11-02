@@ -76,8 +76,8 @@ ATOMIC_BLOCK_CONFIGS = {
     },
 }
 
-# Databases without SAVEPOINT support: a failing nested call is left to the outermost call to roll back
-_NO_SAVEPOINT_DB_TYPES = frozenset({"starrocks"})
+# Session marker: a nested atomic call failed, so the outer transaction must not be committed
+_ROLLBACK_ONLY_FLAG = "_archipy_atomic_rollback_only"
 
 # Type variables for function return types
 R = TypeVar("R")
@@ -229,15 +229,11 @@ async def _run_async_scope[R](
     kwargs: dict[str, Any],
     *,
     is_nested: bool,
-    db_type: str,
 ) -> R:
-    """Run ``func`` in the outer transaction, a savepoint (nested call) or a new transaction."""
-    if is_nested and db_type in _NO_SAVEPOINT_DB_TYPES:
-        return await func(*args, **kwargs)
+    """Run ``func`` in the outer transaction or inside it as a nested call."""
     if is_nested:
-        # A failing nested call rolls back to its savepoint only; the outer transaction stays usable
-        async with session.begin_nested():
-            return await func(*args, **kwargs)
+        # Nested calls join the outer transaction; a failure rolls that transaction back
+        return await func(*args, **kwargs)
     if session.in_transaction():
         result = await func(*args, **kwargs)
         await session.commit()
@@ -253,21 +249,73 @@ def _run_sync_scope[R](
     kwargs: dict[str, Any],
     *,
     is_nested: bool,
-    db_type: str,
 ) -> R:
-    """Run ``func`` in the outer transaction, a savepoint (nested call) or a new transaction."""
-    if is_nested and db_type in _NO_SAVEPOINT_DB_TYPES:
-        return func(*args, **kwargs)
+    """Run ``func`` in the outer transaction or inside it as a nested call."""
     if is_nested:
-        # A failing nested call rolls back to its savepoint only; the outer transaction stays usable
-        with session.begin_nested():
-            return func(*args, **kwargs)
+        # Nested calls join the outer transaction; a failure rolls that transaction back
+        return func(*args, **kwargs)
     if session.in_transaction():
         result = func(*args, **kwargs)
         session.commit()
         return result
     with session.begin():
         return func(*args, **kwargs)
+
+
+async def _rollback_outer_after_nested_failure(session: Any, db_type: str) -> NoReturn:
+    """Roll back the outer transaction and raise when a nested atomic call failed."""
+    await session.rollback()
+    raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
+
+
+def _rollback_outer_after_nested_failure_sync(session: Any, db_type: str) -> NoReturn:
+    """Roll back the outer transaction and raise when a nested atomic call failed."""
+    session.rollback()
+    raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
+
+
+async def _handle_async_atomic_failure(
+    session: Any,
+    exception: BaseException,
+    db_type: str,
+    func: Callable[..., Any],
+    *,
+    is_nested: bool,
+) -> NoReturn:
+    """Roll back and translate an exception raised inside an async atomic block."""
+    if is_nested:
+        session.info[_ROLLBACK_ONLY_FLAG] = True
+    try:
+        await session.rollback()
+    except Exception:
+        logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
+    if _is_control_flow_exception(exception):
+        raise exception
+    func_name = getattr(func, "__name__", "unknown")
+    _handle_db_exception(exception, db_type, func_name)
+    raise exception
+
+
+def _handle_sync_atomic_failure(
+    session: Any,
+    exception: BaseException,
+    db_type: str,
+    func: Callable[..., Any],
+    *,
+    is_nested: bool,
+) -> NoReturn:
+    """Roll back and translate an exception raised inside a sync atomic block."""
+    if is_nested:
+        session.info[_ROLLBACK_ONLY_FLAG] = True
+    try:
+        session.rollback()
+    except Exception:
+        logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
+    if _is_control_flow_exception(exception):
+        raise exception
+    func_name = getattr(func, "__name__", "unknown")
+    _handle_db_exception(exception, db_type, func_name)
+    raise exception
 
 
 def _create_async_atomic_wrapper[R](
@@ -290,21 +338,17 @@ def _create_async_atomic_wrapper[R](
             session.info[atomic_flag] = True
 
         try:
-            return await _run_async_scope(session, func, args, kwargs, is_nested=is_nested, db_type=db_type)
-        except BaseException as exception:
-            if not is_nested or _is_control_flow_exception(exception):
-                try:
-                    await session.rollback()
-                except Exception:
-                    logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
-            if _is_control_flow_exception(exception):
-                raise
-            func_name = getattr(func, "__name__", "unknown")
-            _handle_db_exception(exception, db_type, func_name)
-            raise
+            result = await _run_async_scope(session, func, args, kwargs, is_nested=is_nested)
+        except BaseException as exception:  # noqa: BLE001  # translate every atomic failure
+            await _handle_async_atomic_failure(session, exception, db_type, func, is_nested=is_nested)
+        else:
+            if not is_nested and session.info.pop(_ROLLBACK_ONLY_FLAG, False):
+                await _rollback_outer_after_nested_failure(session, db_type)
+            return result
         finally:
             if not is_nested:
                 session.info.pop(atomic_flag, None)
+                session.info.pop(_ROLLBACK_ONLY_FLAG, None)
             if not is_nested and not session.in_transaction():
                 await _close_async_session(session, session_manager)
 
@@ -331,21 +375,17 @@ def _create_sync_atomic_wrapper[R](
             session.info[atomic_flag] = True
 
         try:
-            return _run_sync_scope(session, func, args, kwargs, is_nested=is_nested, db_type=db_type)
-        except BaseException as exception:
-            if not is_nested or _is_control_flow_exception(exception):
-                try:
-                    session.rollback()
-                except Exception:
-                    logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
-            if _is_control_flow_exception(exception):
-                raise
-            func_name = getattr(func, "__name__", "unknown")
-            _handle_db_exception(exception, db_type, func_name)
-            raise
+            result = _run_sync_scope(session, func, args, kwargs, is_nested=is_nested)
+        except BaseException as exception:  # noqa: BLE001  # translate every atomic failure
+            _handle_sync_atomic_failure(session, exception, db_type, func, is_nested=is_nested)
+        else:
+            if not is_nested and session.info.pop(_ROLLBACK_ONLY_FLAG, False):
+                _rollback_outer_after_nested_failure_sync(session, db_type)
+            return result
         finally:
             if not is_nested:
                 session.info.pop(atomic_flag, None)
+                session.info.pop(_ROLLBACK_ONLY_FLAG, None)
             if not is_nested and not session.in_transaction():
                 session.close()
                 session_manager.remove_session()
