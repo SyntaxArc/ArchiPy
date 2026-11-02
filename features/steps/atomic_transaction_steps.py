@@ -46,7 +46,7 @@ from archipy.adapters.base.sqlalchemy.atomic import (
     starrocks_sqlalchemy_atomic,
 )
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
-from archipy.models.errors import DatabaseError, InternalError
+from archipy.models.errors import DatabaseError, DatabaseTransactionError, InternalError
 from features.test_entity import RelatedTestEntity, TestAdminEntity, TestEntity, TestManagerEntity
 from features.test_entity_factory import TestEntityFactory
 from features.test_helpers import (
@@ -861,9 +861,13 @@ def step_when_nested_atomic_executed(context):
                 logger.error(f"Unexpected error in outer block: {str(e)}")
                 raise
 
-        # Execute the transaction
-        outer_entity = outer_atomic()
-        logger.info(f"Successfully completed nested transactions, with outer entity: {outer_entity}")
+        # Execute the transaction: the swallowed inner failure must still roll back the outer block
+        try:
+            outer_atomic()
+        except DatabaseTransactionError as error:
+            scenario_context.store("nested_outer_error", error)
+        else:
+            raise AssertionError("the outer atomic block committed after a nested failure")
 
     except Exception as e:
         logger.error(f"Unexpected error in nested transaction test: {str(e)}")
@@ -871,54 +875,30 @@ def step_when_nested_atomic_executed(context):
         raise
 
 
-@then("operations from successful nested transactions should be visible within outer transaction")
-def step_then_successful_nested_visible(context):
-    """Verify the outer, inner and post-failure entities are committed despite the failed nested call."""
+@then("the outer transaction should be rolled back")
+def step_then_outer_rolled_back(context):
+    """Verify the nested failure rolled back every write in the outer transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
     db_type = scenario_context.get("db_type", "sqlite")
+    error = scenario_context.get("nested_outer_error")
+    assert isinstance(error, DatabaseTransactionError), f"Expected DatabaseTransactionError, got {error!r}"
 
-    visible_ids = [
-        uuid.UUID(scenario_context.entity_ids[key]) for key in ("outer_entity", "inner_entity", "after_failure_entity")
+    entity_ids = [
+        uuid.UUID(scenario_context.entity_ids[key])
+        for key in ("outer_entity", "inner_entity", "failing_entity", "after_failure_entity")
     ]
     atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
     @atomic_decorator
-    def verify_nested_results():
-        session = get_adapter(context).get_session()
-        for entity_id in visible_ids:
-            assert session.get(TestEntity, entity_id) is not None, f"Entity {entity_id} missing after nested block"
-        return True
-
-    verify_nested_results()
-    logger.info("Verified outer, inner and post-failure entities are committed")
-
-
-@then("operations from failed nested transactions should be rolled back")
-def step_then_failed_nested_rolled_back(context):
-    """Verify that entities from failed nested transactions don't exist."""
-    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
-    scenario_context = get_current_scenario_context(context)
-    db_type = scenario_context.get("db_type", "sqlite")
-
-    # Get UUID for verification
-    entity3_uuid = uuid.UUID(scenario_context.entity_ids["failing_entity"])
-    logger.info(f"Verifying entity 3 with UUID {entity3_uuid} doesn't exist")
-    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
-
-    @atomic_decorator
     def verify_rollback():
-        adapter = get_adapter(context)
-        session = adapter.get_session()
-
-        # Check entity 3 (failed inner atomic) - should not exist
-        entity3 = session.get(TestEntity, entity3_uuid)
-        assert entity3 is None, "Entity 3 found after failed inner atomic transaction"
-        logger.info("Verified entity 3 doesn't exist (rollback successful)")
-
+        session = get_adapter(context).get_session()
+        for entity_id in entity_ids:
+            assert session.get(TestEntity, entity_id) is None, f"Entity {entity_id} survived the outer rollback"
         return True
 
     verify_rollback()
+    logger.info("Verified every outer-transaction write was rolled back")
 
 
 @given("an entity exists in the database")
@@ -2228,7 +2208,8 @@ async def step_when_async_atomic_in_tasks(context, count, db_type):
 
     await asyncio.gather(*(work() for _ in range(count)))
     get_current_scenario_context(context).store(
-        "session_registry_size", len(manager._session_generator.registry.registry),
+        "session_registry_size",
+        len(manager._session_generator.registry.registry),
     )
 
 

@@ -22,12 +22,11 @@ Feature: SQLAlchemy Atomic Transactions on PostgreSQL
       | db_type  |
       | postgres |
 
-  Scenario Outline: Support nested atomic transactions
+  Scenario Outline: A failed nested atomic transaction rolls back the outer transaction
     Given the application database is initialized for <db_type>
     And test entities are defined
     When nested atomic transactions are executed
-    Then operations from successful nested transactions should be visible within outer transaction
-    And operations from failed nested transactions should be rolled back
+    Then the outer transaction should be rolled back
 
     Examples:
       | db_type  |
