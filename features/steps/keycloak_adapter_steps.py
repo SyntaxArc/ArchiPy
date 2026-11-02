@@ -4387,3 +4387,90 @@ async def step_unreachable_keycloak_is_not_a_bad_token(context: Context, kind: s
         assert error.code == code, f"expected {code}, got {error.code}"
         return
     raise AssertionError("an unreachable Keycloak was reported as a plain invalid token")
+
+
+def _unverified_claims(token: str) -> dict[str, Any]:
+    import base64
+    import json
+
+    payload = token.split(".")[1]
+    return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+
+
+async def _check_token(kind: str, adapter: AsyncKeycloakAdapter | KeycloakAdapter, token: str) -> tuple[bool, str | None]:
+    """Return (validate_token result, error code of get_token_info or None)."""
+    if kind == "async":
+        valid = await adapter.validate_token(token)
+    else:
+        valid = adapter.validate_token(token)
+    try:
+        if kind == "async":
+            await adapter.get_token_info(token)
+        else:
+            adapter.get_token_info(token)
+    except BaseError as error:
+        return valid, error.code
+    return valid, None
+
+
+@then(
+    'a {kind} adapter of realm "{realm_name}" and client "{client_name}" expecting {setting} "{value}" '
+    'rejects the access token of "{username}"',
+)
+async def step_adapter_expecting_claim_rejects_token(
+    context: Context,
+    kind: str,
+    realm_name: str,
+    client_name: str,
+    setting: str,
+    value: str,
+    username: str,
+) -> None:
+    """A token whose issuer or audience differs from the configured expectation is rejected."""
+    scenario_context = get_current_scenario_context(context)
+    token = scenario_context.get(f"token_response_{username}").access_token
+    adapter = _no_admin_adapter(kind, REALM_NAME=realm_name, CLIENT_ID=client_name, **{setting: value})
+    valid, code = await _check_token(kind, adapter, token)
+    assert not valid and code == "INVALID_TOKEN", f"expected rejection, got valid={valid} code={code}"
+
+
+@then(
+    'a {kind} adapter of realm "{realm_name}" and client "{client_name}" expecting the issuer of the token of '
+    '"{username}" accepts its access token',
+)
+async def step_adapter_enforces_correct_issuer(
+    context: Context,
+    kind: str,
+    realm_name: str,
+    client_name: str,
+    username: str,
+) -> None:
+    """With the token's real issuer configured the access token still passes."""
+    scenario_context = get_current_scenario_context(context)
+    access_token = scenario_context.get(f"token_response_{username}").access_token
+    issuer = _unverified_claims(access_token)["iss"]
+    adapter = _no_admin_adapter(kind, REALM_NAME=realm_name, CLIENT_ID=client_name, EXPECTED_ISSUER=issuer)
+    assert await _check_token(kind, adapter, access_token) == (True, None)
+
+
+@then("forged claims with token type \"{token_type}\" are {outcome} by the claim check")
+def step_forged_claims_checked(context: Context, token_type: str, outcome: str) -> None:
+    """A signed non-access token cannot be minted by the container, so feed forged claims to the claim check."""
+    import warnings
+
+    from archipy.adapters.keycloak._protocols.oidc.adapter import _check_token_claims
+
+    base = BaseConfig.global_config().KEYCLOAK
+    claims = {"iss": f"{base.SERVER_URL}/realms/{base.REALM_NAME}", "typ": token_type}
+    enforcing = base.model_copy(update={"EXPECTED_ISSUER": claims["iss"]})
+    try:
+        _check_token_claims(claims, enforcing)
+    except BaseError as error:
+        assert outcome == "rejected" and error.code == "INVALID_TOKEN", error
+    else:
+        assert outcome == "accepted", "forged claims passed the enforcing claim check"
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        _check_token_claims(claims, base)
+    warned = any(issubclass(w.category, DeprecationWarning) and "EXPECTED_ISSUER" in str(w.message) for w in caught)
+    assert warned == (outcome == "rejected"), "the default (warn-only) mode must warn exactly when enforcement would reject"
