@@ -32,6 +32,29 @@ Feature: Vault Adapter
     When I write Vault secret "app/cached" with key "v" and value "two"
     Then reading Vault secret "app/cached" should return key "v" with value "two"
 
+  Scenario: Mutating a cached read_secret result does not change later reads
+    Given a Vault adapter with secret cache TTL 60 seconds
+    And a Vault secret "app/cached-copy" with key "v" and value "one"
+    When I mutate the dict returned by reading Vault secret "app/cached-copy"
+    Then reading Vault secret "app/cached-copy" should return key "v" with value "one"
+
+  Scenario Outline: VAULT__VERIFY_SSL accepts explicit booleans and rejects unknown spellings
+    When I parse VAULT__VERIFY_SSL "<value>"
+    Then VAULT__VERIFY_SSL should resolve to "<outcome>"
+
+    Examples:
+      | value   | outcome    |
+      | true    | verified   |
+      | ON      | verified   |
+      | false   | unverified |
+      | 0       | unverified |
+      | off     | unverified |
+      | t       | rejected   |
+      | enabled | rejected   |
+
+  Scenario: Vault credentials are hidden from the config repr
+    Then the Vault config repr should not contain its credentials
+
   Scenario: Cached read_secret is invalidated on delete
     Given a Vault adapter with secret cache TTL 60 seconds
     And a Vault secret "app/cached-del" with key "v" and value "one"
@@ -45,6 +68,24 @@ Feature: Vault Adapter
     When I read Vault secret "app/renew-probe"
     Then the Vault client token should still be valid
     And the token should have been renewed
+
+  Scenario Outline: Auto renew leaves non-expiring and non-renewable tokens alone
+    Given a Vault secret "app/renew-skip" with key "ok" and value "1"
+    And a Vault adapter with auto renew using a <kind> token and renew threshold 120 seconds
+    Then reading Vault secret "app/renew-skip" should return key "ok" with value "1"
+    And the token should not have been renewed
+
+    Examples:
+      | kind          |
+      | root          |
+      | non-renewable |
+
+  Scenario: Adapter logs in again with AppRole when its token is revoked
+    Given a Vault secret "app/relogin" with key "ok" and value "1"
+    And a Vault adapter logged in with AppRole
+    When the Vault adapter token is revoked out-of-band
+    Then reading Vault secret "app/relogin" should return key "ok" with value "1"
+    And the Vault adapter should have logged in again
 
   Scenario Outline: Invalid Vault adapter arguments raise InvalidArgumentError
     When I call Vault "<operation>" with invalid args

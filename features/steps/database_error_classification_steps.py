@@ -75,6 +75,22 @@ def step_given_driver_error_with_statement(context, family, code, statement):
     get_current_scenario_context(context).store("db_error", OperationalError(statement, None, driver_error))
 
 
+@given('an operational error with driver message "{message}" raised by statement "{statement}"')
+def step_given_operational_message_error(context, message, statement):
+    get_current_scenario_context(context).store("db_error", OperationalError(statement, None, Exception(message)))
+
+
+@when("the atomic decorator handler processes the driver error")
+def step_when_atomic_handler(context):
+    from archipy.adapters.base.sqlalchemy.atomic import _handle_db_exception
+
+    scenario_context = get_current_scenario_context(context)
+    try:
+        _handle_db_exception(scenario_context.get("db_error"), "test_db", "work")
+    except errors_pkg.BaseError as exception:
+        scenario_context.store("raised", exception)
+
+
 @given("a driver error without a code that SQLAlchemy flagged as a disconnect")
 def step_given_disconnect(context):
     wrapped = OperationalError("SELECT 1", None, Exception("server closed the connection"), connection_invalidated=True)

@@ -1,5 +1,6 @@
 import inspect
 import json
+import logging
 from unittest.mock import patch
 
 import httpx2
@@ -130,6 +131,24 @@ def _parse_proxies(text):
     return dict(pair.split("=", 1) for pair in text.split(","))
 
 
+@given("Saman debug logging is captured")
+def step_given_log_capture(context):
+    records = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    handler = _Collector(level=logging.DEBUG)
+    adapter_logger = logging.getLogger(saman_adapters.__name__)
+    original_level = adapter_logger.level
+    adapter_logger.setLevel(logging.DEBUG)
+    adapter_logger.addHandler(handler)
+    context.add_cleanup(adapter_logger.removeHandler, handler)
+    context.add_cleanup(adapter_logger.setLevel, original_level)
+    get_current_scenario_context(context).store("saman_logs", records)
+
+
 @given('a {kind} Saman adapter with terminal "{terminal}"')
 def step_given_adapter(context, kind, terminal):
     _try_create(context, kind, _make_config(terminal))
@@ -152,7 +171,12 @@ def step_given_global_terminal(context, terminal):
 
 @given('the Saman "{endpoint}" endpoint answers {status:d} with JSON:')
 def step_given_answers_json(context, endpoint, status):
-    _state(context)["script"][endpoint] = {"kind": "response", "status": status, "json": json.loads(context.text), "raw": None}
+    _state(context)["script"][endpoint] = {
+        "kind": "response",
+        "status": status,
+        "json": json.loads(context.text),
+        "raw": None,
+    }
 
 
 @given('the Saman "{endpoint}" endpoint answers {status:d} with raw body "{body}"')
@@ -321,7 +345,9 @@ def step_then_verify_pan(context, masked, hashed):
     assert result.hashed_pan == hashed
 
 
-@then('the Saman verification detail has original amount {original:d}, affective amount {affective:d} and trace "{trace}"')
+@then(
+    'the Saman verification detail has original amount {original:d}, affective amount {affective:d} and trace "{trace}"',
+)
 def step_then_verify_amounts(context, original, affective, trace):
     result = _result(context)
     assert result.original_amount == original
@@ -386,3 +412,13 @@ def step_then_request_rejected(context):
     error = get_current_scenario_context(context).get("error")
     assert error is not None, "Expected the request to be rejected"
     assert type(error).__name__ in {"ValidationError", "InvalidArgumentError"}, type(error).__name__
+
+
+@then('the Saman debug logs name reservation "{res_num}" but not "{cell}", "{card_hash}" or the redirect URL')
+def step_then_logs_redacted(context, res_num, cell, card_hash):
+    logs = get_current_scenario_context(context).get("saman_logs")
+    assert logs, "No debug logs were captured"
+    joined = "\n".join(logs)
+    assert res_num in joined
+    for secret in (cell, card_hash, "shop.example.com"):
+        assert secret not in joined, f"{secret!r} leaked into the logs"

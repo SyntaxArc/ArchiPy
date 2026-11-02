@@ -26,9 +26,11 @@ from archipy.models.errors import (
     DatabaseDeadlockError,
     DatabaseError,
     DatabaseIntegrityError,
+    DatabaseQueryError,
     DatabaseResourceExhaustedError,
     DatabaseSerializationError,
     DatabaseTimeoutError,
+    DatabaseTransactionError,
     DatabaseUnknownOutcomeError,
 )
 
@@ -67,6 +69,14 @@ _SQL_STRING_LITERAL: Final = re.compile(r"'(?:[^']|'')*'")
 _SQL_NUMBER_LITERAL: Final = re.compile(r"(?<![\w$.])\d+(?:\.\d+)?(?![\w$])")
 _MYSQL_SYNTAX_MESSAGE: Final = re.compile(r"error in your sql syntax", re.IGNORECASE)
 
+_MESSAGE_FALLBACKS: Final = (
+    ("timeout", DatabaseTimeoutError),
+    ("integrity", DatabaseIntegrityError),
+    ("constraint", DatabaseConstraintError),
+    ("connection", DatabaseConnectionError),
+    ("transaction", DatabaseTransactionError),
+)
+
 # SQLite error names
 SQLITE_DEADLOCK_NAMES: Final = frozenset({"SQLITE_BUSY", "SQLITE_LOCKED"})
 
@@ -75,6 +85,21 @@ def _driver_exception(exception: BaseException) -> BaseException | None:
     """Return the driver exception behind a SQLAlchemy error, or the error itself if it is not wrapped."""
     orig = getattr(exception, "orig", None)
     return orig if orig is not None else exception
+
+
+def driver_error_message(exception: BaseException) -> str:
+    """Return the message of the driver exception behind a SQLAlchemy error, without the SQL statement.
+
+    ``str()`` of a SQLAlchemy ``DBAPIError`` embeds ``[SQL: ...]``, so matching on it would classify errors by table
+    and column names.
+
+    Args:
+        exception: A SQLAlchemy error (its ``orig`` is inspected) or a raw exception.
+
+    Returns:
+        The driver message.
+    """
+    return str(_driver_exception(exception))
 
 
 def driver_error_code(exception: BaseException) -> str | int | None:
@@ -111,6 +136,21 @@ def _mysql_errno(driver_error: BaseException) -> int | None:
     if args and isinstance(args[0], int) and not isinstance(args[0], bool):
         return args[0]
     return None
+
+
+def classify_by_message(message: str) -> type[DatabaseError]:
+    """Fallback classification for drivers that expose no usable error code.
+
+    Args:
+        message: The lower-cased driver message, never the full SQLAlchemy message (it embeds the SQL statement).
+
+    Returns:
+        The domain error class; ``DatabaseQueryError`` when nothing matches.
+    """
+    for keyword, error_class in _MESSAGE_FALLBACKS:
+        if keyword in message:
+            return error_class
+    return DatabaseQueryError
 
 
 def classify_driver_error(exception: BaseException) -> type[DatabaseError] | None:

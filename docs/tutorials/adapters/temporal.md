@@ -510,6 +510,11 @@ because retrying the same input cannot succeed. Transient errors are exempt and 
 `ConnectionTimeoutError`, `DeadlineExceededError`, `RateLimitExceededError` and `ResourceExhaustedError`. Override
 `_is_non_retryable(error)` in your activity to change the rule.
 
+A non-retryable failure carries only the error type: the original error, with its message and `additional_data`, is
+not attached as the cause and so is not sent to the Temporal server. A retryable error is re-raised as is, so its
+message is part of the activity failure. Set `REDACT_RETRYABLE_ERRORS = True` on your activity class to send only
+the error type for those too.
+
 ```python
 import asyncio
 import logging

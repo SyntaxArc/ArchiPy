@@ -57,6 +57,14 @@ Feature: MinIO Operations Testing
       | the bytes       | Hello Streaming World | stream-bytes.txt |
       | a binary stream | Binary Stream Data    | stream-bio.txt   |
 
+  Scenario: Streaming download enforces a maximum size
+    Given a bucket named "stream-limit-bucket" exists
+    And an object "large.txt" exists with content "1234567890" in bucket "stream-limit-bucket"
+    When I stream download "large.txt" from "stream-limit-bucket" with max bytes 5
+    Then the MinIO call should raise ResourceExhaustedError
+    When I stream download "large.txt" from "stream-limit-bucket" with max bytes 10
+    Then the downloaded stream content should be "1234567890"
+
   Scenario: Upload file with tags and verify tags
     Given a bucket named "test-bucket" exists
     When I upload a tagged file "tagged.txt" with content "Tagged Content" and tags "ttl-days=7,env=test" to bucket "test-bucket"
@@ -143,6 +151,17 @@ Feature: MinIO Operations Testing
       | list objects in missing bucket "no-such-bucket-xyz"      | NotFoundError        |
       | create bucket "errors-bucket" again                      | AlreadyExistsError   |
       | check existence of an object with an empty bucket name   | InvalidArgumentError |
+
+  Scenario Outline: Missing <resource> reports resource type <resource>
+    Given a bucket named "errors-bucket" exists
+    When I <operation>
+    Then the MinIO call should raise NotFoundError
+    And the MinIO error resource type should be "<resource>"
+
+    Examples:
+      | operation                                                | resource |
+      | stat missing object "nope.txt" in bucket "errors-bucket" | object   |
+      | list objects in missing bucket "no-such-bucket-xyz"      | bucket   |
 
   Scenario Outline: Botocore connection failures map to <error>
     When I check bucket existence while the S3 client raises botocore "<raised_error>"

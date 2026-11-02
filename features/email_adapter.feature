@@ -137,6 +137,18 @@ Feature: Email adapter
     When I create an email adapter
     Then an email deprecation warning mentions "TLS_MODE"
 
+  Scenario Outline: Insecure credential and verification settings warn
+    Given the Mailpit SMTP server is configured
+    And the SMTP transport security is "<mode>" <verification>
+    When I create an email adapter
+    Then an email deprecation warning mentions "<text>"
+
+    Examples:
+      | mode     | verification                     | text                        |
+      | none     | verified with the Mailpit CA     | sends USERNAME and PASSWORD |
+      | starttls | without certificate verification | TLS_VERIFY=False            |
+      | implicit | without certificate verification | TLS_VERIFY=False            |
+
   Scenario Outline: A half-set credential pair is rejected
     Given the Mailpit SMTP server is configured
     And the SMTP transport security is "<mode>" verified with the Mailpit CA
@@ -210,6 +222,20 @@ Feature: Email adapter
     And an email adapter
     When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
     Then an invalid argument error is raised for "SMTP_SERVER"
+
+  Scenario: Failed sends do not use up the connection pool
+    Given no SMTP server is configured
+    And an email connection pool of size 1
+    When I try to take a connection from the pool 3 times
+    Then each attempt raised an invalid argument error for "SMTP_SERVER"
+
+  Scenario: An exhausted pool raises an unavailable error instead of blocking
+    Given the Mailpit SMTP server is configured
+    And the connection timeout is 1 seconds
+    And an email connection pool of size 1
+    When I take a connection from the pool
+    And I try to take a connection from the pool 1 times
+    Then each attempt raised an unavailable error for "SMTP"
 
   Scenario: Connection failure raises an unavailable error and nothing is delivered
     Given an SMTP endpoint on a closed port

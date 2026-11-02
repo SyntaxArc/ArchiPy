@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import functools
 import inspect
 import logging
+import warnings
 from functools import cache
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, NoReturn, override
 
-from elasticsearch import AsyncElasticsearch, Elasticsearch
+from elastic_transport import ConnectionError as TransportConnectionError, ConnectionTimeout, TransportError
+from elasticsearch import ApiError, AsyncElasticsearch, Elasticsearch
 from elasticsearch.helpers import async_bulk, async_scan, bulk as es_bulk, scan as es_scan
 
 from archipy.adapters.elasticsearch.ports import (
@@ -22,9 +25,24 @@ from archipy.adapters.elasticsearch.ports import (
     ElasticsearchResponseType,
 )
 from archipy.configs.base_config import BaseConfig
+from archipy.models.errors import (
+    AlreadyExistsError,
+    BadGatewayError,
+    BaseError,
+    ConflictError,
+    ConnectionTimeoutError,
+    GatewayTimeoutError,
+    InternalError,
+    InvalidArgumentError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitExceededError,
+    ServiceUnavailableError,
+    UnauthenticatedError,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable, Iterable
+    from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Iterator
 
     from archipy.configs.config_template import ElasticsearchConfig
 
@@ -32,6 +50,151 @@ logger = logging.getLogger(__name__)
 
 # Body keys whose client keyword differs from the JSON field name.
 _BODY_FIELD_ALIASES: dict[str, str] = {"from": "from_"}
+
+
+_STATUS_ERRORS: dict[int, type[BaseError]] = {
+    400: InvalidArgumentError,
+    401: UnauthenticatedError,
+    403: PermissionDeniedError,
+    404: NotFoundError,
+    409: ConflictError,
+    429: RateLimitExceededError,
+    502: BadGatewayError,
+    503: ServiceUnavailableError,
+    504: GatewayTimeoutError,
+}
+
+# Elasticsearch error types that are more specific than their status code (409 covers both)
+_ERROR_TYPE_ERRORS: dict[str, type[BaseError]] = {"resource_already_exists_exception": AlreadyExistsError}
+
+_ERROR_MAPPING_DEPRECATION = (
+    "Elasticsearch adapters currently raise raw elasticsearch-py exceptions. "
+    "Set ELASTIC.MAP_ERRORS=True to raise ArchiPy errors instead; this will become the default in a future release."
+)
+
+
+def _to_archipy_error(error: Exception) -> BaseError | None:
+    """Translate an elasticsearch-py exception into an ArchiPy error.
+
+    Args:
+        error (Exception): The exception raised by the client.
+
+    Returns:
+        BaseError | None: The ArchiPy error, or None when the exception is not an Elasticsearch failure.
+    """
+    if isinstance(error, ApiError):
+        status = error.meta.status
+        by_type = _ERROR_TYPE_ERRORS.get(str(getattr(error, "error", "")))
+        if by_type is not None:
+            return by_type()
+        return _STATUS_ERRORS.get(status, InternalError)()
+    if isinstance(error, ConnectionTimeout):
+        return ConnectionTimeoutError()
+    if isinstance(error, TransportConnectionError):
+        return ServiceUnavailableError()
+    if isinstance(error, TransportError):
+        return InternalError()
+    return None
+
+
+def _raise_mapped(error: Exception) -> NoReturn:
+    """Raise the ArchiPy error for an Elasticsearch failure, or re-raise the original.
+
+    Args:
+        error (Exception): The exception raised by the client.
+
+    Raises:
+        BaseError: The mapped ArchiPy error, chained from the original.
+        Exception: The original exception when it is not an Elasticsearch failure.
+    """
+    mapped = _to_archipy_error(error)
+    if mapped is None:
+        raise error
+    raise mapped from error
+
+
+def _errors_mapped(adapter: object) -> bool:
+    """Return whether the adapter was configured to map client errors."""
+    return bool(getattr(adapter, "_map_errors", False))
+
+
+def _map_sync_errors[**P, R](function: Callable[P, R]) -> Callable[P, R]:
+    """Map client exceptions to ArchiPy errors when the adapter has MAP_ERRORS enabled."""
+
+    @functools.wraps(function)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        adapter = args[0]
+        try:
+            return function(*args, **kwargs)
+        except Exception as error:
+            if not _errors_mapped(adapter):
+                raise
+            _raise_mapped(error)
+
+    return wrapper
+
+
+def _map_sync_gen_errors[**P, R](function: Callable[P, Iterable[R]]) -> Callable[P, Iterator[R]]:
+    """Generator variant of ``_map_sync_errors``; errors surface while iterating."""
+
+    @functools.wraps(function)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Iterator[R]:
+        adapter = args[0]
+        try:
+            yield from function(*args, **kwargs)
+        except Exception as error:
+            if not _errors_mapped(adapter):
+                raise
+            _raise_mapped(error)
+
+    return wrapper
+
+
+def _map_async_errors[**P, R](function: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+    """Async variant of ``_map_sync_errors``."""
+
+    @functools.wraps(function)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        adapter = args[0]
+        try:
+            return await function(*args, **kwargs)
+        except Exception as error:
+            if not _errors_mapped(adapter):
+                raise
+            _raise_mapped(error)
+
+    return wrapper
+
+
+def _map_async_gen_errors[**P, R](function: Callable[P, AsyncIterator[R]]) -> Callable[P, AsyncIterator[R]]:
+    """Async-generator variant of ``_map_sync_errors``."""
+
+    @functools.wraps(function)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> AsyncIterator[R]:
+        adapter = args[0]
+        try:
+            async for item in function(*args, **kwargs):
+                yield item
+        except Exception as error:
+            if not _errors_mapped(adapter):
+                raise
+            _raise_mapped(error)
+
+    return wrapper
+
+
+def _warn_error_mapping_disabled(configs: ElasticsearchConfig) -> bool:
+    """Return the MAP_ERRORS flag and warn when it is off.
+
+    Args:
+        configs (ElasticsearchConfig): Configuration settings for Elasticsearch.
+
+    Returns:
+        bool: Whether ArchiPy error mapping is enabled.
+    """
+    if not configs.MAP_ERRORS:
+        warnings.warn(_ERROR_MAPPING_DEPRECATION, DeprecationWarning, stacklevel=3)
+    return configs.MAP_ERRORS
 
 
 def _apply_optional_client_kwargs(kwargs: dict[str, Any], configs: ElasticsearchConfig) -> None:
@@ -126,6 +289,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
                 If None, retrieves from global config. Defaults to None.
         """
         configs: ElasticsearchConfig = elasticsearch_config or BaseConfig.global_config().ELASTIC
+        self._map_errors = _warn_error_mapping_disabled(configs)
         self.client = self._get_client(configs)
 
     @staticmethod
@@ -192,6 +356,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return client
 
     @override
+    @_map_sync_errors
     def ping(self) -> ElasticsearchResponseType:
         """Test the connection to the Elasticsearch server.
 
@@ -201,6 +366,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return self.client.ping()
 
     @override
+    @_map_sync_errors
     def index(
         self,
         index: ElasticsearchIndexType,
@@ -219,9 +385,12 @@ class ElasticsearchAdapter(ElasticsearchPort):
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
         """
-        return self.client.index(index=index, document=document, id=doc_id, **kwargs)
+        # An auto-id POST replayed after a timeout would create a duplicate document
+        client = self.client.options(max_retries=0) if doc_id is None else self.client
+        return client.index(index=index, document=document, id=doc_id, **kwargs)
 
     @override
+    @_map_sync_errors
     def get(
         self,
         index: ElasticsearchIndexType,
@@ -241,6 +410,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return self.client.get(index=index, id=doc_id, **kwargs)
 
     @override
+    @_map_sync_errors
     def search(
         self,
         index: ElasticsearchIndexType,
@@ -260,6 +430,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return self.client.search(index=index, **_expand_body(query, kwargs, self.client.search))
 
     @override
+    @_map_sync_errors
     def update(
         self,
         index: ElasticsearchIndexType,
@@ -278,9 +449,12 @@ class ElasticsearchAdapter(ElasticsearchPort):
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
         """
-        return self.client.update(index=index, id=doc_id, doc=doc, **kwargs)
+        # A scripted update replayed after a timeout could apply the script twice
+        client = self.client.options(max_retries=0) if "script" in kwargs else self.client
+        return client.update(index=index, id=doc_id, doc=doc, **kwargs)
 
     @override
+    @_map_sync_errors
     def delete(
         self,
         index: ElasticsearchIndexType,
@@ -300,6 +474,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return self.client.delete(index=index, id=doc_id, **kwargs)
 
     @override
+    @_map_sync_errors
     def bulk(
         self,
         actions: Iterable[ElasticsearchBulkActionType],
@@ -322,6 +497,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return es_bulk(self.client, actions, stats_only=stats_only, **kwargs)
 
     @override
+    @_map_sync_gen_errors
     def scan(
         self,
         query: ElasticsearchQueryType | None = None,
@@ -339,6 +515,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return es_scan(self.client, query=query, **kwargs)
 
     @override
+    @_map_sync_errors
     def create_index(
         self,
         index: ElasticsearchIndexType,
@@ -359,6 +536,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return indices.create(index=index, **_expand_body(body, kwargs, indices.create))
 
     @override
+    @_map_sync_errors
     def delete_index(
         self,
         index: ElasticsearchIndexType,
@@ -376,6 +554,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return self.client.indices.delete(index=index, **kwargs)
 
     @override
+    @_map_sync_errors
     def exists(
         self,
         index: ElasticsearchIndexType,
@@ -395,6 +574,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         return self.client.exists(index=index, id=doc_id, **kwargs)
 
     @override
+    @_map_sync_errors
     def index_exists(
         self,
         index: ElasticsearchIndexType,
@@ -410,6 +590,11 @@ class ElasticsearchAdapter(ElasticsearchPort):
             ElasticsearchResponseType: True if the index exists, False otherwise.
         """
         return self.client.indices.exists(index=index, **kwargs)
+
+    @override
+    def close(self) -> None:
+        """Close the client and release its connection pool."""
+        self.client.close()
 
 
 class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
@@ -427,6 +612,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
                 If None, retrieves from global config. Defaults to None.
         """
         configs: ElasticsearchConfig = elasticsearch_config or BaseConfig.global_config().ELASTIC
+        self._map_errors = _warn_error_mapping_disabled(configs)
         self.client = self._get_client(configs)
 
     @staticmethod
@@ -493,6 +679,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return client
 
     @override
+    @_map_async_errors
     async def ping(self) -> ElasticsearchResponseType:
         """Test the connection to the Elasticsearch server.
 
@@ -502,6 +689,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return await self.client.ping()
 
     @override
+    @_map_async_errors
     async def index(
         self,
         index: ElasticsearchIndexType,
@@ -520,9 +708,12 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
         """
-        return await self.client.index(index=index, document=document, id=doc_id, **kwargs)
+        # An auto-id POST replayed after a timeout would create a duplicate document
+        client = self.client.options(max_retries=0) if doc_id is None else self.client
+        return await client.index(index=index, document=document, id=doc_id, **kwargs)
 
     @override
+    @_map_async_errors
     async def get(
         self,
         index: ElasticsearchIndexType,
@@ -542,6 +733,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return await self.client.get(index=index, id=doc_id, **kwargs)
 
     @override
+    @_map_async_errors
     async def search(
         self,
         index: ElasticsearchIndexType,
@@ -561,6 +753,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return await self.client.search(index=index, **_expand_body(query, kwargs, self.client.search))
 
     @override
+    @_map_async_errors
     async def update(
         self,
         index: ElasticsearchIndexType,
@@ -579,9 +772,12 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
         """
-        return await self.client.update(index=index, id=doc_id, doc=doc, **kwargs)
+        # A scripted update replayed after a timeout could apply the script twice
+        client = self.client.options(max_retries=0) if "script" in kwargs else self.client
+        return await client.update(index=index, id=doc_id, doc=doc, **kwargs)
 
     @override
+    @_map_async_errors
     async def delete(
         self,
         index: ElasticsearchIndexType,
@@ -601,6 +797,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return await self.client.delete(index=index, id=doc_id, **kwargs)
 
     @override
+    @_map_async_errors
     async def bulk(
         self,
         actions: Iterable[ElasticsearchBulkActionType],
@@ -623,6 +820,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return await async_bulk(self.client, actions, stats_only=stats_only, **kwargs)
 
     @override
+    @_map_async_gen_errors
     async def scan(
         self,
         query: ElasticsearchQueryType | None = None,
@@ -641,6 +839,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
             yield document
 
     @override
+    @_map_async_errors
     async def create_index(
         self,
         index: ElasticsearchIndexType,
@@ -661,6 +860,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return await indices.create(index=index, **_expand_body(body, kwargs, indices.create))
 
     @override
+    @_map_async_errors
     async def delete_index(
         self,
         index: ElasticsearchIndexType,
@@ -678,6 +878,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return await self.client.indices.delete(index=index, **kwargs)
 
     @override
+    @_map_async_errors
     async def exists(
         self,
         index: ElasticsearchIndexType,
@@ -697,6 +898,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         return await self.client.exists(index=index, id=doc_id, **kwargs)
 
     @override
+    @_map_async_errors
     async def index_exists(
         self,
         index: ElasticsearchIndexType,
@@ -712,3 +914,8 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
             ElasticsearchResponseType: True if the index exists, False otherwise.
         """
         return await self.client.indices.exists(index=index, **kwargs)
+
+    @override
+    async def aclose(self) -> None:
+        """Close the client and release its connection pool."""
+        await self.client.close()
