@@ -207,7 +207,7 @@ class UserRegistrationLogic:
 
 > **Note:** Logic layer collaboration rules:
 >
-> - Logic classes **may call other logic classes** — nested `@atomic` calls reuse the open session. A nested call that fails rolls back the whole transaction, and the outer block raises `DatabaseTransactionError` even if the nested error was caught.
+> - Logic classes **may call other logic classes** — nested `@atomic` calls reuse the open session. By default a nested failure rolls back the whole transaction and the outer block raises `DatabaseTransactionError` even if the error was caught. Pass `savepoint=True` to a nested call to roll back only that savepoint and keep the outer transaction usable; a default call inside the chain still aborts everything. StarRocks has no savepoints.
 > - Logic classes **must never import or call a repository from another domain directly**.
 >   Cross-domain reads must go through the other domain's logic class.
 >

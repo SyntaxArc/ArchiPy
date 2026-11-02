@@ -31,6 +31,36 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
       | db_type |
       | sqlite  |
 
+  Scenario Outline: Savepoints keep the outer transaction after a caught nested failure
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When nested atomic transactions run with savepoints and one inner fails
+    Then the savepoint transaction should commit the successful inner and the outer writes
+
+    Examples:
+      | db_type |
+      | sqlite  |
+
+  Scenario Outline: Multilevel savepoints roll back only the failing level
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When multilevel savepoint transactions are executed
+    Then the outer transaction should commit the surviving savepoint level
+
+    Examples:
+      | db_type |
+      | sqlite  |
+
+  Scenario Outline: A default nested failure inside a savepoint rolls back the transaction
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When a savepoint wraps a nested default atomic failure
+    Then the mixed-mode transaction should be rolled back
+
+    Examples:
+      | db_type |
+      | sqlite  |
+
   Scenario Outline: Update entities in atomic transaction
     Given the application database is initialized for <db_type>
     And test entities are defined
@@ -101,6 +131,17 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
     When a new async entity creation fails within an atomic transaction
     Then no async entity should exist in the database
     And the async database session should remain usable
+
+    Examples:
+      | db_type |
+      | sqlite  |
+
+  @async
+  Scenario Outline: Savepoints keep the outer async transaction after a caught nested failure
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When nested async atomic transactions run with savepoints and one inner fails
+    Then the async savepoint transaction should commit the successful inner and the outer writes
 
     Examples:
       | db_type |
@@ -637,3 +678,8 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
       | kind  | value | expected |
       | sync  | 2.5   | 2500     |
       | async | 2.5   | 2500     |
+
+  @unit
+  Scenario: Savepoints are rejected for StarRocks
+    When a savepoint atomic decorator is requested for StarRocks
+    Then an invalid argument error should name "savepoint"

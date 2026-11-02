@@ -78,6 +78,10 @@ ATOMIC_BLOCK_CONFIGS = {
 
 # Session marker: a nested atomic call failed, so the outer transaction must not be committed
 _ROLLBACK_ONLY_FLAG = "_archipy_atomic_rollback_only"
+# Number of active savepoint levels on the session
+_SAVEPOINT_DEPTH_FLAG = "_archipy_atomic_savepoint_depth"
+# Databases without SAVEPOINT support
+_SAVEPOINT_UNSUPPORTED_DB_TYPES = frozenset({"starrocks"})
 
 # Type variables for function return types
 R = TypeVar("R")
@@ -222,6 +226,54 @@ async def _close_async_session(session: Any, session_manager: AsyncSessionManage
         await session_manager.remove_session()
 
 
+async def _run_async_savepoint[R](
+    session: Any,
+    func: Callable[..., Awaitable[R]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> R:
+    """Run ``func`` inside a savepoint and release or roll it back."""
+    depth = session.info.get(_SAVEPOINT_DEPTH_FLAG, 0)
+    savepoint_tx = await session.begin_nested()
+    session.info[_SAVEPOINT_DEPTH_FLAG] = depth + 1
+    try:
+        result = await func(*args, **kwargs)
+    except BaseException:
+        if savepoint_tx.is_active:
+            await savepoint_tx.rollback()
+        raise
+    else:
+        if savepoint_tx.is_active:
+            await savepoint_tx.commit()
+        return result
+    finally:
+        session.info[_SAVEPOINT_DEPTH_FLAG] = depth
+
+
+def _run_sync_savepoint[R](
+    session: Any,
+    func: Callable[..., R],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> R:
+    """Run ``func`` inside a savepoint and release or roll it back."""
+    depth = session.info.get(_SAVEPOINT_DEPTH_FLAG, 0)
+    savepoint_tx = session.begin_nested()
+    session.info[_SAVEPOINT_DEPTH_FLAG] = depth + 1
+    try:
+        result = func(*args, **kwargs)
+    except BaseException:
+        if savepoint_tx.is_active:
+            savepoint_tx.rollback()
+        raise
+    else:
+        if savepoint_tx.is_active:
+            savepoint_tx.commit()
+        return result
+    finally:
+        session.info[_SAVEPOINT_DEPTH_FLAG] = depth
+
+
 async def _run_async_scope[R](
     session: Any,
     func: Callable[..., Awaitable[R]],
@@ -229,17 +281,26 @@ async def _run_async_scope[R](
     kwargs: dict[str, Any],
     *,
     is_nested: bool,
+    savepoint: bool,
+    db_type: str,
 ) -> R:
     """Run ``func`` in the outer transaction or inside it as a nested call."""
     if is_nested:
+        if savepoint:
+            return await _run_async_savepoint(session, func, args, kwargs)
         # Nested calls join the outer transaction; a failure rolls that transaction back
         return await func(*args, **kwargs)
     if session.in_transaction():
         result = await func(*args, **kwargs)
+        if session.info.get(_ROLLBACK_ONLY_FLAG, False):
+            raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
         await session.commit()
         return result
     async with session.begin():
-        return await func(*args, **kwargs)
+        result = await func(*args, **kwargs)
+        if session.info.get(_ROLLBACK_ONLY_FLAG, False):
+            raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
+        return result
 
 
 def _run_sync_scope[R](
@@ -249,17 +310,26 @@ def _run_sync_scope[R](
     kwargs: dict[str, Any],
     *,
     is_nested: bool,
+    savepoint: bool,
+    db_type: str,
 ) -> R:
     """Run ``func`` in the outer transaction or inside it as a nested call."""
     if is_nested:
+        if savepoint:
+            return _run_sync_savepoint(session, func, args, kwargs)
         # Nested calls join the outer transaction; a failure rolls that transaction back
         return func(*args, **kwargs)
     if session.in_transaction():
         result = func(*args, **kwargs)
+        if session.info.get(_ROLLBACK_ONLY_FLAG, False):
+            raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
         session.commit()
         return result
     with session.begin():
-        return func(*args, **kwargs)
+        result = func(*args, **kwargs)
+        if session.info.get(_ROLLBACK_ONLY_FLAG, False):
+            raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
+        return result
 
 
 async def _rollback_outer_after_nested_failure(session: Any, db_type: str) -> NoReturn:
@@ -281,14 +351,22 @@ async def _handle_async_atomic_failure(
     func: Callable[..., Any],
     *,
     is_nested: bool,
+    savepoint: bool,
 ) -> NoReturn:
     """Roll back and translate an exception raised inside an async atomic block."""
-    if is_nested:
+    should_rollback = True
+    if is_nested and savepoint:
+        # The savepoint already rolled back; the outer transaction stays usable
+        should_rollback = False
+    elif is_nested:
         session.info[_ROLLBACK_ONLY_FLAG] = True
-    try:
-        await session.rollback()
-    except Exception:
-        logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
+        # Defer a full rollback while a savepoint ancestor is unwinding
+        should_rollback = session.info.get(_SAVEPOINT_DEPTH_FLAG, 0) == 0
+    if should_rollback:
+        try:
+            await session.rollback()
+        except Exception:
+            logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
     if _is_control_flow_exception(exception):
         raise exception
     func_name = getattr(func, "__name__", "unknown")
@@ -303,14 +381,22 @@ def _handle_sync_atomic_failure(
     func: Callable[..., Any],
     *,
     is_nested: bool,
+    savepoint: bool,
 ) -> NoReturn:
     """Roll back and translate an exception raised inside a sync atomic block."""
-    if is_nested:
+    should_rollback = True
+    if is_nested and savepoint:
+        # The savepoint already rolled back; the outer transaction stays usable
+        should_rollback = False
+    elif is_nested:
         session.info[_ROLLBACK_ONLY_FLAG] = True
-    try:
-        session.rollback()
-    except Exception:
-        logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
+        # Defer a full rollback while a savepoint ancestor is unwinding
+        should_rollback = session.info.get(_SAVEPOINT_DEPTH_FLAG, 0) == 0
+    if should_rollback:
+        try:
+            session.rollback()
+        except Exception:
+            logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
     if _is_control_flow_exception(exception):
         raise exception
     func_name = getattr(func, "__name__", "unknown")
@@ -323,6 +409,7 @@ def _create_async_atomic_wrapper[R](
     *,
     db_type: str,
     atomic_flag: str,
+    savepoint: bool = False,
     registry_override: type[SessionManagerRegistry] | None = None,
 ) -> Callable[..., Awaitable[R]]:
     """Wrap an async function with atomic transaction management."""
@@ -338,9 +425,24 @@ def _create_async_atomic_wrapper[R](
             session.info[atomic_flag] = True
 
         try:
-            result = await _run_async_scope(session, func, args, kwargs, is_nested=is_nested)
+            result = await _run_async_scope(
+                session,
+                func,
+                args,
+                kwargs,
+                is_nested=is_nested,
+                savepoint=savepoint,
+                db_type=db_type,
+            )
         except BaseException as exception:  # noqa: BLE001  # translate every atomic failure
-            await _handle_async_atomic_failure(session, exception, db_type, func, is_nested=is_nested)
+            await _handle_async_atomic_failure(
+                session,
+                exception,
+                db_type,
+                func,
+                is_nested=is_nested,
+                savepoint=savepoint,
+            )
         else:
             if not is_nested and session.info.pop(_ROLLBACK_ONLY_FLAG, False):
                 await _rollback_outer_after_nested_failure(session, db_type)
@@ -360,6 +462,7 @@ def _create_sync_atomic_wrapper[R](
     *,
     db_type: str,
     atomic_flag: str,
+    savepoint: bool = False,
     registry_override: type[SessionManagerRegistry] | None = None,
 ) -> Callable[..., R]:
     """Wrap a sync function with atomic transaction management."""
@@ -375,9 +478,17 @@ def _create_sync_atomic_wrapper[R](
             session.info[atomic_flag] = True
 
         try:
-            result = _run_sync_scope(session, func, args, kwargs, is_nested=is_nested)
+            result = _run_sync_scope(
+                session,
+                func,
+                args,
+                kwargs,
+                is_nested=is_nested,
+                savepoint=savepoint,
+                db_type=db_type,
+            )
         except BaseException as exception:  # noqa: BLE001  # translate every atomic failure
-            _handle_sync_atomic_failure(session, exception, db_type, func, is_nested=is_nested)
+            _handle_sync_atomic_failure(session, exception, db_type, func, is_nested=is_nested, savepoint=savepoint)
         else:
             if not is_nested and session.info.pop(_ROLLBACK_ONLY_FLAG, False):
                 _rollback_outer_after_nested_failure_sync(session, db_type)
@@ -396,6 +507,7 @@ def _create_sync_atomic_wrapper[R](
 def _bind_db_type[**P, R](
     db_type: str,
     registry: type[SessionManagerRegistry] | None,
+    savepoint: bool,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Return a decorator that applies the atomic wrapper for ``db_type`` to the function it receives.
 
@@ -404,7 +516,7 @@ def _bind_db_type[**P, R](
     """
 
     def apply(function: Callable[P, R]) -> Callable[P, R]:
-        return sqlalchemy_atomic(db_type, function, registry=registry)
+        return sqlalchemy_atomic(db_type, function, registry=registry, savepoint=savepoint)
 
     return apply
 
@@ -413,9 +525,10 @@ def _atomic_for(
     db_type: str,
     function: Callable[..., Any] | None,
     registry: type[SessionManagerRegistry] | None,
+    savepoint: bool = False,
 ) -> Any:
     """Apply :func:`sqlalchemy_atomic` for a shortcut (typed by the shortcut's own overloads)."""
-    return sqlalchemy_atomic(db_type, function, registry=registry)
+    return sqlalchemy_atomic(db_type, function, registry=registry, savepoint=savepoint)
 
 
 @overload
@@ -424,6 +537,7 @@ def sqlalchemy_atomic[**P, R](
     function: Callable[P, R],
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[P, R]: ...
 
 
@@ -433,6 +547,7 @@ def sqlalchemy_atomic[**P, R](
     function: None = None,
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
@@ -441,6 +556,7 @@ def sqlalchemy_atomic[**P, R](
     function: Callable[P, R] | None = None,
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Run a function inside a SQLAlchemy transaction for the given database type.
 
@@ -454,6 +570,8 @@ def sqlalchemy_atomic[**P, R](
         registry (type[SessionManagerRegistry] | None): Registry that supplies the session manager. Defaults to the
             registry of ``db_type``, which reads the global config; pass a registry subclass to run on another
             database of the same type (see the multiple databases section of the docs).
+        savepoint (bool): Run a nested call in a savepoint. Defaults to False, where a nested failure rolls back the
+            whole transaction. Ignored on the outermost call and unsupported on StarRocks.
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
@@ -488,9 +606,17 @@ def sqlalchemy_atomic[**P, R](
             argument_name="db_type",
             additional_data={"valid_values": list(ATOMIC_BLOCK_CONFIGS.keys())},
         )
+    if savepoint and db_type in _SAVEPOINT_UNSUPPORTED_DB_TYPES:
+        raise InvalidArgumentError(
+            argument_name="savepoint",
+            additional_data={"db_type": db_type, "reason": "savepoint_not_supported"},
+        )
 
     if function is None:
-        return cast("Callable[[Callable[P, R]], Callable[P, R]]", _bind_db_type(db_type, registry))
+        return cast(
+            "Callable[[Callable[P, R]], Callable[P, R]]",
+            _bind_db_type(db_type, registry, savepoint),
+        )
 
     atomic_flag = ATOMIC_BLOCK_CONFIGS[db_type]["flag"]
     if inspect.iscoroutinefunction(function):
@@ -500,10 +626,17 @@ def sqlalchemy_atomic[**P, R](
                 function,
                 db_type=db_type,
                 atomic_flag=atomic_flag,
+                savepoint=savepoint,
                 registry_override=registry,
             ),
         )
-    return _create_sync_atomic_wrapper(function, db_type=db_type, atomic_flag=atomic_flag, registry_override=registry)
+    return _create_sync_atomic_wrapper(
+        function,
+        db_type=db_type,
+        atomic_flag=atomic_flag,
+        savepoint=savepoint,
+        registry_override=registry,
+    )
 
 
 @overload
@@ -511,6 +644,7 @@ def postgres_sqlalchemy_atomic[**P, R](
     function: Callable[P, R],
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[P, R]: ...
 
 
@@ -519,6 +653,7 @@ def postgres_sqlalchemy_atomic[**P, R](
     function: None = None,
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
@@ -526,6 +661,7 @@ def postgres_sqlalchemy_atomic[**P, R](
     function: Callable[P, R] | None = None,
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator for PostgreSQL atomic transactions; works for sync and ``async def`` functions.
 
@@ -533,11 +669,12 @@ def postgres_sqlalchemy_atomic[**P, R](
         function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
         registry (type[SessionManagerRegistry] | None): Registry for another database of the same type; defaults to
             the registry that reads the global config.
+        savepoint (bool): Run a nested call in a savepoint instead of rolling back the whole transaction.
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
     """
-    return _atomic_for("postgres", function, registry)
+    return _atomic_for("postgres", function, registry, savepoint)
 
 
 @overload
@@ -545,6 +682,7 @@ def sqlite_sqlalchemy_atomic[**P, R](
     function: Callable[P, R],
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[P, R]: ...
 
 
@@ -553,6 +691,7 @@ def sqlite_sqlalchemy_atomic[**P, R](
     function: None = None,
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
@@ -560,6 +699,7 @@ def sqlite_sqlalchemy_atomic[**P, R](
     function: Callable[P, R] | None = None,
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator for SQLite atomic transactions; works for sync and ``async def`` functions.
 
@@ -567,11 +707,12 @@ def sqlite_sqlalchemy_atomic[**P, R](
         function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
         registry (type[SessionManagerRegistry] | None): Registry for another database of the same type; defaults to
             the registry that reads the global config.
+        savepoint (bool): Run a nested call in a savepoint instead of rolling back the whole transaction.
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
     """
-    return _atomic_for("sqlite", function, registry)
+    return _atomic_for("sqlite", function, registry, savepoint)
 
 
 @overload
@@ -613,6 +754,7 @@ def mysql_sqlalchemy_atomic[**P, R](
     function: Callable[P, R],
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[P, R]: ...
 
 
@@ -621,6 +763,7 @@ def mysql_sqlalchemy_atomic[**P, R](
     function: None = None,
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
@@ -628,6 +771,7 @@ def mysql_sqlalchemy_atomic[**P, R](
     function: Callable[P, R] | None = None,
     *,
     registry: type[SessionManagerRegistry] | None = None,
+    savepoint: bool = False,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator for MySQL atomic transactions; works for sync and ``async def`` functions.
 
@@ -635,11 +779,12 @@ def mysql_sqlalchemy_atomic[**P, R](
         function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
         registry (type[SessionManagerRegistry] | None): Registry for another database of the same type; defaults to
             the registry that reads the global config.
+        savepoint (bool): Run a nested call in a savepoint instead of rolling back the whole transaction.
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
     """
-    return _atomic_for("mysql", function, registry)
+    return _atomic_for("mysql", function, registry, savepoint)
 
 
 def sqlalchemy_atomic_decorator(

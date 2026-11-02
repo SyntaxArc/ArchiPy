@@ -32,6 +32,36 @@ Feature: SQLAlchemy Atomic Transactions on PostgreSQL
       | db_type  |
       | postgres |
 
+  Scenario Outline: Savepoints keep the outer transaction after a caught nested failure
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When nested atomic transactions run with savepoints and one inner fails
+    Then the savepoint transaction should commit the successful inner and the outer writes
+
+    Examples:
+      | db_type  |
+      | postgres |
+
+  Scenario Outline: Multilevel savepoints roll back only the failing level
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When multilevel savepoint transactions are executed
+    Then the outer transaction should commit the surviving savepoint level
+
+    Examples:
+      | db_type  |
+      | postgres |
+
+  Scenario Outline: A default nested failure inside a savepoint rolls back the transaction
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When a savepoint wraps a nested default atomic failure
+    Then the mixed-mode transaction should be rolled back
+
+    Examples:
+      | db_type  |
+      | postgres |
+
   Scenario Outline: Update entities in atomic transaction
     Given the application database is initialized for <db_type>
     And test entities are defined
