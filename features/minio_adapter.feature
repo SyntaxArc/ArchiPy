@@ -165,6 +165,21 @@ Feature: MinIO Operations Testing
       | create bucket "errors-bucket" again                      | AlreadyExistsError   |
       | check existence of an object with an empty bucket name   | InvalidArgumentError |
 
+  Scenario Outline: Presigned <kind> URL rejects expiry <expires>
+    Given a bucket named "errors-bucket" exists
+    When I generate a presigned <kind> URL with expiry <expires>
+    Then the MinIO call should raise <result>
+
+    Examples:
+      | kind | expires | result               |
+      | GET  | 0       | InvalidArgumentError |
+      | GET  | -5      | InvalidArgumentError |
+      | GET  | 1000000 | InvalidArgumentError |
+      | PUT  | 0       | InvalidArgumentError |
+      | PUT  | 604801  | InvalidArgumentError |
+      | GET  | 604800  | NoError              |
+      | PUT  | 1       | NoError              |
+
   Scenario Outline: Missing <resource> reports resource type <resource>
     Given a bucket named "errors-bucket" exists
     When I <operation>
