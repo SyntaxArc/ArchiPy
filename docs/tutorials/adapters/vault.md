@@ -209,6 +209,15 @@ map onto nested config fields (e.g. `REDIS__PASSWORD` → `REDIS.PASSWORD`).
 See [Configuration Management](../config_management.md) for priority order and
 settings-source details.
 
+### Token Renewal and Re-login
+
+With `VAULT__AUTO_RENEW_TOKEN=true` the adapter looks the token up once, caches its expiry locally
+and renews it with `renew_self` when the remaining TTL drops to `VAULT__RENEW_THRESHOLD_SECONDS`.
+Tokens that never expire (`ttl == 0`, such as root or periodic tokens) and non-renewable tokens are
+left alone, and a failed renewal is logged without failing the call. For auth methods other than
+`token` (AppRole, Kubernetes, ...), a call rejected with 403 triggers one new login and one replay
+of the call; with a static `token` there is nothing to log in again with.
+
 ### Retries and Outages
 
 `VAULT__RETRIES_MAX_ATTEMPTS` retries failed connections for every call. Read errors and
@@ -216,6 +225,16 @@ settings-source details.
 so a write, delete or lease operation is never replayed. When Vault stays unavailable the adapter
 raises `UnavailableError` with a fixed message (the Vault address and path are logged, not
 returned in the error).
+
+### Good to Know
+
+- `read_secret` returns a copy of the payload, so changing the result never alters the cached value.
+- `VAULT__VERIFY_SSL` accepts `1/true/yes/on` and `0/false/no/off` (case-insensitive). Any other value raises a
+  `ConfigurationError` instead of silently turning verification off.
+- Credential fields of `VaultConfig` (`TOKEN`, `APPROLE_SECRET_ID`, `PASSWORD`, the JWT and AWS secrets) are
+  excluded from `repr()`. Error reasons are generic; the underlying detail is logged.
+- If two callers request dynamic credentials for the same role, each call creates its own lease. Revoke
+  the leases you no longer need.
 
 ## See Also
 

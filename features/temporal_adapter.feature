@@ -302,6 +302,16 @@ Feature: Temporal Adapter Operations
       | plain  | SecondPlainActivity.execute         |
       | atomic | SecondAtomicActivity.execute_atomic |
 
+  Scenario Outline: A failed activity raising <error> with redaction <redaction> is converted with the intended visibility
+    When an activity raising <error> with redaction <redaction> fails and its failure is converted
+    Then the converted failure should <visibility> the card number
+
+    Examples: Failure serialisation
+      | error                | redaction | visibility  |
+      | InvalidArgumentError | off       | not contain |
+      | InternalError        | off       | contain     |
+      | InternalError        | on        | not contain |
+
   Scenario Outline: A workflow timeout override of <override> resolves to <resolved>
     When I resolve a workflow timeout override of <override> against a configured 120 seconds
     Then the resolved workflow timeout should be <resolved>

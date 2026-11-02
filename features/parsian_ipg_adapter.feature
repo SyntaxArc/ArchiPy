@@ -45,9 +45,27 @@ Feature: Parsian Shaparak payment gateway adapter
       | sync  |
       | async |
 
-  Scenario Outline: Unexpected transport failure during initiation is reported as internal error
+  Scenario Outline: Network failures are reported as unavailable so callers can retry
     Given a <kind> Parsian adapter with login account "merchant-1"
-    And the Parsian gateway fails with a connection error on "SalePaymentRequest"
+    And the Parsian gateway fails with <failure> on "<operation>"
+    When I call Parsian "<operation>"
+    Then the Parsian call fails with "UnavailableError"
+    And the Parsian failure carries resource type "<resource>"
+
+    Examples:
+      | kind  | failure                   | operation                | resource                          |
+      | sync  | connection error          | SalePaymentRequest       | Parsian Shaparak Sale Service     |
+      | sync  | requests timeout          | ConfirmPayment           | Parsian Shaparak Confirm Service  |
+      | sync  | requests connection error | ConfirmPaymentWithAmount | Parsian Shaparak Confirm Service  |
+      | sync  | zeep transport error      | ReversalRequest          | Parsian Shaparak Reversal Service |
+      | async | httpx timeout             | SalePaymentRequest       | Parsian Shaparak Sale Service     |
+      | async | httpx connect error       | ConfirmPayment           | Parsian Shaparak Confirm Service  |
+      | async | httpx timeout             | ConfirmPaymentWithAmount | Parsian Shaparak Confirm Service  |
+      | async | httpx connect error       | ReversalRequest          | Parsian Shaparak Reversal Service |
+
+  Scenario Outline: Unexpected non-network failure is reported as internal error
+    Given a <kind> Parsian adapter with login account "merchant-1"
+    And the Parsian gateway fails with unexpected bug on "SalePaymentRequest"
     When I initiate a Parsian payment of 50000 for order 1001 with callback "https://shop.example.com/back"
     Then the Parsian call fails with "InternalError"
 

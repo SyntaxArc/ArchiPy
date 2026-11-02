@@ -84,6 +84,23 @@ class SQLAlchemyExceptionHandlerMixin:
         return classify_by_message(message)
 
 
+def _escape_like(value: Any) -> str:  # noqa: ANN401
+    """Escape LIKE wildcards so the value matches literally (the statement declares a backslash as escape)."""
+    return str(value).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _sort_attribute(entity: type[BaseEntity], column_name: str) -> InstrumentedAttribute:
+    """Return the mapped column of an entity to sort by.
+
+    Raises:
+        InvalidArgumentError: If the entity has no mapped column of that name.
+    """
+    mapper_attributes = inspect(entity).column_attrs
+    if column_name not in mapper_attributes:
+        raise InvalidArgumentError(argument_name="sort_info.column")
+    return getattr(entity, column_name)
+
+
 # Operations that need no validation, mapped to the SQLAlchemy expression they build.
 _FILTER_EXPRESSIONS: dict[FilterOperationType, Callable[[InstrumentedAttribute, Any], ColumnElement[bool]]] = {
     FilterOperationType.EQUAL: lambda field, value: field == value,
@@ -92,11 +109,11 @@ _FILTER_EXPRESSIONS: dict[FilterOperationType, Callable[[InstrumentedAttribute, 
     FilterOperationType.LESS_THAN_OR_EQUAL: lambda field, value: field <= value,
     FilterOperationType.GREATER_THAN: lambda field, value: field > value,
     FilterOperationType.GREATER_THAN_OR_EQUAL: lambda field, value: field >= value,
-    FilterOperationType.LIKE: lambda field, value: field.like(f"%{value}%"),
-    FilterOperationType.ILIKE: lambda field, value: field.ilike(f"%{value}%"),
-    FilterOperationType.STARTS_WITH: lambda field, value: field.startswith(value),
-    FilterOperationType.ENDS_WITH: lambda field, value: field.endswith(value),
-    FilterOperationType.CONTAINS: lambda field, value: field.contains(value),
+    FilterOperationType.LIKE: lambda field, value: field.like(f"%{_escape_like(value)}%", escape="\\"),
+    FilterOperationType.ILIKE: lambda field, value: field.ilike(f"%{_escape_like(value)}%", escape="\\"),
+    FilterOperationType.STARTS_WITH: lambda field, value: field.startswith(value, autoescape=True),
+    FilterOperationType.ENDS_WITH: lambda field, value: field.endswith(value, autoescape=True),
+    FilterOperationType.CONTAINS: lambda field, value: field.contains(value, autoescape=True),
     FilterOperationType.IS_NULL: lambda field, _value: field.is_(None),
     FilterOperationType.IS_NOT_NULL: lambda field, _value: field.is_not(None),
 }
@@ -327,9 +344,9 @@ class SQLAlchemySortMixin:
         if sort_info is None:
             return query
         if isinstance(sort_info.column, str):
-            sort_column = getattr(entity, sort_info.column)
+            sort_column = _sort_attribute(entity, sort_info.column)
         elif isinstance(sort_info.column, Enum):
-            sort_column = getattr(entity, sort_info.column.name.lower())
+            sort_column = _sort_attribute(entity, sort_info.column.name.lower())
         else:
             sort_column = sort_info.column
 

@@ -167,6 +167,17 @@ Feature: MinIO Operations Testing
       | GET  | 604800  | NoError              |
       | PUT  | 1       | NoError              |
 
+  Scenario Outline: Missing <resource> reports resource type <resource>
+    Given a bucket named "errors-bucket" exists
+    When I <operation>
+    Then the MinIO call should raise NotFoundError
+    And the MinIO error resource type should be "<resource>"
+
+    Examples:
+      | operation                                                | resource |
+      | stat missing object "nope.txt" in bucket "errors-bucket" | object   |
+      | list objects in missing bucket "no-such-bucket-xyz"      | bucket   |
+
   Scenario Outline: Botocore connection failures map to <error>
     When I check bucket existence while the S3 client raises botocore "<raised_error>"
     Then the MinIO call should raise <error>

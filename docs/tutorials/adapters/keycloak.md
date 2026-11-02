@@ -34,8 +34,17 @@ KEYCLOAK__CLIENT_SECRET_KEY=client-secret
 KEYCLOAK__VERIFY_SSL=true  # true, false, or the path of a CA bundle for a private CA
 KEYCLOAK__TIMEOUT=10  # seconds, fractions allowed (2.5)
 KEYCLOAK__TOKEN_LEEWAY_SECONDS=0  # clock-skew tolerance when validating token expiry
+KEYCLOAK__EXPECTED_ISSUER=https://keycloak.example.com/realms/my-realm  # enforce the iss claim (and typ=Bearer) of locally verified tokens
+KEYCLOAK__EXPECTED_AUDIENCE=my-client  # enforce the aud claim (and typ=Bearer) of locally verified tokens
 KEYCLOAK__REMOTE_CACHE_TTL_SECONDS=0  # opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)
 ```
+
+!!! warning "Token claim checks"
+    Local verification (`validate_token`, `get_token_info`, role checks) always checks the signature and expiry. Set
+    `KEYCLOAK__EXPECTED_ISSUER` and/or `KEYCLOAK__EXPECTED_AUDIENCE` to also require the `iss` / `aud` claims and
+    `typ == "Bearer"`; mismatching tokens are rejected (`validate_token` returns `False`, `get_token_info` raises
+    `InvalidTokenError`). Without these settings a mismatch only emits a `DeprecationWarning`, and enforcement becomes
+    the default in 6.0.
 
 ### Connection Options
 
@@ -776,10 +785,11 @@ Both adapters use TTL (Time-To-Live) caching for appropriate operations to impro
 configured for each method based on how frequently the data typically changes:
 
 - Public keys and certificate information: 1 hour
+- Realm JWKS used for local token verification: 1 hour, fetched again (at most every 10 seconds) when a token names an unknown `kid`, so a rotated signing key is picked up
 - User details and role information: 5 minutes
 
 !!! note
-    Token validation, `get_userinfo` and `check_permissions_batch` are never cached by the adapters. Write operations such as user creation and updates clear the relevant caches.
+    Token validation, `get_userinfo` and `check_permissions_batch` are never cached by the adapters. If Keycloak cannot be reached while its JWKS is fetched, `validate_token` and `get_token_info` raise `ServiceUnavailableError` instead of reporting an invalid token. Write operations such as user creation and updates clear the relevant caches.
 
 You can clear all caches if needed. `clear_all_caches()` works with or without admin mode: it never builds the admin
 client or logs in to Keycloak.
@@ -809,7 +819,9 @@ client or logs in to Keycloak.
     token or a changed permission stays accepted until the cached entry expires.
 
 - Token validation is performed without caching to ensure security.
-- The adapter automatically refreshes admin tokens before they expire.
+- The adapter automatically refreshes admin tokens before they expire. `AsyncKeycloakAdapter` refreshes them off the
+  event loop and behind a lock, so concurrent coroutines trigger one login. Its constructor still logs in synchronously
+  when admin mode is on, so build it at startup, not inside a request.
 - Write operations (like user creation/updates) automatically clear relevant caches.
 - For production use, prefer the authorization code flow over direct username/password authentication.
 - The auth guards' role checks read `realm_access` and `resource_access` from the UserInfo response. Stock Keycloak
