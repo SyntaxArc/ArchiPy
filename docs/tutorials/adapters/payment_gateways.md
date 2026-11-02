@@ -57,6 +57,10 @@ config = ParsianShaparakConfig(
     Debug logs name only the order id, the amount and the last four characters of a token. The login account and
     full tokens are never logged.
 
+!!! note "Timeouts"
+    `PARSIAN_SHAPARAK__TIMEOUT` (seconds) bounds both the WSDL downloads done in the constructor and every SOAP call.
+    If a WSDL cannot be loaded in time, the constructor raises `UnavailableError`.
+
 ### Initializing the Adapter
 
 ```python

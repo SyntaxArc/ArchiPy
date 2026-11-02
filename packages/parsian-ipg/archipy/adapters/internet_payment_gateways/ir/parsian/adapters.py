@@ -78,6 +78,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
 
         Raises:
             InvalidArgumentError: If LOGIN_ACCOUNT is not a valid string.
+            UnavailableError: If a WSDL cannot be downloaded within TIMEOUT seconds.
         """
         configs = config or BaseConfig.global_config().PARSIAN_SHAPARAK
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
@@ -87,11 +88,14 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
         session = requests.Session()
         if configs.PROXIES:
             session.proxies = configs.PROXIES
-        sync_transport = Transport(session=session, operation_timeout=configs.TIMEOUT)
+        sync_transport = Transport(session=session, timeout=configs.TIMEOUT, operation_timeout=configs.TIMEOUT)
 
-        self.sale_client = zeep.Client(wsdl=configs.PAYMENT_WSDL_URL, transport=sync_transport)
-        self.confirm_client = zeep.Client(wsdl=configs.CONFIRM_WSDL_URL, transport=sync_transport)
-        self.reversal_client = zeep.Client(wsdl=configs.REVERSAL_WSDL_URL, transport=sync_transport)
+        try:
+            self.sale_client = zeep.Client(wsdl=configs.PAYMENT_WSDL_URL, transport=sync_transport)
+            self.confirm_client = zeep.Client(wsdl=configs.CONFIRM_WSDL_URL, transport=sync_transport)
+            self.reversal_client = zeep.Client(wsdl=configs.REVERSAL_WSDL_URL, transport=sync_transport)
+        except _UNAVAILABLE_ERRORS as exception:
+            raise UnavailableError(resource_type="Parsian Shaparak WSDL") from exception
 
     def initiate_payment(self, request: PaymentRequestDTO) -> PaymentResponseDTO:
         """Step 1: Request payment token.
@@ -266,6 +270,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
 
         Raises:
             InvalidArgumentError: If LOGIN_ACCOUNT is not a valid string.
+            UnavailableError: If a WSDL cannot be downloaded within TIMEOUT seconds.
         """
         configs = config or BaseConfig.global_config().PARSIAN_SHAPARAK
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
@@ -278,12 +283,16 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
         async_transport = AsyncTransport(
             client=httpx2.AsyncClient(proxy=proxy, timeout=configs.TIMEOUT),
             proxy=proxy,
+            timeout=configs.TIMEOUT,
             operation_timeout=configs.TIMEOUT,
         )
 
-        self.sale_client = AsyncClient(wsdl=configs.PAYMENT_WSDL_URL, transport=async_transport)
-        self.confirm_client = AsyncClient(wsdl=configs.CONFIRM_WSDL_URL, transport=async_transport)
-        self.reversal_client = AsyncClient(wsdl=configs.REVERSAL_WSDL_URL, transport=async_transport)
+        try:
+            self.sale_client = AsyncClient(wsdl=configs.PAYMENT_WSDL_URL, transport=async_transport)
+            self.confirm_client = AsyncClient(wsdl=configs.CONFIRM_WSDL_URL, transport=async_transport)
+            self.reversal_client = AsyncClient(wsdl=configs.REVERSAL_WSDL_URL, transport=async_transport)
+        except _UNAVAILABLE_ERRORS as exception:
+            raise UnavailableError(resource_type="Parsian Shaparak WSDL") from exception
 
     @staticmethod
     def _get_proxy(proxies: dict[str, str] | None) -> str | None:
