@@ -227,6 +227,13 @@ config = SamanShaparakConfig(
     Debug logs name only the reservation number and the amount. The phone number, card hash, redirect URL and tokens
     are never logged.
 
+!!! note "Timeout and Neo-PG redirect"
+    `SAMAN_SHAPARAK__TIMEOUT` (seconds, default 30) bounds every gateway call. A read timeout on verify or reverse
+    leaves the outcome unknown: query the transaction before retrying. The Neo-PG payment page URL (`X-IPG-Url`) must
+    be https and belong to `SAMAN_SHAPARAK__ALLOWED_IPG_HOSTS` (default `["shaparak.ir"]`, subdomains included);
+    otherwise `InvalidArgumentError` is raised, and a successful token reply without the header raises
+    `FailedPreconditionError`.
+
 ### Initializing the Adapter
 
 ```python
@@ -355,6 +362,11 @@ else:
 ```
 
 ---
+
+## Closing Adapters
+
+Both gateways hold HTTP connections. Close adapters you create yourself with `close()` / `await aclose()`, or use
+them as context managers (`with` for sync adapters, `async with` for async adapters).
 
 ## Complete FastAPI Example
 

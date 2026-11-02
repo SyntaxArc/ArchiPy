@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import httpx2
 import requests
@@ -86,6 +86,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
 
         self.login_account = configs.LOGIN_ACCOUNT
         session = requests.Session()
+        self._session = session
         if configs.PROXIES:
             session.proxies = configs.PROXIES
         sync_transport = Transport(session=session, timeout=configs.TIMEOUT, operation_timeout=configs.TIMEOUT)
@@ -96,6 +97,22 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
             self.reversal_client = zeep.Client(wsdl=configs.REVERSAL_WSDL_URL, transport=sync_transport)
         except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak WSDL") from exception
+
+    def close(self) -> None:
+        """Close the underlying HTTP session and release its connections."""
+        self._session.close()
+
+    def __enter__(self) -> Self:
+        """Enter the context manager.
+
+        Returns:
+            Self: This adapter.
+        """
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        """Close the adapter when leaving the context manager."""
+        self.close()
 
     def initiate_payment(self, request: PaymentRequestDTO) -> PaymentResponseDTO:
         """Step 1: Request payment token.
@@ -280,8 +297,9 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
         proxy = self._get_proxy(configs.PROXIES)
         # The proxy is also handed to the transport: zeep loads the WSDL with its own client, which would
         # otherwise bypass it.
+        self._http_client = httpx2.AsyncClient(proxy=proxy, timeout=configs.TIMEOUT)
         async_transport = AsyncTransport(
-            client=httpx2.AsyncClient(proxy=proxy, timeout=configs.TIMEOUT),
+            client=self._http_client,
             proxy=proxy,
             timeout=configs.TIMEOUT,
             operation_timeout=configs.TIMEOUT,
@@ -293,6 +311,22 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
             self.reversal_client = AsyncClient(wsdl=configs.REVERSAL_WSDL_URL, transport=async_transport)
         except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak WSDL") from exception
+
+    async def aclose(self) -> None:
+        """Close the underlying HTTP client and release its connections."""
+        await self._http_client.aclose()
+
+    async def __aenter__(self) -> Self:
+        """Enter the async context manager.
+
+        Returns:
+            Self: This adapter.
+        """
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        """Close the adapter when leaving the async context manager."""
+        await self.aclose()
 
     @staticmethod
     def _get_proxy(proxies: dict[str, str] | None) -> str | None:
