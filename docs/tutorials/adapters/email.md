@@ -58,6 +58,10 @@ EMAIL__TLS_VERIFY=true
     `auto` keeps the previous behavior and emits a `DeprecationWarning`. Set `EMAIL__TLS_MODE`
     explicitly; the default will change in a future major release.
 
+`TLS_MODE=none` with credentials and `TLS_VERIFY=false` each emit a `DeprecationWarning` (clear-text login
+and unverified certificates expose credentials to interception); both will be rejected in a future major
+release. A login over a session without TLS is also logged as a warning.
+
 `USERNAME` and `PASSWORD` must be set together. A half-set pair raises `ConfigurationError` when
 `TLS_MODE` is not `auto`; in `auto` mode login is skipped with a `DeprecationWarning`.
 

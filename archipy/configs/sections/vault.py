@@ -34,7 +34,7 @@ class VaultConfig(BaseModel):
     )
 
     # Token auth
-    TOKEN: str | None = Field(default=None, description="Vault token (token auth)")
+    TOKEN: str | None = Field(default=None, repr=False, description="Vault token (token auth)")
     TOKEN_FILE: str | None = Field(
         default=None,
         description="Path to a file containing the Vault token; takes precedence over TOKEN",
@@ -42,7 +42,7 @@ class VaultConfig(BaseModel):
 
     # AppRole auth
     APPROLE_ROLE_ID: str | None = Field(default=None, description="AppRole role_id")
-    APPROLE_SECRET_ID: str | None = Field(default=None, description="AppRole secret_id")
+    APPROLE_SECRET_ID: str | None = Field(default=None, repr=False, description="AppRole secret_id")
     APPROLE_SECRET_ID_FILE: str | None = Field(
         default=None,
         description="Path to a file containing the AppRole secret_id; takes precedence over APPROLE_SECRET_ID",
@@ -65,7 +65,7 @@ class VaultConfig(BaseModel):
 
     # Username/password auth (userpass, ldap, okta)
     USERNAME: str | None = Field(default=None, description="Username for userpass/ldap/okta auth")
-    PASSWORD: str | None = Field(default=None, description="Password for userpass/ldap/okta auth")
+    PASSWORD: str | None = Field(default=None, repr=False, description="Password for userpass/ldap/okta auth")
     PASSWORD_FILE: str | None = Field(
         default=None,
         description="Path to a file containing the password; takes precedence over PASSWORD",
@@ -76,7 +76,7 @@ class VaultConfig(BaseModel):
 
     # JWT auth
     JWT_ROLE: str | None = Field(default=None, description="Role name for JWT auth")
-    JWT: str | None = Field(default=None, description="JWT for JWT auth")
+    JWT: str | None = Field(default=None, repr=False, description="JWT for JWT auth")
     JWT_FILE: str | None = Field(
         default=None,
         description="Path to a file containing the JWT; takes precedence over JWT",
@@ -85,15 +85,19 @@ class VaultConfig(BaseModel):
 
     # AWS IAM auth
     AWS_ACCESS_KEY: str | None = Field(default=None, description="AWS access key for IAM auth")
-    AWS_SECRET_KEY: str | None = Field(default=None, description="AWS secret key for IAM auth")
-    AWS_SESSION_TOKEN: str | None = Field(default=None, description="Optional AWS session token for IAM auth")
+    AWS_SECRET_KEY: str | None = Field(default=None, repr=False, description="AWS secret key for IAM auth")
+    AWS_SESSION_TOKEN: str | None = Field(
+        default=None,
+        repr=False,
+        description="Optional AWS session token for IAM auth",
+    )
     AWS_ROLE: str | None = Field(default=None, description="Optional Vault role for AWS IAM auth")
     AWS_REGION: str = Field(default="us-east-1", description="AWS region used for IAM auth signing")
     AWS_MOUNT_POINT: str = Field(default="aws", description="Mount point of the AWS auth method")
 
     # Azure auth
     AZURE_ROLE: str | None = Field(default=None, description="Role name for Azure auth")
-    AZURE_JWT: str | None = Field(default=None, description="JWT for Azure auth")
+    AZURE_JWT: str | None = Field(default=None, repr=False, description="JWT for Azure auth")
     AZURE_JWT_FILE: str | None = Field(
         default=None,
         description="Path to a file containing the Azure JWT; takes precedence over AZURE_JWT",
@@ -106,7 +110,7 @@ class VaultConfig(BaseModel):
 
     # GCP auth
     GCP_ROLE: str | None = Field(default=None, description="Role name for GCP auth")
-    GCP_JWT: str | None = Field(default=None, description="JWT for GCP auth")
+    GCP_JWT: str | None = Field(default=None, repr=False, description="JWT for GCP auth")
     GCP_JWT_FILE: str | None = Field(
         default=None,
         description="Path to a file containing the GCP JWT; takes precedence over GCP_JWT",
@@ -114,7 +118,11 @@ class VaultConfig(BaseModel):
     GCP_MOUNT_POINT: str = Field(default="gcp", description="Mount point of the GCP auth method")
 
     # GitHub auth
-    GITHUB_TOKEN: str | None = Field(default=None, description="GitHub personal access token for GitHub auth")
+    GITHUB_TOKEN: str | None = Field(
+        default=None,
+        repr=False,
+        description="GitHub personal access token for GitHub auth",
+    )
     GITHUB_TOKEN_FILE: str | None = Field(
         default=None,
         description="Path to a file containing the GitHub token; takes precedence over GITHUB_TOKEN",

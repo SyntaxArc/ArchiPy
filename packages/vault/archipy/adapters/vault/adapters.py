@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import base64
+import copy
 import logging
+import math
+import threading
+import time
 from typing import TYPE_CHECKING, Any, NoReturn, override
 
 import hvac.exceptions
@@ -109,9 +113,9 @@ class VaultExceptionHandlerMixin:
             raise UnavailableError(resource_type="Vault", additional_data={"operation": operation}) from exception
         if isinstance(exception, RequestsConnectionError | RequestsTimeout):
             raise NetworkError(service="Vault") from exception
-        if isinstance(exception, hvac.exceptions.VaultError):
-            raise ConfigurationError(operation=operation, reason=str(exception)) from exception
-        raise ConfigurationError(operation=operation, reason=str(exception)) from exception
+        # The exception text can carry the Vault host, path and file names: log it, keep the reason generic.
+        logger.warning("Vault operation %s failed: %s", operation, exception)
+        raise ConfigurationError(operation=operation, reason="Vault operation failed") from exception
 
 
 class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
@@ -151,9 +155,14 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
             OSError,
             ValueError,
         ) as e:
-            raise ConfigurationError(operation="vault_connect", reason=str(e)) from e
+            logger.warning("Vault connection failed: %s", e)
+            raise ConfigurationError(operation="vault_connect", reason="Failed to connect to Vault") from e
 
         self.token_renew_count = 0
+        # Local token expiry (monotonic seconds): None = unknown, inf = never expires.
+        self._token_lock = threading.Lock()
+        self._token_expires_at: float | None = None
+        self._token_renewable = False
 
         # Per-instance TTL cache so SECRET_CACHE_TTL on this config is honored.
         # Class-level decoration cannot see instance config and resolves TTL too early.
@@ -182,38 +191,98 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
             ConfigurationError: For unmapped Vault/client failures.
         """
         self._maybe_renew_token()
-        try:
-            return fn()
-        except BaseError:
-            raise
-        except (
-            hvac.exceptions.VaultError,
-            RequestsConnectionError,
-            RequestsTimeout,
-            OSError,
-            ValueError,
-        ) as e:
-            self._handle_vault_exception(e, operation)
+        for attempt in (0, 1):
+            try:
+                return fn()
+            except BaseError:
+                raise
+            except (hvac.exceptions.Forbidden, hvac.exceptions.Unauthorized) as e:
+                # A rejected call is safe to replay once after logging in again
+                # (AppRole / Kubernetes / ... tokens can expire or be revoked).
+                if attempt == 0 and self._reauthenticate():
+                    continue
+                self._handle_vault_exception(e, operation)
+            except (
+                hvac.exceptions.VaultError,
+                RequestsConnectionError,
+                RequestsTimeout,
+                OSError,
+                ValueError,
+            ) as e:
+                self._handle_vault_exception(e, operation)
+        raise AssertionError("unreachable")  # pragma: no cover
+
+    def _reset_token_state(self) -> None:
+        """Forget the cached token expiry so the next check looks the token up."""
+        self._token_expires_at = None
+        self._token_renewable = False
+
+    def _reauthenticate(self) -> bool:
+        """Log in again for non-static auth methods.
+
+        Returns:
+            True when a fresh authenticated client replaced the old one.
+        """
+        if self.configs.AUTH_METHOD == "token":
+            return False
+        with self._token_lock:
+            try:
+                self._client = create_vault_client(self.configs)
+            except (
+                BaseError,
+                hvac.exceptions.VaultError,
+                RequestsConnectionError,
+                RequestsTimeout,
+                OSError,
+                ValueError,
+            ):
+                logger.warning("Vault re-authentication failed", exc_info=True)
+                return False
+            self._reset_token_state()
+        logger.info("Re-authenticated to Vault (%s)", self.configs.AUTH_METHOD)
+        return True
+
+    def _refresh_token_state(self) -> None:
+        """Look the token up once and cache its expiry locally."""
+        data = self._client.auth.token.lookup_self().get("data", {})
+        ttl = int(data.get("ttl", 0))
+        self._token_renewable = bool(data.get("renewable", False))
+        self._token_expires_at = math.inf if ttl <= 0 else time.monotonic() + ttl
 
     def _maybe_renew_token(self) -> None:
-        """Renew the client token when AUTO_RENEW_TOKEN is enabled and TTL is low."""
+        """Renew the client token when AUTO_RENEW_TOKEN is enabled and TTL is low.
+
+        The token is looked up once and its expiry cached, so normal calls cost no
+        extra round trip. Non-expiring (``ttl == 0``) and non-renewable tokens are
+        never renewed; a failed renewal is logged and the real call still runs.
+        """
         if not self.configs.AUTO_RENEW_TOKEN:
             return
-        try:
-            lookup = self._client.auth.token.lookup_self()
-            ttl = int(lookup.get("data", {}).get("ttl", 0))
-            if ttl <= self.configs.RENEW_THRESHOLD_SECONDS:
-                self._client.auth.token.renew_self()
+        with self._token_lock:
+            try:
+                if self._token_expires_at is None:
+                    self._refresh_token_state()
+                expires_at = self._token_expires_at
+                if (
+                    expires_at is None
+                    or not self._token_renewable
+                    or expires_at - time.monotonic() > self.configs.RENEW_THRESHOLD_SECONDS
+                ):
+                    return
+                response = self._client.auth.token.renew_self()
                 self.token_renew_count += 1
-                logger.debug("Renewed Vault token (previous TTL=%s)", ttl)
-        except (
-            hvac.exceptions.VaultError,
-            RequestsConnectionError,
-            RequestsTimeout,
-            OSError,
-            ValueError,
-        ) as e:
-            self._handle_vault_exception(e, "renew_token")
+                lease = int((response.get("auth") or {}).get("lease_duration", 0))
+                self._token_expires_at = time.monotonic() + lease if lease > 0 else None
+                logger.debug("Renewed Vault token")
+            except (
+                hvac.exceptions.VaultError,
+                RequestsConnectionError,
+                RequestsTimeout,
+                OSError,
+                ValueError,
+            ):
+                logger.warning("Vault token renewal skipped", exc_info=True)
+                self._reset_token_state()
 
     def clear_secret_cache(self) -> None:
         """Clear all cached ``read_secret`` results."""
@@ -260,8 +329,9 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
         """
         if not path:
             raise InvalidArgumentError(argument_name="path")
+        # Return a copy so callers cannot mutate the cached payload.
         if self._read_secret_cached is not None:
-            return self._read_secret_cached(path, mount_point)
+            return copy.deepcopy(self._read_secret_cached(path, mount_point))
         return self._read_secret_uncached(path, mount_point)
 
     @override

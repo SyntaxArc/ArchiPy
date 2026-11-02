@@ -40,6 +40,20 @@ SQLITE_SQLALCHEMY__CHECK_SAME_THREAD=false  # sync driver only; the caller must 
 
 Unset keeps the sqlite3 defaults. `CHECK_SAME_THREAD` is ignored by the async driver.
 
+### Foreign Keys and In-Memory Databases
+
+SQLite does not enforce foreign keys unless `PRAGMA foreign_keys=ON` runs on each connection, so violations pass
+silently by default. Set `FOREIGN_KEYS=true` to run the pragma on every new connection (the default stays `false` to
+keep existing behavior):
+
+```bash
+SQLITE_SQLALCHEMY__FOREIGN_KEYS=true
+```
+
+!!! warning
+    With the sync driver, a `:memory:` database exists once per thread: a second thread sees an empty database. Use a
+    file path (or the async driver) when several threads share the data.
+
 ### Direct Configuration
 
 ```python
