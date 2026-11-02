@@ -4594,6 +4594,11 @@ callable, or by its class-qualified name.</p>
 </span><span id="__span-6-54"><a id="__codelineno-6-54" name="__codelineno-6-54" href="#__codelineno-6-54"></a>    <span class="k">return</span> <span class="kc">True</span>
 </span></code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<p><code>BaseActivity</code> fails an activity at once (non-retryable) when it raises an ArchiPy error with a 4xx HTTP status,
+because retrying the same input cannot succeed. Transient errors are exempt and follow the retry policy: HTTP 408,
+425 and 429, plus <code>DatabaseDeadlockError</code>, <code>DatabaseSerializationError</code>, <code>DatabaseTimeoutError</code>,
+<code>ConnectionTimeoutError</code>, <code>DeadlineExceededError</code>, <code>RateLimitExceededError</code> and <code>ResourceExhaustedError</code>. Override
+<code>_is_non_retryable(error)</code> in your activity to change the rule.</p>
 <p>A non-retryable failure carries only the error type: the original error, with its message and <code>additional_data</code>, is
 not attached as the cause and so is not sent to the Temporal server. A retryable error is re-raised as is, so its
 message is part of the activity failure. Set <code>REDACT_RETRYABLE_ERRORS = True</code> on your activity class to send only
