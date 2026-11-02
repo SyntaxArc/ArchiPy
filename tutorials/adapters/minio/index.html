@@ -3914,6 +3914,9 @@ keys from the environment or a secrets store.</p>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">MINIO__SECURE</span><span class="o">=</span><span class="nb">false</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">MINIO__REGION</span><span class="o">=</span>us-east-1
 </span></code></pre></div>
+<p><code>ENDPOINT</code> may be a bare <code>host:port</code> (TLS follows <code>SECURE</code>/<code>USE_SSL</code>) or carry an <code>http://</code> or <code>https://</code> scheme, which
+then wins over those settings. Other schemes raise <code>InvalidArgumentError</code>. The adapter logs a warning when TLS is off
+for a non-local host or <code>VERIFY_SSL</code> is disabled. Credentials are excluded from the config <code>repr</code>.</p>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">MinioConfig</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
