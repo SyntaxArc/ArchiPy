@@ -458,6 +458,40 @@ def step_batch_delete_objects(context, object_names, bucket_name):
     context.logger.info(f"Batch deleted {names} from '{bucket_name}'")
 
 
+@given('{count:d} objects named "{prefix}" exist in bucket "{bucket_name}"')
+def step_many_objects_exist(context, count, prefix, bucket_name):
+    adapter = get_minio_adapter(context)
+    for index in range(count):
+        adapter.put_object_stream(bucket_name, f"{prefix}{index:04d}.txt", b"x")
+    context.logger.info(f"Created {count} objects named '{prefix}*' in '{bucket_name}'")
+
+
+@when('I batch delete {count:d} objects named "{prefix}" from bucket "{bucket_name}"')
+def step_batch_delete_many_objects(context, count, prefix, bucket_name):
+    adapter = get_minio_adapter(context)
+    names = [f"{prefix}{index:04d}.txt" for index in range(count)]
+    adapter.remove_objects(bucket_name, names)
+    context.logger.info(f"Batch deleted {count} objects named '{prefix}*' from '{bucket_name}'")
+
+
+@when('I batch delete "{object_names}" from bucket "{bucket_name}" while storage reports failures')
+def step_batch_delete_with_failure(context, object_names, bucket_name):
+    adapter = get_minio_adapter(context)
+    failed_key = object_names.split(",")[-1]
+    response = {"Errors": [{"Key": failed_key, "Code": "AccessDenied", "Message": "denied"}]}
+    with mock.patch.object(adapter._client, "delete_objects", return_value=response):
+        _capture_error(context, lambda: adapter.remove_objects(bucket_name, object_names.split(",")))
+
+
+@then('the raised error should list failed key "{failed_key}"')
+def step_verify_failed_keys(context, failed_key):
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get("raised_error")
+    assert failed_key in error.additional_data.get("failed_keys", []), (
+        f"Failed key '{failed_key}' not in {error.additional_data}"
+    )
+
+
 @when('I enable versioning on bucket "{bucket_name}"')
 def step_enable_versioning(context, bucket_name):
     adapter = get_minio_adapter(context)

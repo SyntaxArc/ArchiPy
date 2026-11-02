@@ -107,6 +107,19 @@ Feature: MinIO Operations Testing
     And object "batch-b.txt" should not exist in bucket "batch-bucket"
     And object "batch-c.txt" should not exist in bucket "batch-bucket"
 
+  Scenario: Batch delete handles more than 1000 keys
+    Given a bucket named "batch-large-bucket" exists
+    And 1005 objects named "chunk-" exist in bucket "batch-large-bucket"
+    When I batch delete 1005 objects named "chunk-" from bucket "batch-large-bucket"
+    And I list the top level of bucket "batch-large-bucket"
+    Then no object names should be listed
+
+  Scenario: Batch delete reports failed keys
+    Given a bucket named "batch-error-bucket" exists
+    When I batch delete "ok.txt,denied.txt" from bucket "batch-error-bucket" while storage reports failures
+    Then the MinIO call should raise StorageError
+    And the raised error should list failed key "denied.txt"
+
   Scenario: Object versioning
     Given a bucket named "version-bucket" exists
     When I enable versioning on bucket "version-bucket"
