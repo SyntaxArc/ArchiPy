@@ -47,7 +47,7 @@ from archipy.adapters.base.sqlalchemy.atomic import (
     starrocks_sqlalchemy_atomic,
 )
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
-from archipy.models.errors import DatabaseError, DatabaseTransactionError, InternalError, InvalidArgumentError
+from archipy.models.errors import DatabaseError, InternalError, InvalidArgumentError
 from features.test_entity import RelatedTestEntity, TestAdminEntity, TestEntity, TestManagerEntity
 from features.test_entity_factory import TestEntityFactory
 from features.test_helpers import (
@@ -868,7 +868,7 @@ def step_when_nested_atomic_executed(context):
         # Execute the transaction: the swallowed inner failure must still roll back the outer block
         try:
             outer_atomic()
-        except DatabaseTransactionError as error:
+        except ValueError as error:
             scenario_context.store("nested_outer_error", error)
         else:
             raise AssertionError("the outer atomic block committed after a nested failure")
@@ -886,7 +886,7 @@ def step_then_outer_rolled_back(context):
     scenario_context = get_current_scenario_context(context)
     db_type = scenario_context.get("db_type", "sqlite")
     error = scenario_context.get("nested_outer_error")
-    assert isinstance(error, DatabaseTransactionError), f"Expected DatabaseTransactionError, got {error!r}"
+    assert isinstance(error, ValueError), f"Expected ValueError, got {error!r}"
 
     entity_ids = [
         uuid.UUID(scenario_context.entity_ids[key])
@@ -1088,7 +1088,7 @@ def step_when_mixed_savepoint_default_failure(context):
 
     try:
         outer()
-    except DatabaseTransactionError as error:
+    except ValueError as error:
         scenario_context.store("mixed_mode_error", error)
     else:
         raise AssertionError("the outer transaction committed after a default nested failure")
@@ -1099,7 +1099,7 @@ def step_then_mixed_mode_rolled_back(context):
     """Verify a default nested failure inside a savepoint rolls back every write."""
     scenario_context = get_current_scenario_context(context)
     db_type = scenario_context.get("db_type", "sqlite")
-    assert isinstance(scenario_context.get("mixed_mode_error"), DatabaseTransactionError)
+    assert isinstance(scenario_context.get("mixed_mode_error"), ValueError)
     atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
     @atomic_decorator
@@ -1566,16 +1566,13 @@ def step_then_appropriate_error_raised(context):
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
 
-    from archipy.models.errors import DatabaseDeadlockError, InternalError
+    from archipy.models.errors import DatabaseDeadlockError
 
-    # Check normal exception was wrapped as InternalError
+    # Check the logic exception propagated unchanged
     logger.info("Verifying normal exception handling")
     normal_exception = scenario_context.get("normal_exception")
     assert normal_exception is not None, "Normal exception was not captured"
-    assert isinstance(
-        normal_exception,
-        InternalError,
-    ), f"Normal exception not wrapped as InternalError: {type(normal_exception)}"
+    assert isinstance(normal_exception, ValueError), f"Normal exception changed type: {type(normal_exception)}"
 
     # Check deadlock exception
     logger.info("Verifying deadlock exception handling")
@@ -2311,6 +2308,10 @@ class _FakeTransaction:
         self.session.active = False
         return False
 
+    async def start(self):
+        self.session.active = True
+        return self
+
     async def __aenter__(self):
         return self.__enter__()
 
@@ -2338,6 +2339,7 @@ class _FakeSession:
 
     def _rollback(self):
         self.rolled_back = True
+        self.active = False
         if self.rollback_error is not None:
             raise self.rollback_error
 
@@ -2475,11 +2477,10 @@ def step_then_fake_closed(context):
     assert get_current_scenario_context(context).get("fake_session").closed
 
 
-@then("an InternalError chained from ValueError should be raised")
-def step_then_internal_error_chained(context):
+@then("the original ValueError should be raised")
+def step_then_original_value_error(context):
     error = get_current_scenario_context(context).get("atomic_error")
-    assert isinstance(error, InternalError), f"Got {error!r}"
-    assert isinstance(error.__cause__, ValueError), f"Cause {error.__cause__!r}"
+    assert isinstance(error, ValueError), f"Got {error!r}"
 
 
 @when("a nested atomic block succeeds on {db_type}")

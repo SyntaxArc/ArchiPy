@@ -254,7 +254,7 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
     Given a fake <mode> session behind the atomic decorator
     And the fake session fails to roll back
     When the atomic function raises ValueError
-    Then an InternalError chained from ValueError should be raised
+    Then the original ValueError should be raised
     And the fake session should have been closed
 
     Examples:
