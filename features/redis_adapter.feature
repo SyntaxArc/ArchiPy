@@ -151,6 +151,20 @@ Feature: Redis Testing
     When I query cluster info from the adapter
     Then cluster state should be ok
 
+  Scenario: Cluster mock exposes cluster operations without a real cluster
+    Given a configured cluster mock
+    When I query cluster info from the adapter
+    Then cluster state should be ok
+    When I query cluster nodes from the adapter
+    Then cluster should have 3 masters and 3 replicas
+    When I get the cluster slot for key "foo"
+    Then the cluster slot should be 12182
+
+  Scenario: Async cluster mock exposes the CRC16 key slot
+    Given a configured async cluster mock
+    When I get the cluster slot for key "foo" from the async adapter
+    Then the cluster slot should be 12182
+
   Scenario Outline: Hash-tagged keys round-trip on cluster
     Given a configured cluster
     When I store the key "<key>" with value "<value>" in cluster
