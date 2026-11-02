@@ -2,13 +2,16 @@
 
 import logging
 import ssl
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from archipy.models.errors import FailedPreconditionError, InvalidArgumentError
 
 logger = logging.getLogger(__name__)
+
+# Backoff cap applied when only RETRY_BACKOFF_BASE is set (the client needs both to back off)
+DEFAULT_RETRY_BACKOFF_CAP = 30.0
 
 
 class ElasticsearchConfig(BaseModel):
@@ -82,7 +85,7 @@ class ElasticsearchConfig(BaseModel):
         ge=0.0,
         description="Minimum delay between sniffing attempts in seconds (needs SNIFF_BEFORE_REQUESTS)",
     )
-    NODE_SELECTOR_CLASS: str = Field(
+    NODE_SELECTOR_CLASS: Literal["round_robin", "random"] = Field(
         default="round_robin",
         description="Node selector strategy ('round_robin' or 'random')",
     )
@@ -100,11 +103,33 @@ class ElasticsearchConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_auth_settings(self) -> Self:
-        """Validate that bearer auth is not combined with another auth method."""
+        """Validate auth settings: no partial credential pairs, no bearer auth mixed with another method."""
+        if bool(self.API_KEY) != bool(self.API_SECRET):
+            raise InvalidArgumentError(argument_name="API_KEY and API_SECRET")
+        if bool(self.HTTP_USER_NAME) != bool(self.HTTP_PASSWORD):
+            raise InvalidArgumentError(argument_name="HTTP_USER_NAME and HTTP_PASSWORD")
         has_api_key = bool(self.API_KEY and self.API_SECRET)
         has_basic = bool(self.HTTP_USER_NAME and self.HTTP_PASSWORD)
         if self.BEARER_AUTH and (has_api_key or has_basic):
             raise InvalidArgumentError()
+        return self
+
+    @model_validator(mode="after")
+    def warn_insecure_transport(self) -> Self:
+        """Warn when credentials travel over plaintext HTTP or without certificate verification."""
+        if not (self.API_KEY or self.HTTP_USER_NAME or self.BEARER_AUTH):
+            return self
+        if not self.CLOUD_ID and any(host.lower().startswith("http://") for host in self.HOSTS):
+            logger.warning("Elasticsearch credentials are sent over plaintext http://; use https:// hosts.")
+        if not self.VERIFY_CERTS:
+            logger.warning("Elasticsearch credentials are sent with VERIFY_CERTS disabled; enable certificate checks.")
+        return self
+
+    @model_validator(mode="after")
+    def default_retry_backoff_cap(self) -> Self:
+        """Set a backoff cap when only the base is given, since the client ignores a lone base."""
+        if self.RETRY_BACKOFF_BASE is not None and self.RETRY_BACKOFF_CAP is None:
+            self.RETRY_BACKOFF_CAP = max(self.RETRY_BACKOFF_BASE, DEFAULT_RETRY_BACKOFF_CAP)
         return self
 
     @model_validator(mode="after")
@@ -114,6 +139,8 @@ class ElasticsearchConfig(BaseModel):
             raise InvalidArgumentError()
         if self.CLIENT_CERT and not self.CLIENT_KEY:
             raise FailedPreconditionError()
+        if self.CLIENT_KEY and not self.CLIENT_CERT:
+            raise InvalidArgumentError(argument_name="CLIENT_KEY")
         return self
 
     @model_validator(mode="after")
