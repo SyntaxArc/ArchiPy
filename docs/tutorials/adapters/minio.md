@@ -165,6 +165,9 @@ for entry in minio.list_objects("my-bucket", prefix="documents/"):
     kind = "folder" if entry["is_prefix"] else "object"
     logger.info(f"{kind}: {entry['object_name']}")
 
+# Download into memory; max_bytes raises ResourceExhaustedError for larger objects
+data = minio.get_object_stream("my-bucket", "document.pdf", max_bytes=10 * 1024 * 1024)
+
 # Get object metadata
 metadata = minio.stat_object("my-bucket", "document.pdf")
 logger.info(f"Content type: {metadata['content_type']}")

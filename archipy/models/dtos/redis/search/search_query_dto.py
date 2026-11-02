@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import NonNegativeInt, PositiveInt
 
 from archipy.models.dtos.base_dtos import BaseDTO
+from archipy.models.dtos.redis.search.escaping import SearchIdentifier, escape_text
 from archipy.models.types.redis_search_types import (
     UseSearchHistory,
     VectorHybridPolicy,
@@ -25,14 +26,18 @@ class VectorQueryRuntimeDTO(BaseDTO):
 
 
 class KnnQueryDTO(BaseDTO):
-    """Vector KNN search parameters."""
+    """Vector KNN search parameters.
+
+    ``filter_expr`` is raw RediSearch syntax and is not escaped; build it from untrusted input with
+    ``escape_text``, ``escape_tag`` or ``quote_phrase``. Identifier-like fields are validated.
+    """
 
     vector: list[float]
-    vector_field: str = "embedding"
+    vector_field: SearchIdentifier = "embedding"
     k: PositiveInt = 10
     filter_expr: str | None = None
-    return_fields: list[str] | None = None
-    score_field: str = "score"
+    return_fields: list[SearchIdentifier] | None = None
+    score_field: SearchIdentifier = "score"
     runtime: VectorQueryRuntimeDTO | None = None
 
 
@@ -40,20 +45,24 @@ class RangeQueryDTO(BaseDTO):
     """Vector range search parameters."""
 
     vector: list[float]
-    vector_field: str = "embedding"
+    vector_field: SearchIdentifier = "embedding"
     radius: float
     filter_expr: str | None = None
     filter_mode: Literal["and", "or"] = "and"
-    return_fields: list[str] | None = None
-    score_field: str | None = None
+    return_fields: list[SearchIdentifier] | None = None
+    score_field: SearchIdentifier | None = None
     runtime: VectorQueryRuntimeDTO | None = None
 
 
 class SearchQueryDTO(BaseDTO):
-    """Full-text, vector KNN, vector range, or hybrid RediSearch query."""
+    """Full-text, vector KNN, vector range, or hybrid RediSearch query.
+
+    ``query`` is raw RediSearch syntax and is not escaped. For untrusted user text use ``from_text`` or escape
+    with ``escape_text`` / ``escape_tag`` / ``quote_phrase`` first. Identifier-like fields are validated.
+    """
 
     query: str = "*"
-    return_fields: list[str] | None = None
+    return_fields: list[SearchIdentifier] | None = None
     offset: NonNegativeInt = 0
     limit: NonNegativeInt = 10
     text_scorer: str | None = None
@@ -71,12 +80,43 @@ class SearchQueryDTO(BaseDTO):
         return self.range is not None
 
     @classmethod
+    def from_text(
+        cls,
+        text: str,
+        *,
+        return_fields: list[str] | None = None,
+        offset: int = 0,
+        limit: int = 10,
+        text_scorer: str | None = None,
+    ) -> SearchQueryDTO:
+        """Build a full-text query from untrusted text, escaping every term.
+
+        Args:
+            text: User text; whitespace-separated terms are escaped and combined with AND.
+            return_fields: Optional document fields to return.
+            offset: Number of hits to skip.
+            limit: Maximum number of hits.
+            text_scorer: Optional full-text scorer name.
+
+        Returns:
+            SearchQueryDTO whose query matches the terms literally.
+        """
+        terms = [escape_text(term) for term in text.split()]
+        return cls(
+            query=" ".join(terms) if terms else "*",
+            return_fields=return_fields,
+            offset=offset,
+            limit=limit,
+            text_scorer=text_scorer,
+        )
+
+    @classmethod
     def from_knn(
         cls,
         vector: list[float],
         *,
         k: int = 10,
-        vector_field: str = "embedding",
+        vector_field: SearchIdentifier = "embedding",
         filter_expr: str | None = None,
         return_fields: list[str] | None = None,
         runtime: VectorQueryRuntimeDTO | None = None,
@@ -111,7 +151,7 @@ class SearchQueryDTO(BaseDTO):
         vector: list[float],
         *,
         radius: float,
-        vector_field: str = "embedding",
+        vector_field: SearchIdentifier = "embedding",
         filter_expr: str | None = None,
         filter_mode: Literal["and", "or"] = "and",
         return_fields: list[str] | None = None,
@@ -157,7 +197,7 @@ class SearchQueryDTO(BaseDTO):
         vector: list[float],
         *,
         k: int = 10,
-        vector_field: str = "embedding",
+        vector_field: SearchIdentifier = "embedding",
         filter_expr: str | None = None,
         text_scorer: str | None = None,
         return_fields: list[str] | None = None,

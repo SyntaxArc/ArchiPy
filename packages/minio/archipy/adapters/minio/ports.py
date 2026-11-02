@@ -190,7 +190,7 @@ class MinioPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_object_stream(self, bucket_name: str, object_name: str) -> bytes:
+    def get_object_stream(self, bucket_name: str, object_name: str, max_bytes: int | None = None) -> bytes:
         """Download an object and return its content as bytes.
 
         Unlike get_object which requires a local file path, this method returns
@@ -199,9 +199,14 @@ class MinioPort:
         Args:
             bucket_name: Source bucket name.
             object_name: Object name in the bucket.
+            max_bytes: Maximum number of bytes to read. None means no limit.
 
         Returns:
             bytes: The full content of the object.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is invalid.
+            ResourceExhaustedError: If the object is larger than max_bytes.
         """
         raise NotImplementedError
 

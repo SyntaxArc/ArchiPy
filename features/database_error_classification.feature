@@ -69,6 +69,19 @@ Feature: Database driver error classification
     When the adapter exception handler processes the driver error
     Then the raised error should be "DatabaseConnectionError"
 
+  Scenario Outline: Error classification ignores the SQL statement and agrees between the adapter and the atomic decorator
+    Given an operational error with driver message "<message>" raised by statement "<statement>"
+    When the adapter exception handler processes the driver error
+    Then the raised error should be "<domain_error>"
+    When the atomic decorator handler processes the driver error
+    Then the raised error should be "<atomic_error>"
+
+    Examples:
+      | message                  | statement                    | domain_error            | atomic_error            |
+      | no such column           | SELECT x FROM connection_log | DatabaseQueryError      | DatabaseQueryError      |
+      | no such column           | SELECT x FROM t_timeout      | DatabaseQueryError      | DatabaseQueryError      |
+      | connection reset by peer | SELECT 1                     | DatabaseConnectionError | DatabaseConnectionError |
+
   Scenario: Resource exhaustion maps to HTTP 503 and gRPC RESOURCE_EXHAUSTED
     Given the DatabaseResourceExhaustedError type
     Then its HTTP status should be 503 and its gRPC status should be 8
