@@ -297,6 +297,37 @@ async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # 
     return user
 ```
 
+### Nested atomic calls and savepoints
+
+A nested atomic call joins the outer transaction. By default a nested failure rolls back the whole transaction, and
+the outer block raises `DatabaseTransactionError` even when the nested error was caught. Pass `savepoint=True` to
+isolate the nested call instead:
+
+```python
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
+
+
+@postgres_sqlalchemy_atomic
+def outer() -> None:
+    """Run an outer transaction with an isolated nested call."""
+    # ...
+
+
+@postgres_sqlalchemy_atomic(savepoint=True)
+def inner() -> None:
+    """Roll back only this block when it fails."""
+    # ...
+```
+
+- With `savepoint=True`, a caught nested failure rolls back only that savepoint; the outer transaction and other
+  successful nested calls commit.
+- Savepoints stack: a failure at level N rolls back level N only; a parent savepoint can catch it and continue.
+- A `savepoint=False` call anywhere in the chain aborts the whole transaction; an enclosing savepoint cannot contain
+  it.
+- The outermost call always owns the commit; `savepoint` only affects nested calls.
+- StarRocks has no `SAVEPOINT` support: `starrocks_sqlalchemy_atomic` takes no `savepoint` argument, and
+  `sqlalchemy_atomic("starrocks", savepoint=True)` raises `InvalidArgumentError`.
+
 ### Several databases
 
 Databases of different types (for example PostgreSQL and MySQL) work out of the box: each type has its own registry,

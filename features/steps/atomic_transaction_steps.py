@@ -15,6 +15,7 @@ import tempfile
 import time
 import uuid
 from datetime import datetime
+from functools import partial
 
 from behave import given, then, when
 
@@ -46,7 +47,7 @@ from archipy.adapters.base.sqlalchemy.atomic import (
     starrocks_sqlalchemy_atomic,
 )
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
-from archipy.models.errors import DatabaseError, DatabaseTransactionError, InternalError
+from archipy.models.errors import DatabaseError, DatabaseTransactionError, InternalError, InvalidArgumentError
 from features.test_entity import RelatedTestEntity, TestAdminEntity, TestEntity, TestManagerEntity
 from features.test_entity_factory import TestEntityFactory
 from features.test_helpers import (
@@ -117,7 +118,7 @@ def _get_db_type(context) -> str:
     return "sqlite"
 
 
-def _get_atomic_decorator(db_type: str, is_async: bool = False):  # noqa: ARG001
+def _get_atomic_decorator(db_type: str, is_async: bool = False, savepoint: bool = False):  # noqa: ARG001
     """Get the appropriate atomic decorator for the database type.
 
     The decorators detect async functions themselves, so ``is_async`` only documents the call site.
@@ -125,17 +126,20 @@ def _get_atomic_decorator(db_type: str, is_async: bool = False):  # noqa: ARG001
     Args:
         db_type: Database type ('postgres', 'sqlite', 'mysql', or 'starrocks')
         is_async: Whether the decorated function is async
+        savepoint: Whether nested calls should use a savepoint
 
     Returns:
         The appropriate atomic decorator function
     """
     if db_type == "postgres":
-        return postgres_sqlalchemy_atomic
-    if db_type == "mysql":
-        return mysql_sqlalchemy_atomic
-    if db_type == "starrocks":
-        return starrocks_sqlalchemy_atomic
-    return sqlite_sqlalchemy_atomic
+        decorator = postgres_sqlalchemy_atomic
+    elif db_type == "mysql":
+        decorator = mysql_sqlalchemy_atomic
+    elif db_type == "starrocks":
+        decorator = starrocks_sqlalchemy_atomic
+    else:
+        decorator = sqlite_sqlalchemy_atomic
+    return partial(decorator, savepoint=True) if savepoint else decorator
 
 
 def _get_session_registry(db_type: str):
@@ -899,6 +903,310 @@ def step_then_outer_rolled_back(context):
 
     verify_rollback()
     logger.info("Verified every outer-transaction write was rolled back")
+
+
+@when("nested atomic transactions run with savepoints and one inner fails")
+def step_when_savepoint_nested_one_inner_fails(context):
+    """Run one passing and one failing savepoint nested call inside an outer transaction."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    keys = {
+        "savepoint_outer": uuid.uuid4(),
+        "savepoint_inner_ok": uuid.uuid4(),
+        "savepoint_inner_fail": uuid.uuid4(),
+        "savepoint_after": uuid.uuid4(),
+    }
+    for key, value in keys.items():
+        scenario_context.entity_ids[key] = str(value)
+
+    outer_atomic = _get_atomic_decorator(db_type, is_async=False)
+    savepoint_atomic = _get_atomic_decorator(db_type, is_async=False, savepoint=True)
+
+    @outer_atomic
+    def outer():
+        adapter = get_adapter(context)
+        adapter.create(TestEntityFactory.create_test_entity(test_uuid=keys["savepoint_outer"], description="Outer"))
+
+        @savepoint_atomic
+        def inner_ok():
+            adapter.create(
+                TestEntityFactory.create_test_entity(test_uuid=keys["savepoint_inner_ok"], description="Inner OK"),
+            )
+
+        @savepoint_atomic
+        def inner_fail():
+            adapter.create(
+                TestEntityFactory.create_test_entity(test_uuid=keys["savepoint_inner_fail"], description="Inner fail"),
+            )
+            raise ValueError("savepoint failure")
+
+        inner_ok()
+        try:
+            inner_fail()
+        except Exception as error:
+            logger.info(f"Expected savepoint failure: {type(error).__name__}")
+        adapter.create(
+            TestEntityFactory.create_test_entity(test_uuid=keys["savepoint_after"], description="After failure"),
+        )
+
+    outer()
+
+
+@then("the savepoint transaction should commit the successful inner and the outer writes")
+def step_then_savepoint_committed(context):
+    """Verify the outer and successful inner entities exist and the failed inner does not."""
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
+
+    @atomic_decorator
+    def verify():
+        session = get_adapter(context).get_session()
+        for key in ("savepoint_outer", "savepoint_inner_ok", "savepoint_after"):
+            entity_id = uuid.UUID(scenario_context.entity_ids[key])
+            assert session.get(TestEntity, entity_id) is not None, f"{key} was not committed"
+        failed_id = uuid.UUID(scenario_context.entity_ids["savepoint_inner_fail"])
+        assert session.get(TestEntity, failed_id) is None, "the failed savepoint entity survived"
+
+    verify()
+
+
+@when("multilevel savepoint transactions are executed")
+def step_when_multilevel_savepoints(context):
+    """Run a savepoint inside a savepoint and swallow the innermost failure."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    keys = {
+        "multilevel_outer": uuid.uuid4(),
+        "multilevel_level1": uuid.uuid4(),
+        "multilevel_level1_after": uuid.uuid4(),
+        "multilevel_level2": uuid.uuid4(),
+    }
+    for key, value in keys.items():
+        scenario_context.entity_ids[key] = str(value)
+
+    outer_atomic = _get_atomic_decorator(db_type, is_async=False)
+    savepoint_atomic = _get_atomic_decorator(db_type, is_async=False, savepoint=True)
+
+    @outer_atomic
+    def outer():
+        adapter = get_adapter(context)
+        adapter.create(TestEntityFactory.create_test_entity(test_uuid=keys["multilevel_outer"], description="Outer"))
+
+        @savepoint_atomic
+        def level1():
+            adapter.create(
+                TestEntityFactory.create_test_entity(test_uuid=keys["multilevel_level1"], description="Level 1"),
+            )
+
+            @savepoint_atomic
+            def level2():
+                adapter.create(
+                    TestEntityFactory.create_test_entity(test_uuid=keys["multilevel_level2"], description="Level 2"),
+                )
+                raise ValueError("level 2 failure")
+
+            try:
+                level2()
+            except Exception as error:
+                logger.info(f"Expected level 2 failure: {type(error).__name__}")
+            adapter.create(
+                TestEntityFactory.create_test_entity(
+                    test_uuid=keys["multilevel_level1_after"],
+                    description="Level 1 after failure",
+                ),
+            )
+
+        level1()
+
+    outer()
+
+
+@then("the outer transaction should commit the surviving savepoint level")
+def step_then_multilevel_committed(context):
+    """Verify the outer and level 1 entities exist and the level 2 entity does not."""
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
+
+    @atomic_decorator
+    def verify():
+        session = get_adapter(context).get_session()
+        for key in ("multilevel_outer", "multilevel_level1", "multilevel_level1_after"):
+            entity_id = uuid.UUID(scenario_context.entity_ids[key])
+            assert session.get(TestEntity, entity_id) is not None, f"{key} was not committed"
+        failed_id = uuid.UUID(scenario_context.entity_ids["multilevel_level2"])
+        assert session.get(TestEntity, failed_id) is None, "the level 2 entity survived"
+
+    verify()
+
+
+@when("a savepoint wraps a nested default atomic failure")
+def step_when_mixed_savepoint_default_failure(context):
+    """Run a default nested call inside a savepoint and swallow its failure."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    keys = {
+        "mixed_outer": uuid.uuid4(),
+        "mixed_savepoint": uuid.uuid4(),
+        "mixed_default": uuid.uuid4(),
+    }
+    for key, value in keys.items():
+        scenario_context.entity_ids[key] = str(value)
+
+    outer_atomic = _get_atomic_decorator(db_type, is_async=False)
+    savepoint_atomic = _get_atomic_decorator(db_type, is_async=False, savepoint=True)
+    default_atomic = _get_atomic_decorator(db_type, is_async=False)
+
+    @outer_atomic
+    def outer():
+        adapter = get_adapter(context)
+        adapter.create(TestEntityFactory.create_test_entity(test_uuid=keys["mixed_outer"], description="Outer"))
+
+        @savepoint_atomic
+        def savepoint_level():
+            adapter.create(
+                TestEntityFactory.create_test_entity(test_uuid=keys["mixed_savepoint"], description="Savepoint"),
+            )
+
+            @default_atomic
+            def default_inner():
+                adapter.create(
+                    TestEntityFactory.create_test_entity(test_uuid=keys["mixed_default"], description="Default"),
+                )
+                raise ValueError("default nested failure")
+
+            try:
+                default_inner()
+            except Exception as error:
+                logger.info(f"Expected default nested failure: {type(error).__name__}")
+
+        savepoint_level()
+
+    try:
+        outer()
+    except DatabaseTransactionError as error:
+        scenario_context.store("mixed_mode_error", error)
+    else:
+        raise AssertionError("the outer transaction committed after a default nested failure")
+
+
+@then("the mixed-mode transaction should be rolled back")
+def step_then_mixed_mode_rolled_back(context):
+    """Verify a default nested failure inside a savepoint rolls back every write."""
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    assert isinstance(scenario_context.get("mixed_mode_error"), DatabaseTransactionError)
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
+
+    @atomic_decorator
+    def verify():
+        session = get_adapter(context).get_session()
+        for key in ("mixed_outer", "mixed_savepoint", "mixed_default"):
+            entity_id = uuid.UUID(scenario_context.entity_ids[key])
+            assert session.get(TestEntity, entity_id) is None, f"{key} survived the mixed-mode rollback"
+
+    verify()
+
+
+@when("nested async atomic transactions run with savepoints and one inner fails")
+async def step_when_async_savepoint_nested_one_inner_fails(context):
+    """Async variant: one passing and one failing savepoint nested call."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    keys = {
+        "async_savepoint_outer": uuid.uuid4(),
+        "async_savepoint_inner_ok": uuid.uuid4(),
+        "async_savepoint_inner_fail": uuid.uuid4(),
+        "async_savepoint_after": uuid.uuid4(),
+    }
+    for key, value in keys.items():
+        scenario_context.entity_ids[key] = str(value)
+
+    outer_atomic = _get_atomic_decorator(db_type, is_async=True)
+    savepoint_atomic = _get_atomic_decorator(db_type, is_async=True, savepoint=True)
+
+    @outer_atomic
+    async def outer():
+        adapter = get_async_adapter(context)
+        await adapter.create(
+            TestEntityFactory.create_test_entity(test_uuid=keys["async_savepoint_outer"], description="Outer"),
+        )
+
+        @savepoint_atomic
+        async def inner_ok():
+            await adapter.create(
+                TestEntityFactory.create_test_entity(
+                    test_uuid=keys["async_savepoint_inner_ok"],
+                    description="Inner OK",
+                ),
+            )
+
+        @savepoint_atomic
+        async def inner_fail():
+            await adapter.create(
+                TestEntityFactory.create_test_entity(
+                    test_uuid=keys["async_savepoint_inner_fail"],
+                    description="Inner fail",
+                ),
+            )
+            raise ValueError("async savepoint failure")
+
+        await inner_ok()
+        try:
+            await inner_fail()
+        except Exception as error:
+            logger.info(f"Expected async savepoint failure: {type(error).__name__}")
+        await adapter.create(
+            TestEntityFactory.create_test_entity(test_uuid=keys["async_savepoint_after"], description="After"),
+        )
+
+    await outer()
+
+
+@then("the async savepoint transaction should commit the successful inner and the outer writes")
+async def step_then_async_savepoint_committed(context):
+    """Verify the async savepoint outcome."""
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic_decorator
+    async def verify():
+        async_adapter = get_async_adapter(context)
+        session = async_adapter.session_manager.get_session()
+        for key in ("async_savepoint_outer", "async_savepoint_inner_ok", "async_savepoint_after"):
+            entity_id = uuid.UUID(scenario_context.entity_ids[key])
+            assert await session.get(TestEntity, entity_id) is not None, f"{key} was not committed"
+        failed_id = uuid.UUID(scenario_context.entity_ids["async_savepoint_inner_fail"])
+        assert await session.get(TestEntity, failed_id) is None, "the async failed savepoint entity survived"
+
+    await verify()
+
+
+@when("a savepoint atomic decorator is requested for StarRocks")
+def step_when_savepoint_starrocks_requested(context):
+    """Verify the generic decorator rejects savepoints on StarRocks."""
+    scenario_context = get_current_scenario_context(context)
+    try:
+        sqlalchemy_atomic("starrocks", savepoint=True)
+    except InvalidArgumentError as error:
+        scenario_context.store("starrocks_savepoint_error", error)
+    else:
+        raise AssertionError("savepoint=True was accepted for StarRocks")
+
+
+@then('an invalid argument error should name "{argument}"')
+def step_then_invalid_argument_named(context, argument):
+    """Verify the captured InvalidArgumentError names the argument."""
+    error = get_current_scenario_context(context).get("starrocks_savepoint_error")
+    assert isinstance(error, InvalidArgumentError), f"Expected InvalidArgumentError, got {error!r}"
+    assert error.additional_data.get("reason") == "savepoint_not_supported"
+    assert argument in str(error)
 
 
 @given("an entity exists in the database")
