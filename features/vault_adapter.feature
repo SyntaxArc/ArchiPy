@@ -32,6 +32,29 @@ Feature: Vault Adapter
     When I write Vault secret "app/cached" with key "v" and value "two"
     Then reading Vault secret "app/cached" should return key "v" with value "two"
 
+  Scenario: Mutating a cached read_secret result does not change later reads
+    Given a Vault adapter with secret cache TTL 60 seconds
+    And a Vault secret "app/cached-copy" with key "v" and value "one"
+    When I mutate the dict returned by reading Vault secret "app/cached-copy"
+    Then reading Vault secret "app/cached-copy" should return key "v" with value "one"
+
+  Scenario Outline: VAULT__VERIFY_SSL accepts explicit booleans and rejects unknown spellings
+    When I parse VAULT__VERIFY_SSL "<value>"
+    Then VAULT__VERIFY_SSL should resolve to "<outcome>"
+
+    Examples:
+      | value   | outcome    |
+      | true    | verified   |
+      | ON      | verified   |
+      | false   | unverified |
+      | 0       | unverified |
+      | off     | unverified |
+      | t       | rejected   |
+      | enabled | rejected   |
+
+  Scenario: Vault credentials are hidden from the config repr
+    Then the Vault config repr should not contain its credentials
+
   Scenario: Cached read_secret is invalidated on delete
     Given a Vault adapter with secret cache TTL 60 seconds
     And a Vault secret "app/cached-del" with key "v" and value "one"
