@@ -122,6 +122,16 @@ Feature: Keycloak Authentication Testing
       | async        | jwks-async | jwks-async-c | jwksasync |
 
   @tokens
+  Scenario Outline: Forged tokens are mapped to an error and secrets stay out of the config repr
+    Given a configured sync Keycloak adapter via direct
+    Then a <adapter_type> adapter maps reading the claims of a token signed by an unknown key to "INVALID_TOKEN"
+    And the Keycloak config repr does not contain the client secret or the admin password
+
+    Examples:
+      | adapter_type |
+      | sync         |
+      | async        |
+
   Scenario Outline: Local token checks enforce the configured issuer, audience and token type
     Given a configured sync Keycloak adapter via direct
     And I create a realm named "<realm_name>" with display name "Claims Realm" using sync adapter
