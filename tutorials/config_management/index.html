@@ -1716,6 +1716,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#secret-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secret Fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#best-practices" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3871,6 +3882,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#secret-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secret Fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#best-practices" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4270,6 +4292,14 @@ is a no-op and <code>hvac</code> is never imported.</p>
 </blockquote>
 <p>For runtime secret CRUD, dynamic leases, and transit encryption, use the
 <a href="../adapters/vault/">Vault adapter</a>.</p>
+<h2 id="secret-fields">Secret Fields<a class="headerlink" href="#secret-fields" title="Permanent link">&para;</a></h2>
+<p>Password, token and secret-key settings in the Redis, Keycloak, MinIO, Vault and SQLAlchemy config sections are
+<code>pydantic.SecretStr</code>. They are masked in <code>repr()</code>, <code>str()</code> and <code>model_dump()</code>/<code>model_dump_json()</code>. Pass the real value
+to an SDK with <code>get_secret_value()</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">redis_password</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">REDIS</span><span class="o">.</span><span class="n">PASSWORD</span><span class="o">.</span><span class="n">get_secret_value</span><span class="p">()</span>
+</span></code></pre></div>
+<p>Environment variables and constructor strings are coerced to <code>SecretStr</code> automatically. Non-string secrets such as
+<code>POSTGRES_DSN</code> keep <code>Field(repr=False)</code>.</p>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <ol>
 <li>
