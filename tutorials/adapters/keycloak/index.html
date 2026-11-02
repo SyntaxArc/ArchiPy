@@ -4115,8 +4115,18 @@ authorization. ArchiPy offers both synchronous and asynchronous implementations.
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">KEYCLOAK__VERIFY_SSL</span><span class="o">=</span><span class="nb">true</span><span class="w">  </span><span class="c1"># true, false, or the path of a CA bundle for a private CA</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">KEYCLOAK__TIMEOUT</span><span class="o">=</span><span class="m">10</span><span class="w">  </span><span class="c1"># seconds, fractions allowed (2.5)</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">KEYCLOAK__TOKEN_LEEWAY_SECONDS</span><span class="o">=</span><span class="m">0</span><span class="w">  </span><span class="c1"># clock-skew tolerance when validating token expiry</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">KEYCLOAK__REMOTE_CACHE_TTL_SECONDS</span><span class="o">=</span><span class="m">0</span><span class="w">  </span><span class="c1"># opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">KEYCLOAK__EXPECTED_ISSUER</span><span class="o">=</span>https://keycloak.example.com/realms/my-realm<span class="w">  </span><span class="c1"># enforce the iss claim (and typ=Bearer) of locally verified tokens</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">KEYCLOAK__EXPECTED_AUDIENCE</span><span class="o">=</span>my-client<span class="w">  </span><span class="c1"># enforce the aud claim (and typ=Bearer) of locally verified tokens</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">KEYCLOAK__REMOTE_CACHE_TTL_SECONDS</span><span class="o">=</span><span class="m">0</span><span class="w">  </span><span class="c1"># opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)</span>
 </span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Token claim checks</p>
+<p>Local verification (<code>validate_token</code>, <code>get_token_info</code>, role checks) always checks the signature and expiry. Set
+<code>KEYCLOAK__EXPECTED_ISSUER</code> and/or <code>KEYCLOAK__EXPECTED_AUDIENCE</code> to also require the <code>iss</code> / <code>aud</code> claims and
+<code>typ == "Bearer"</code>; mismatching tokens are rejected (<code>validate_token</code> returns <code>False</code>, <code>get_token_info</code> raises
+<code>InvalidTokenError</code>). Without these settings a mismatch only emits a <code>DeprecationWarning</code>, and enforcement becomes
+the default in 6.0.</p>
+</div>
 <h3 id="connection-options">Connection Options<a class="headerlink" href="#connection-options" title="Permanent link">&para;</a></h3>
 <p>Optional settings for private CAs, mutual TLS, retries, pooling, proxies and extra headers. The defaults keep the
 previous behaviour.</p>

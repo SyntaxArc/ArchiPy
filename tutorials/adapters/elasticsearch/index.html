@@ -1180,6 +1180,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#config-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#error-mapping" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3944,6 +3955,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#config-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#error-mapping" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4487,6 +4509,12 @@ timeout can duplicate a document or apply the script twice.</p>
 </span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="k">else</span><span class="p">:</span>
 </span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Elasticsearch configuration created successfully"</span><span class="p">)</span>
 </span></code></pre></div>
+<h3 id="config-validation">Config Validation<a class="headerlink" href="#config-validation" title="Permanent link">&para;</a></h3>
+<p>The config rejects (<code>InvalidArgumentError</code>) a username without a password (and the reverse), an API key without a
+secret (and the reverse), and <code>CLIENT_KEY</code> without <code>CLIENT_CERT</code>. It logs a warning when credentials are used with an
+<code>http://</code> host or with <code>VERIFY_CERTS=false</code>. <code>NODE_SELECTOR_CLASS</code> accepts only <code>round_robin</code> or <code>random</code>. When only
+<code>RETRY_BACKOFF_BASE</code> is set, <code>RETRY_BACKOFF_CAP</code> defaults to the larger of the base and 30 seconds, because the client
+needs both values to back off.</p>
 <h3 id="error-mapping">Error Mapping<a class="headerlink" href="#error-mapping" title="Permanent link">&para;</a></h3>
 <p>By default the adapters raise raw <code>elasticsearch</code> exceptions (<code>NotFoundError</code>, <code>ApiError</code>, <code>ConnectionError</code>), and
 creating an adapter with <code>MAP_ERRORS=False</code> emits a <code>DeprecationWarning</code> because mapping will become the default.
