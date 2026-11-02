@@ -41,14 +41,18 @@ class RedisConfig(BaseModel):
     SENTINEL_NODES: list[str] = Field(default=[], description="List of sentinel addresses (host:port)")
     SENTINEL_SERVICE_NAME: str | None = Field(default=None, description="Master service name for sentinel")
     SENTINEL_SOCKET_TIMEOUT: float = Field(default=0.1, description="Sentinel socket timeout")
-    SENTINEL_PASSWORD: str | None = Field(default=None, description="Password for sentinel nodes (if distinct)")
+    SENTINEL_PASSWORD: str | None = Field(
+        default=None,
+        repr=False,
+        description="Password for sentinel nodes (if distinct)",
+    )
     SENTINEL_USERNAME: str | None = Field(default=None, description="ACL username for sentinel nodes (if distinct)")
 
     # Common settings
     PORT: int = Field(default=6379, description="Default Redis server port")
     DATABASE: int = Field(default=0, description="Redis database number (standalone and sentinel; ignored in cluster)")
     USERNAME: str | None = Field(default=None, description="Redis ACL username (Redis 6+); None uses the default user")
-    PASSWORD: str | None = Field(default=None, description="Redis password")
+    PASSWORD: str | None = Field(default=None, repr=False, description="Redis password")
     DECODE_RESPONSES: Literal[True] = Field(default=True, description="Whether to decode responses")
     PROTOCOL: Literal[2, 3] = Field(default=3, description="RESP protocol version (2 or 3)")
     HEALTH_CHECK_INTERVAL: int = Field(default=10, description="Health check interval in seconds")
@@ -87,7 +91,18 @@ class RedisConfig(BaseModel):
             raise ConfigurationError(operation="redis", reason="ssl_certfile_and_keyfile_must_be_set_together")
         if not self.SSL and (self.SSL_CA_CERTS or self.SSL_CERTFILE):
             raise ConfigurationError(operation="redis", reason="ssl_options_require_ssl_enabled")
+        if not self.SSL and (self.PASSWORD or self.SENTINEL_PASSWORD):
+            logger.warning("Redis credentials are configured without SSL; they are sent in clear text")
+        if self.SSL and not self.SSL_CHECK_HOSTNAME:
+            logger.warning("Redis SSL_CHECK_HOSTNAME is disabled; the server identity is not verified")
         return self
+
+    @staticmethod
+    def _validate_node_address(node: str, *, port_required: bool) -> None:
+        """Validate a ``host[:port]`` node address."""
+        host, separator, port = node.partition(":")
+        if not host or (separator and not port.isdecimal()) or (port_required and not separator):
+            raise ConfigurationError(operation="redis", reason="invalid_node_address", additional_data={"node": node})
 
     @model_validator(mode="after")
     def validate_mode_configuration(self) -> Self:
@@ -95,12 +110,16 @@ class RedisConfig(BaseModel):
         if self.MODE == RedisMode.CLUSTER:
             if not self.CLUSTER_NODES:
                 raise ConfigurationError(operation="redis", reason="cluster_nodes_required")
+            for node in self.CLUSTER_NODES:
+                self._validate_node_address(node, port_required=False)
             if self.DATABASE != 0:
                 logger.warning("DATABASE setting ignored in cluster mode")
 
         elif self.MODE == RedisMode.SENTINEL:
             if not self.SENTINEL_NODES or not self.SENTINEL_SERVICE_NAME:
                 raise ConfigurationError(operation="redis", reason="sentinel_config_incomplete")
+            for node in self.SENTINEL_NODES:
+                self._validate_node_address(node, port_required=True)
 
         elif self.MODE == RedisMode.STANDALONE:
             if not self.MASTER_HOST:
