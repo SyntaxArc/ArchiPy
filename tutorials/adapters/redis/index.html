@@ -4350,6 +4350,9 @@ versions ignored them, so a sentinel setup with a non-zero <code>DATABASE</code>
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nv">REDIS__SENTINEL_USERNAME</span><span class="o">=</span>sentinel-user<span class="w">  </span><span class="c1"># sentinel ACL user, used with SENTINEL_PASSWORD</span>
 </span></code></pre></div>
 <p><code>RETRY_ON_TIMEOUT</code> adds <code>TimeoutError</code> to the retried errors. The backoff settings take effect once <code>RETRY_ATTEMPTS</code> is set.</p>
+<p><code>PASSWORD</code> and <code>SENTINEL_PASSWORD</code> are hidden from the config <code>repr</code>. A warning is logged when a password is set without
+<code>SSL</code> or when <code>SSL_CHECK_HOSTNAME</code> is disabled. <code>SENTINEL_NODES</code> entries must be <code>host:port</code> and <code>CLUSTER_NODES</code> ports
+must be numeric; malformed entries raise <code>ConfigurationError</code>.</p>
 <h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Sync</label><label for="__tabbed_1_2">Async</label></div>
 <div class="tabbed-content">
@@ -4884,6 +4887,8 @@ for cluster sizing and <code>SHARD_K_RATIO</code> guidance.</p>
 </span><span id="__span-18-25"><a id="__codelineno-18-25" name="__codelineno-18-25" href="#__codelineno-18-25"></a><span class="p">)</span>
 </span><span id="__span-18-26"><a id="__codelineno-18-26" name="__codelineno-18-26" href="#__codelineno-18-26"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"HASH documents indexed"</span><span class="p">)</span>
 </span></code></pre></div>
+<p><code>upsert_hash</code> writes all fields with one atomic <code>HSET</code> and merges them into the existing hash. The <code>replace</code> argument
+is ignored; passing <code>replace=False</code> emits a <code>DeprecationWarning</code>.</p>
 <p>JSON documents store the full payload at a JSON path (default <code>$</code>):</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
@@ -5139,7 +5144,10 @@ interpolate user input into them. Use <code>SearchQueryDTO.from_text()</code> fo
 </span><span id="__span-30-13"><a id="__codelineno-30-13" name="__codelineno-30-13" href="#__codelineno-30-13"></a><span class="n">handle</span><span class="o">.</span><span class="n">delete_document</span><span class="p">(</span><span class="s2">"product:1"</span><span class="p">,</span> <span class="n">delete_actual_document</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
-<p>The Redis adapter maps connection and command failures to <code>CacheError</code>:</p>
+<p>The Redis adapter (and the RediSearch handles) map <code>redis.exceptions.RedisError</code> failures to <code>CacheError</code>. The raised
+error is also an instance of the original redis-py type (for example <code>ConnectionError</code> or <code>ResponseError</code>), so existing
+<code>except redis.exceptions.*</code> handlers keep working; the original exception is available as <code>__cause__</code>. Lazy results
+such as <code>scan_iter</code>, pipelines and pub/sub objects are not wrapped.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>
 </span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.redis.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">RedisAdapter</span>

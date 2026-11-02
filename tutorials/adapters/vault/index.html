@@ -1346,6 +1346,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#good-to-know" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Good to Know
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3710,6 +3721,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#good-to-know" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Good to Know
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3928,6 +3950,16 @@ of the call; with a static <code>token</code> there is nothing to log in again w
 so a write, delete or lease operation is never replayed. When Vault stays unavailable the adapter
 raises <code>UnavailableError</code> with a fixed message (the Vault address and path are logged, not
 returned in the error).</p>
+<h3 id="good-to-know">Good to Know<a class="headerlink" href="#good-to-know" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>read_secret</code> returns a copy of the payload, so changing the result never alters the cached value.</li>
+<li><code>VAULT__VERIFY_SSL</code> accepts <code>1/true/yes/on</code> and <code>0/false/no/off</code> (case-insensitive). Any other value raises a
+  <code>ConfigurationError</code> instead of silently turning verification off.</li>
+<li>Credential fields of <code>VaultConfig</code> (<code>TOKEN</code>, <code>APPROLE_SECRET_ID</code>, <code>PASSWORD</code>, the JWT and AWS secrets) are
+  excluded from <code>repr()</code>. Error reasons are generic; the underlying detail is logged.</li>
+<li>If two callers request dynamic credentials for the same role, each call creates its own lease. Revoke
+  the leases you no longer need.</li>
+</ul>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="https://python-hvac.org/en/stable/overview.html">hvac overview</a> — Client init and auth</li>
