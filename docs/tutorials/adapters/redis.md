@@ -936,7 +936,10 @@ handle.delete_document("product:1", delete_actual_document=True)
 
 ## Error Handling
 
-The Redis adapter maps connection and command failures to `CacheError`:
+The Redis adapter (and the RediSearch handles) map `redis.exceptions.RedisError` failures to `CacheError`. The raised
+error is also an instance of the original redis-py type (for example `ConnectionError` or `ResponseError`), so existing
+`except redis.exceptions.*` handlers keep working; the original exception is available as `__cause__`. Lazy results
+such as `scan_iter`, pipelines and pub/sub objects are not wrapped.
 
 ```python
 import logging

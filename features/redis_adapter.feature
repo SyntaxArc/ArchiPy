@@ -1458,6 +1458,36 @@ Feature: Redis Testing
     When I close the async container adapter directly
     Then the async client pool and the search client pool should be closed
 
+  Scenario Outline: Server errors surface as CacheError and stay redis-py errors
+    Given a configured <adapter_type>
+    When I increment the non-numeric key "{bdd-s-err}:k" in <adapter_type>
+    Then the Redis failure should be a CacheError and still a redis-py ResponseError
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Async server errors surface as CacheError and stay redis-py errors
+    Given a configured async <adapter_type>
+    When I increment the non-numeric key "{bdd-a-err}:k" in async <adapter_type>
+    Then the Redis failure should be a CacheError and still a redis-py ResponseError
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario: Connection failures surface as CacheError
+    When I read a key from an unreachable Redis server
+    Then the Redis failure should be a CacheError and still a redis-py ConnectionError
+
+  Scenario: Async connection failures surface as CacheError
+    When I read a key from an unreachable Redis server asynchronously
+    Then the Redis failure should be a CacheError and still a redis-py ConnectionError
+
   Scenario Outline: Untrusted text is matched literally by escaped queries
     Given a configured container
     And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents

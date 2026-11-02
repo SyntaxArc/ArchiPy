@@ -19,7 +19,7 @@ from pydantic import ValidationError
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig
-from archipy.models.errors import ConfigurationError
+from archipy.models.errors import CacheError, ConfigurationError
 from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
 from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
 from archipy.models.dtos.redis.search.index_schema_dto import (
@@ -3468,7 +3468,9 @@ async def step_when_sscan_iter_async(context, name, pattern, adapter_type):
     store_result(context, "async_set_scan", members)
 
 
-@when(r'I iterate keys matching "(?P<pattern>[^"]+)" and members of the set "(?P<name>[^"]+)" directly in async (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I iterate keys matching "(?P<pattern>[^"]+)" and members of the set "(?P<name>[^"]+)" directly in async (?P<adapter_type>mock|container|cluster)',
+)
 async def step_when_scan_iter_direct_async(context, pattern, name, adapter_type):
     """Use scan_iter and sscan_iter with a plain async for, without awaiting them first."""
     adapter = get_current_scenario_context(context).async_adapter
@@ -3890,6 +3892,63 @@ async def step_then_async_pools_closed(context):
     assert adapter._search_client is None
     for pool in get_result(context, "closed_pools"):
         assert _pool_is_closed(pool), "connection pool still holds connections after close"
+
+
+@when(r'I increment the non-numeric key "(?P<key>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+def step_when_incr_non_numeric(context, key, adapter_type):
+    """Trigger a server-side ResponseError and keep the raised error."""
+    adapter = get_current_scenario_context(context).adapter
+    adapter.set(key, "not-a-number")
+    try:
+        adapter.incrby(key, 1)
+    except Exception as error:  # noqa: BLE001 - the raised type is the behavior under test
+        store_result(context, "redis_error", error)
+
+
+@when(r'I increment the non-numeric key "(?P<key>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_incr_non_numeric_async(context, key, adapter_type):
+    """Trigger a server-side ResponseError asynchronously and keep the raised error."""
+    adapter = get_current_scenario_context(context).async_adapter
+    await adapter.set(key, "not-a-number")
+    try:
+        await adapter.incrby(key, 1)
+    except Exception as error:  # noqa: BLE001 - the raised type is the behavior under test
+        store_result(context, "redis_error", error)
+
+
+def _unreachable_config():
+    return RedisConfig(MASTER_HOST="127.0.0.1", PORT=1, SOCKET_CONNECT_TIMEOUT=1, SOCKET_TIMEOUT=1)
+
+
+@when(r"I read a key from an unreachable Redis server")
+def step_when_read_unreachable(context):
+    """Read from a server nobody listens on and keep the raised error."""
+    adapter = RedisAdapter(redis_config=_unreachable_config())
+    try:
+        adapter.get("any-key")
+    except Exception as error:  # noqa: BLE001 - the raised type is the behavior under test
+        store_result(context, "redis_error", error)
+
+
+@when(r"I read a key from an unreachable Redis server asynchronously")
+async def step_when_read_unreachable_async(context):
+    """Read asynchronously from a server nobody listens on and keep the raised error."""
+    adapter = AsyncRedisAdapter(redis_config=_unreachable_config())
+    try:
+        await adapter.get("any-key")
+    except Exception as error:  # noqa: BLE001 - the raised type is the behavior under test
+        store_result(context, "redis_error", error)
+
+
+@then(r"the Redis failure should be a CacheError and still a redis-py (?P<kind>ResponseError|ConnectionError)")
+def step_then_cache_error(context, kind):
+    """Verify the mapped error is both a CacheError and the original redis-py type."""
+    import redis.exceptions
+
+    error = get_result(context, "redis_error")
+    assert isinstance(error, CacheError), f"Expected CacheError, got {error!r}"
+    assert isinstance(error, getattr(redis.exceptions, kind)), f"Not a redis {kind}: {error!r}"
+    assert isinstance(error.__cause__, redis.exceptions.RedisError)
 
 
 @when(
