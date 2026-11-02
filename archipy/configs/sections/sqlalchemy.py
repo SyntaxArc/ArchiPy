@@ -5,7 +5,7 @@ import warnings
 from typing import Literal, Self
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-from pydantic import BaseModel, ConfigDict, Field, PostgresDsn, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PostgresDsn, SecretStr, field_validator, model_validator
 
 from archipy.models.errors import ConfigurationError
 
@@ -49,7 +49,7 @@ class SQLAlchemyConfig(BaseModel):
     HIDE_PARAMETERS: bool = Field(default=False, description="Whether to hide SQL parameters in logs")
     HOST: str | None = Field(default=None, description="Database host")
     ISOLATION_LEVEL: str | None = Field(default="REPEATABLE READ", description="Transaction isolation level")
-    PASSWORD: str | None = Field(default=None, repr=False, description="Database password")
+    PASSWORD: SecretStr | None = Field(default=None, description="Database password")
     POOL_MAX_OVERFLOW: int = Field(default=1, description="Maximum number of connections to allow in pool overflow")
     POOL_PRE_PING: bool = Field(default=True, description="Whether to ping connections before use")
     POOL_RECYCLE_SECONDS: int = Field(default=10 * 60, description="Number of seconds between connection recycling")
@@ -176,7 +176,7 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
 
         if all([self.USERNAME, self.HOST, self.PORT, self.DATABASE]):
             user_part = quote(str(self.USERNAME), safe="")
-            password_part = f":{quote(self.PASSWORD, safe='')}" if self.PASSWORD else ""
+            password_part = f":{quote(self.PASSWORD.get_secret_value(), safe='')}" if self.PASSWORD else ""
             self.POSTGRES_DSN = PostgresDsn(
                 url=f"{self.DRIVER_NAME}://{user_part}{password_part}@{self.HOST}:{self.PORT}/{self.DATABASE}",
             )
@@ -247,7 +247,7 @@ def _extract_postgres_auth_from_url(parsed: object, config: PostgresSQLAlchemyCo
         if config.USERNAME is None:
             config.USERNAME = unquote(username)
         if config.PASSWORD is None:
-            config.PASSWORD = unquote(password)
+            config.PASSWORD = SecretStr(unquote(password))
     elif auth_part and config.USERNAME is None:
         config.USERNAME = unquote(auth_part)
 

@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, get_args
 
 import hvac
+from pydantic import SecretStr
 from pydantic_settings import PydanticBaseSettingsSource
 from requests import Session
 from requests.adapters import HTTPAdapter
@@ -76,32 +77,37 @@ def _read_file_secret(path: str) -> str:
         ) from e
 
 
+def _secret_value(value: SecretStr | str | None) -> str | None:
+    """Return the plain value of a config secret, tolerating a raw string."""
+    return value.get_secret_value() if isinstance(value, SecretStr) else value
+
+
 def _resolve_token(config: VaultConfig) -> str | None:
     """Resolve the Vault token from TOKEN_FILE or TOKEN."""
     if config.TOKEN_FILE:
         return _read_file_secret(config.TOKEN_FILE)
-    return config.TOKEN
+    return _secret_value(config.TOKEN)
 
 
 def _resolve_approle_secret_id(config: VaultConfig) -> str | None:
     """Resolve the AppRole secret_id from file or inline value."""
     if config.APPROLE_SECRET_ID_FILE:
         return _read_file_secret(config.APPROLE_SECRET_ID_FILE)
-    return config.APPROLE_SECRET_ID
+    return _secret_value(config.APPROLE_SECRET_ID)
 
 
 def _resolve_password(config: VaultConfig) -> str | None:
     """Resolve password from PASSWORD_FILE or PASSWORD."""
     if config.PASSWORD_FILE:
         return _read_file_secret(config.PASSWORD_FILE)
-    return config.PASSWORD
+    return _secret_value(config.PASSWORD)
 
 
-def _resolve_optional_file_or_value(file_path: str | None, value: str | None) -> str | None:
+def _resolve_optional_file_or_value(file_path: str | None, value: SecretStr | str | None) -> str | None:
     """Resolve a secret from an optional file path, else an inline value."""
     if file_path:
         return _read_file_secret(file_path)
-    return value
+    return _secret_value(value)
 
 
 _AUTH_METHOD_MAP: dict[str, VaultAuthMethod] = {method: method for method in get_args(VaultAuthMethod)}
@@ -358,8 +364,8 @@ def _authenticate_aws(client: hvac.Client, config: VaultConfig) -> None:
         )
     response = client.auth.aws.iam_login(
         access_key=config.AWS_ACCESS_KEY,
-        secret_key=config.AWS_SECRET_KEY,
-        session_token=config.AWS_SESSION_TOKEN,
+        secret_key=_secret_value(config.AWS_SECRET_KEY),
+        session_token=_secret_value(config.AWS_SESSION_TOKEN),
         role=config.AWS_ROLE,
         region=config.AWS_REGION,
         mount_point=config.AWS_MOUNT_POINT,

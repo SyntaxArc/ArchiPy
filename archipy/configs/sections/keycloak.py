@@ -1,6 +1,6 @@
 """Keycloak configuration."""
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 
 _TRUE_WORDS = frozenset({"true", "1", "yes", "on", "t", "y"})
 _FALSE_WORDS = frozenset({"false", "0", "no", "off", "f", "n"})
@@ -16,7 +16,7 @@ class KeycloakConfig(BaseModel):
     SERVER_URL: str | None = None
     CLIENT_ID: str | None = None
     REALM_NAME: str = "master"
-    CLIENT_SECRET_KEY: str | None = Field(default=None, repr=False)
+    CLIENT_SECRET_KEY: SecretStr | None = Field(default=None)
     VERIFY_SSL: bool | str = Field(
         default=True,
         description="True/False toggles TLS verification; a string is the path of a CA bundle to verify against",
@@ -71,7 +71,7 @@ class KeycloakConfig(BaseModel):
     )
     IS_ADMIN_MODE_ENABLED: bool = False
     ADMIN_USERNAME: str | None = None
-    ADMIN_PASSWORD: str | None = Field(default=None, repr=False)
+    ADMIN_PASSWORD: SecretStr | None = Field(default=None)
     ADMIN_REALM_NAME: str = "master"
 
     @field_validator("VERIFY_SSL", mode="before")

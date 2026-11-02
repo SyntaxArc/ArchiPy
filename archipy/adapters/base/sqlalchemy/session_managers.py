@@ -9,6 +9,7 @@ from asyncio import current_task
 from typing import TYPE_CHECKING, Any, TypeVar, override
 
 import sqlalchemy
+from pydantic import SecretStr
 from sqlalchemy import URL, Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
@@ -29,15 +30,20 @@ if TYPE_CHECKING:
 # Generic type variable for SQLAlchemy configurations
 ConfigT = TypeVar("ConfigT", bound=SQLAlchemyConfig)
 
-_SECRET_CONFIG_FIELDS = ("PASSWORD", "POSTGRES_DSN")
+
+def _secret_digest(value: SecretStr | str) -> str:
+    """Return a deterministic keyed digest of a secret, unwrapping ``SecretStr``."""
+    plain = value.get_secret_value() if isinstance(value, SecretStr) else value
+    return hashlib.pbkdf2_hmac("sha256", plain.encode(), b"archipy-sqlalchemy-singleton", 100_000).hex()
 
 
 def _config_singleton_key(orm_config: SQLAlchemyConfig) -> str:
     """Serialise a configuration to a stable key with secrets replaced by their SHA-256 digest."""
     data = orm_config.model_dump(mode="json")
-    for field_name in _SECRET_CONFIG_FIELDS:
-        if data.get(field_name):
-            data[field_name] = hashlib.sha256(str(data[field_name]).encode()).hexdigest()
+    if orm_config.PASSWORD is not None:
+        data["PASSWORD"] = _secret_digest(orm_config.PASSWORD)
+    if data.get("POSTGRES_DSN"):
+        data["POSTGRES_DSN"] = _secret_digest(str(data["POSTGRES_DSN"]))
     return json.dumps(data, sort_keys=True)
 
 

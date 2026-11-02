@@ -251,9 +251,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._client = session.client(
                 "s3",
                 endpoint_url=endpoint_url,
-                aws_access_key_id=self.configs.ACCESS_KEY,
-                aws_secret_access_key=self.configs.SECRET_KEY,
-                aws_session_token=self.configs.SESSION_TOKEN,
+                aws_access_key_id=self.configs.ACCESS_KEY.get_secret_value() if self.configs.ACCESS_KEY else None,
+                aws_secret_access_key=self.configs.SECRET_KEY.get_secret_value() if self.configs.SECRET_KEY else None,
+                aws_session_token=self.configs.SESSION_TOKEN.get_secret_value() if self.configs.SESSION_TOKEN else None,
                 region_name=self.configs.REGION,
                 config=boto_config,
                 verify=self._ssl_verify(self.configs),

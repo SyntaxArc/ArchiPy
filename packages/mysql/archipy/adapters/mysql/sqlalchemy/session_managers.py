@@ -162,7 +162,7 @@ class MySQLSQlAlchemySessionManager(BaseSQLAlchemySessionManager[MySQLSQLAlchemy
             return URL.create(
                 drivername=configs.DRIVER_NAME,
                 username=configs.USERNAME,
-                password=configs.PASSWORD,
+                password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
                 host=configs.HOST,
                 port=configs.PORT,
                 database=configs.DATABASE,
@@ -249,7 +249,7 @@ class AsyncMySQLSQlAlchemySessionManager(
             return URL.create(
                 drivername="mysql+asyncmy",
                 username=configs.USERNAME,
-                password=configs.PASSWORD,
+                password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
                 host=configs.HOST,
                 port=configs.PORT,
                 database=configs.DATABASE,

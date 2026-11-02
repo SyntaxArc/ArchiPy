@@ -115,7 +115,7 @@ def _redis_connection_kwargs(
 ) -> dict[str, Any]:
     """Build common Redis client connection kwargs from config."""
     return {
-        "password": configs.PASSWORD,
+        "password": configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
         "decode_responses": (configs.DECODE_RESPONSES if decode_responses is None else decode_responses),
         "health_check_interval": configs.HEALTH_CHECK_INTERVAL,
         "max_connections": configs.MAX_CONNECTIONS,
@@ -133,7 +133,7 @@ def _sentinel_redis_kwargs(configs: RedisConfig, *, is_async: bool = False) -> d
         "socket_timeout": configs.SOCKET_TIMEOUT,
         "socket_connect_timeout": configs.SOCKET_CONNECT_TIMEOUT,
         "max_connections": configs.MAX_CONNECTIONS,
-        "password": configs.PASSWORD,
+        "password": configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
         "db": configs.DATABASE,
         "decode_responses": configs.DECODE_RESPONSES,
         "health_check_interval": configs.HEALTH_CHECK_INTERVAL,
@@ -149,7 +149,7 @@ def _sentinel_kwargs(configs: RedisConfig) -> dict[str, Any] | None:
     if configs.SENTINEL_USERNAME:
         kwargs["username"] = configs.SENTINEL_USERNAME
     if configs.SENTINEL_PASSWORD:
-        kwargs["password"] = configs.SENTINEL_PASSWORD
+        kwargs["password"] = configs.SENTINEL_PASSWORD.get_secret_value()
     if configs.SSL:
         kwargs.update({k: v for k, v in _tls_acl_kwargs(configs).items() if k != "username"})
     return kwargs or None

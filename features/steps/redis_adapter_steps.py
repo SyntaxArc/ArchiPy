@@ -9,6 +9,7 @@ import json
 import logging
 import time
 
+from pydantic import SecretStr
 from behave import given, then, use_step_matcher, when
 from features.test_containers import ContainerManager
 from features.test_helpers import get_current_scenario_context
@@ -3641,7 +3642,9 @@ def step_when_create_acl_user_and_connect(context, user, password):
         commands=["+@all"],
         keys=["*"],
     )
-    config = BaseConfig.global_config().REDIS.model_copy(update={"USERNAME": user, "PASSWORD": password})
+    config = BaseConfig.global_config().REDIS.model_copy(
+        update={"USERNAME": user, "PASSWORD": SecretStr(password) if password else None},
+    )
     scenario_context.acl_adapter = RedisAdapter(redis_config=config)
     scenario_context.acl_whoami = scenario_context.acl_adapter.client.acl_whoami()
 

@@ -7,6 +7,7 @@ from unittest import mock
 
 import certifi
 import httpx2
+from pydantic import SecretStr
 from behave import given, then, when
 from features.test_helpers import get_current_scenario_context
 
@@ -701,9 +702,13 @@ def step_s3_client_endpoint(context, expected_url):
 @then("the MinIO configuration repr should not contain any credential")
 def step_config_repr_hides_credentials(context):
     config = BaseConfig.global_config().MINIO.model_copy(
-        update={"ACCESS_KEY": "ak-visible", "SECRET_KEY": "sk-visible", "SESSION_TOKEN": "st-visible"},
+        update={
+            "ACCESS_KEY": SecretStr("ak-visible"),
+            "SECRET_KEY": SecretStr("sk-visible"),
+            "SESSION_TOKEN": SecretStr("st-visible"),
+        },
     )
-    text = repr(config)
+    text = repr(config) + str(config) + config.model_dump_json()
     for secret in ("ak-visible", "sk-visible", "st-visible"):
         assert secret not in text, f"{secret} leaked in repr"
 

@@ -127,7 +127,7 @@ class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLA
             return URL.create(
                 drivername=configs.DRIVER_NAME,
                 username=configs.USERNAME,
-                password=configs.PASSWORD,
+                password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
                 host=configs.HOST,
                 port=configs.PORT,
                 database=configs.DATABASE,
@@ -211,7 +211,7 @@ class AsyncPostgresSQlAlchemySessionManager(
             return URL.create(
                 drivername=configs.DRIVER_NAME,
                 username=configs.USERNAME,
-                password=configs.PASSWORD,
+                password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
                 host=configs.HOST,
                 port=configs.PORT,
                 database=configs.DATABASE,
