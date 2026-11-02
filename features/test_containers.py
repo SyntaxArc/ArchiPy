@@ -1,3 +1,5 @@
+from pydantic import SecretStr
+
 """Container manager for test containers"""
 
 import datetime
@@ -65,7 +67,14 @@ POSTGRES_LOW_MEMORY_COMMAND: str = (
     "postgres -c shared_buffers=32MB -c work_mem=2MB -c maintenance_work_mem=16MB"
     " -c fsync=off -c synchronous_commit=off -c full_page_writes=off"
 )
+
+
 # Keycloak otherwise sizes its heap at 70% of the container limit.
+def _secret_value(value):
+    """Return a plain secret value, unwrapping pydantic SecretStr."""
+    return value.get_secret_value() if hasattr(value, "get_secret_value") else value
+
+
 KEYCLOAK_HEAP_OPTS: str = "-Xms64m -Xmx256m"
 
 # ``KeycloakContainer`` replaces any ``with_command`` call with its ``cmd`` argument, so features go here:
@@ -276,12 +285,12 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         self.host: str | None = None
         self.port: int | None = None
         self.database: int = self.config.DATABASE
-        self.password: str | None = self.config.PASSWORD
+        self.password: str | None = _secret_value(self.config.PASSWORD)
 
         # Set up the container
         self._container = RedisContainer(self.image)
         if self.config.PASSWORD:
-            self._container.with_env("REDIS_PASSWORD", self.config.PASSWORD)
+            self._container.with_env("REDIS_PASSWORD", _secret_value(self.config.PASSWORD))
         self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["redis"])
         self._container.with_command(REDIS_LOW_MEMORY_COMMAND)
 
@@ -294,7 +303,7 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         if self._container is None:
             self._container = RedisContainer(self.image)
             if self.config.PASSWORD:
-                self._container.with_env("REDIS_PASSWORD", self.config.PASSWORD)
+                self._container.with_env("REDIS_PASSWORD", _secret_value(self.config.PASSWORD))
             self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["redis"])
             self._container.with_command(REDIS_LOW_MEMORY_COMMAND)
 
@@ -442,7 +451,7 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
         self.port: int | None = None
         self.database: str | None = self.config.DATABASE
         self.username: str | None = self.config.USERNAME
-        self.password: str | None = self.config.PASSWORD
+        self.password: str | None = _secret_value(self.config.PASSWORD)
 
         # Use config values or fallback to defaults for test containers
         dbname = self.database or "test_db"
@@ -526,7 +535,7 @@ class MySQLTestContainer(metaclass=Singleton, thread_safe=True):
         self.port: int | None = None
         self.database: str | None = self.config.DATABASE
         self.username: str | None = self.config.USERNAME
-        self.password: str | None = self.config.PASSWORD
+        self.password: str | None = _secret_value(self.config.PASSWORD)
 
         # Use config values or fallback to defaults for test containers
         dbname = self.database or "test_db"
@@ -617,7 +626,8 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         self.host: str | None = None
         self.port: int | None = None
         self.admin_username: str | None = self.config.ADMIN_USERNAME
-        self.admin_password: str | None = self.config.ADMIN_PASSWORD
+        admin_password = self.config.ADMIN_PASSWORD
+        self.admin_password: str | None = admin_password.get_secret_value() if admin_password else None
         self.realm: str = self.config.REALM_NAME
 
         # Use config values or fallback to defaults for test containers
@@ -942,8 +952,10 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
 
         self.host: str | None = None
         self.port: int | None = None
-        self.access_key = self.config.ACCESS_KEY or "minioadmin"
-        self.secret_key = self.config.SECRET_KEY or "minioadmin"
+        access_key = _secret_value(self.config.ACCESS_KEY)
+        secret_key = _secret_value(self.config.SECRET_KEY)
+        self.access_key = access_key or "minioadmin"
+        self.secret_key = secret_key or "minioadmin"
 
         self._container = MinioContainer(
             image=self.image,
@@ -974,8 +986,8 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
 
         global_config = BaseConfig.global_config()
         global_config.MINIO.ENDPOINT = f"{self.host}:{self.port}"
-        global_config.MINIO.ACCESS_KEY = self.access_key
-        global_config.MINIO.SECRET_KEY = self.secret_key
+        global_config.MINIO.ACCESS_KEY = SecretStr(self.access_key)
+        global_config.MINIO.SECRET_KEY = SecretStr(self.secret_key)
         global_config.MINIO.SECURE = False
 
         logger.info("MinIO container started on %s:%s", self.host, self.port)
@@ -1148,7 +1160,7 @@ class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
         self.port: int | None = None
         self.database: str | None = self.config.DATABASE
         self.username: str | None = self.config.USERNAME
-        self.password: str | None = self.config.PASSWORD
+        self.password: str | None = _secret_value(self.config.PASSWORD)
 
         # Set up the container
         self._container = DockerContainer(self.image)
@@ -1405,7 +1417,7 @@ class VaultTestContainer(metaclass=Singleton, thread_safe=True):
 
         global_config = BaseConfig.global_config()
         global_config.VAULT.ADDR = self.addr
-        global_config.VAULT.TOKEN = self.root_token
+        global_config.VAULT.TOKEN = SecretStr(self.root_token)
         global_config.VAULT.AUTH_METHOD = "token"
         global_config.VAULT.VERIFY_SSL = False
         global_config.VAULT.MOUNT_POINT = "secret"

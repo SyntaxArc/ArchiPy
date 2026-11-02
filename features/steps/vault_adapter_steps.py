@@ -39,7 +39,8 @@ def _store_adapter(context, adapter: VaultAdapter) -> VaultAdapter:
 def _admin_client() -> hvac.Client:
     """Return an hvac client using the global Vault root token."""
     vault = TestConfig.global_config().VAULT
-    return hvac.Client(url=vault.ADDR, token=vault.TOKEN, verify=vault.VERIFY_SSL)
+    token = vault.TOKEN.get_secret_value() if vault.TOKEN else None
+    return hvac.Client(url=vault.ADDR, token=token, verify=vault.VERIFY_SSL)
 
 
 @given("a configured Vault adapter")
@@ -130,6 +131,7 @@ def step_given_auto_renew_adapter_kind(context, kind: str, threshold: int):
     """Build an auto-renewing adapter on a root or a short-lived non-renewable token."""
     if kind == "root":
         token = TestConfig.global_config().VAULT.TOKEN
+        token = token.get_secret_value() if token else None
     elif kind == "non-renewable":
         admin = _admin_client()
         response = admin.auth.token.create(
@@ -216,7 +218,7 @@ def step_given_vault_database_role(context, role_name):
     host = "host.docker.internal"
     port = postgres.port or pg.PORT or 5432
     user = pg.USERNAME or postgres.username or "test_user"
-    password = pg.PASSWORD or postgres.password or "test_password"
+    password = pg.PASSWORD.get_secret_value() if pg.PASSWORD else (postgres.password or "test_password")
     database = pg.DATABASE or postgres.database or "test_db"
 
     connection_url = f"postgresql://{{{{username}}}}:{{{{password}}}}@{host}:{port}/{database}?sslmode=disable"

@@ -2,7 +2,7 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 
 class MinioConfig(BaseModel):
@@ -13,10 +13,10 @@ class MinioConfig(BaseModel):
     """
 
     ENDPOINT: str | None = Field(default=None, description="MinIO/S3 server endpoint")
-    ACCESS_KEY: str | None = Field(default=None, description="Access key for authentication", repr=False)
-    SECRET_KEY: str | None = Field(default=None, description="Secret key for authentication", repr=False)
+    ACCESS_KEY: SecretStr | None = Field(default=None, description="Access key for authentication")
+    SECRET_KEY: SecretStr | None = Field(default=None, description="Secret key for authentication")
     SECURE: bool = Field(default=False, description="Whether to use secure (HTTPS) connection")
-    SESSION_TOKEN: str | None = Field(default=None, description="Session token for temporary credentials", repr=False)
+    SESSION_TOKEN: SecretStr | None = Field(default=None, description="Session token for temporary credentials")
     REGION: str | None = Field(default=None, description="AWS region for S3 compatibility")
     ADDRESSING_STYLE: Literal["auto", "path", "virtual"] = Field(
         default="auto",

@@ -114,7 +114,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
 
         cluster_client = RedisCluster(
             startup_nodes=startup_nodes,
-            password=configs.PASSWORD,
+            password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
             decode_responses=configs.DECODE_RESPONSES,
             max_connections=configs.MAX_CONNECTIONS,
             socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
@@ -145,7 +145,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
         sentinel = Sentinel(
             sentinel_nodes,
             socket_timeout=configs.SENTINEL_SOCKET_TIMEOUT,
-            password=configs.PASSWORD,
+            password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
@@ -200,7 +200,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
 
             return RedisCluster(
                 startup_nodes=startup_nodes,
-                password=configs.PASSWORD,
+                password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
                 decode_responses=False,
                 max_connections=configs.MAX_CONNECTIONS,
                 socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
@@ -392,7 +392,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
 
         cluster_client = AsyncRedisCluster(
             startup_nodes=startup_nodes,
-            password=configs.PASSWORD,
+            password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
             decode_responses=configs.DECODE_RESPONSES,
             max_connections=configs.MAX_CONNECTIONS,
             socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
@@ -423,7 +423,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         sentinel = AsyncSentinel(
             sentinel_nodes,
             socket_timeout=configs.SENTINEL_SOCKET_TIMEOUT,
-            password=configs.PASSWORD,
+            password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
@@ -478,7 +478,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
 
             return AsyncRedisCluster(
                 startup_nodes=startup_nodes,
-                password=configs.PASSWORD,
+                password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
                 decode_responses=False,
                 max_connections=configs.MAX_CONNECTIONS,
                 socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,

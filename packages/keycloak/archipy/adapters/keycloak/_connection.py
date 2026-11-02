@@ -15,6 +15,7 @@ from keycloak.exceptions import (
     KeycloakError,
 )
 from keycloak.openid_connection import KeycloakOpenIDConnection
+from pydantic import SecretStr
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -34,6 +35,12 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import KeycloakConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _secret_value(value: SecretStr | str | None) -> str | None:
+    """Return the plain value of a config secret, tolerating a raw string."""
+    return value.get_secret_value() if isinstance(value, SecretStr) else value
+
 
 _CACHE_CLEAR_NAMES = ("clear_cache", "cache_clear")
 
@@ -105,7 +112,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
                 server_url=server_url,
                 client_id=client_id,
                 realm_name=configs.REALM_NAME,
-                client_secret_key=configs.CLIENT_SECRET_KEY,
+                client_secret_key=_secret_value(configs.CLIENT_SECRET_KEY),
                 **client_options(configs),
             ),
             configs,
@@ -121,7 +128,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
                     KeycloakAdmin(
                         server_url=self.configs.SERVER_URL,
                         username=self.configs.ADMIN_USERNAME,
-                        password=self.configs.ADMIN_PASSWORD,
+                        password=_secret_value(self.configs.ADMIN_PASSWORD),
                         realm_name=self.configs.REALM_NAME,
                         user_realm_name=self.configs.ADMIN_REALM_NAME,
                         **client_options(self.configs, with_proxies=False),
@@ -220,7 +227,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
                     server_url=server_url,
                     realm_name=configs.REALM_NAME,
                     client_id=client_id,
-                    client_secret_key=configs.CLIENT_SECRET_KEY,
+                    client_secret_key=_secret_value(configs.CLIENT_SECRET_KEY),
                     **client_options(configs, with_proxies=False),
                 ),
             ),
@@ -289,7 +296,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
                 server_url=server_url,
                 client_id=client_id,
                 realm_name=configs.REALM_NAME,
-                client_secret_key=configs.CLIENT_SECRET_KEY,
+                client_secret_key=_secret_value(configs.CLIENT_SECRET_KEY),
                 **client_options(configs),
             ),
             configs,
@@ -305,7 +312,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
                     KeycloakAdmin(
                         server_url=self.configs.SERVER_URL,
                         username=self.configs.ADMIN_USERNAME,
-                        password=self.configs.ADMIN_PASSWORD,
+                        password=_secret_value(self.configs.ADMIN_PASSWORD),
                         realm_name=self.configs.REALM_NAME,
                         user_realm_name=self.configs.ADMIN_REALM_NAME,
                         **client_options(self.configs, with_proxies=False),
@@ -464,7 +471,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
                     server_url=server_url,
                     realm_name=configs.REALM_NAME,
                     client_id=client_id,
-                    client_secret_key=configs.CLIENT_SECRET_KEY,
+                    client_secret_key=_secret_value(configs.CLIENT_SECRET_KEY),
                     **client_options(configs, with_proxies=False),
                 ),
             ),

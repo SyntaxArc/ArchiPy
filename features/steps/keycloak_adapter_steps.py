@@ -6,6 +6,7 @@ import threading
 import uuid
 from typing import Any
 
+from pydantic import SecretStr
 from behave import given, step, then, when
 from behave.runner import Context
 from keycloak.exceptions import KeycloakGetError
@@ -384,7 +385,7 @@ async def step_create_client_and_update_adapter(
             new_config.SERVER_URL = adapter.configs.SERVER_URL
             new_config.CLIENT_ID = client_name  # Use client name for configuration
             new_config.REALM_NAME = realm_name
-            new_config.CLIENT_SECRET_KEY = client_secret
+            new_config.CLIENT_SECRET_KEY = SecretStr(client_secret)
             new_config.VERIFY_SSL = adapter.configs.VERIFY_SSL
             new_config.TIMEOUT = adapter.configs.TIMEOUT
             new_config.ADMIN_USERNAME = adapter.configs.ADMIN_USERNAME
@@ -444,7 +445,7 @@ async def step_create_client_and_update_adapter(
                         adapter._initialize_admin_client()
 
                     client_secret = adapter.get_client_secret(client_id)
-                    adapter.configs.CLIENT_SECRET_KEY = client_secret
+                    adapter.configs.CLIENT_SECRET_KEY = SecretStr(client_secret)
                     break
                 except Exception as e:
                     if attempt < max_retries - 1:
@@ -721,7 +722,7 @@ def step_rotate_realm_signing_key(context: Context, realm_name: str) -> None:
     admin = KeycloakAdmin(
         server_url=config.SERVER_URL,
         username=config.ADMIN_USERNAME,
-        password=config.ADMIN_PASSWORD,
+        password=config.ADMIN_PASSWORD.get_secret_value() if config.ADMIN_PASSWORD else None,
         realm_name=realm_name,
         user_realm_name=config.ADMIN_REALM_NAME,
         verify=config.VERIFY_SSL,
@@ -4414,7 +4415,7 @@ async def step_adapter_maps_bad_signature(context: Context, kind: str, code: str
 @then("the Keycloak config repr does not contain the client secret or the admin password")
 def step_config_repr_hides_secrets(context: Context) -> None:
     config = KeycloakConfig(CLIENT_SECRET_KEY="client-secret-value", ADMIN_PASSWORD="admin-password-value")
-    text = repr(config) + str(config)
+    text = repr(config) + str(config) + config.model_dump_json()
     assert "client-secret-value" not in text and "admin-password-value" not in text, text
 
 
@@ -4427,7 +4428,9 @@ def _unverified_claims(token: str) -> dict[str, Any]:
 
 
 async def _check_token(
-    kind: str, adapter: AsyncKeycloakAdapter | KeycloakAdapter, token: str,
+    kind: str,
+    adapter: AsyncKeycloakAdapter | KeycloakAdapter,
+    token: str,
 ) -> tuple[bool, str | None]:
     """Return (validate_token result, error code of get_token_info or None)."""
     if kind == "async":

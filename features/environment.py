@@ -12,6 +12,7 @@ from behave.model import Feature, Scenario
 from behave.runner import Context
 from features.scenario_context_pool_manager import ScenarioContextPoolManager
 from features.test_containers import ContainerManager
+from pydantic import SecretStr
 from pydantic_settings import SettingsConfigDict
 from testcontainers.core.config import testcontainers_config
 
@@ -228,7 +229,7 @@ def after_scenario(context: Context, scenario: Scenario) -> None:
         instance = ContainerManager._container_instances.get("vault")
         if instance is not None and getattr(instance, "_is_running", False):
             global_config.VAULT.ADDR = instance.addr
-            global_config.VAULT.TOKEN = instance.root_token
+            global_config.VAULT.TOKEN = SecretStr(instance.root_token)
             global_config.VAULT.AUTH_METHOD = "token"
             global_config.VAULT.VERIFY_SSL = False
             global_config.VAULT.MOUNT_POINT = "secret"

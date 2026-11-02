@@ -371,6 +371,19 @@ Apps that need a different order can override `settings_customise_sources` in a
 For runtime secret CRUD, dynamic leases, and transit encryption, use the
 [Vault adapter](adapters/vault.md).
 
+## Secret Fields
+
+Password, token and secret-key settings in the Redis, Keycloak, MinIO, Vault and SQLAlchemy config sections are
+`pydantic.SecretStr`. They are masked in `repr()`, `str()` and `model_dump()`/`model_dump_json()`. Pass the real value
+to an SDK with `get_secret_value()`:
+
+```python
+redis_password = config.REDIS.PASSWORD.get_secret_value()
+```
+
+Environment variables and constructor strings are coerced to `SecretStr` automatically. Non-string secrets such as
+`POSTGRES_DSN` keep `Field(repr=False)`.
+
 ## Best Practices
 
 1. **Use meaningful defaults**: Configure sensible defaults that work in local development

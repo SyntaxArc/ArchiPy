@@ -14,9 +14,9 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
-from pydantic import ValidationError
 from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
+from pydantic import ValidationError
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
@@ -171,7 +171,8 @@ def step_when_init_with_vault(context):
     if scenario_context.get("vault_force_invalid_token"):
         os.environ["VAULT__TOKEN"] = "invalid-token-for-test"
     else:
-        os.environ["VAULT__TOKEN"] = vault.TOKEN or ""
+        token = vault.TOKEN.get_secret_value() if vault.TOKEN else ""
+        os.environ["VAULT__TOKEN"] = token
 
     try:
         config = TestConfig()
@@ -190,7 +191,8 @@ def step_then_redis_password(context, expected):
     error = scenario_context.get("vault_config_error")
     assert error is None, f"Unexpected error initializing config: {error}"
     config = BaseConfig.global_config()
-    assert config.REDIS.PASSWORD == expected, f"Expected REDIS.PASSWORD={expected!r}, got {config.REDIS.PASSWORD!r}"
+    actual = config.REDIS.PASSWORD.get_secret_value() if config.REDIS.PASSWORD else None
+    assert actual == expected, f"Expected REDIS.PASSWORD={expected!r}, got {actual!r}"
 
 
 @then("no Vault connection should be attempted")
@@ -365,7 +367,8 @@ def step_when_postgres_config_from_parts(context, user, password, host, port, da
 )
 def step_then_postgres_parts(context, user, password, host, port, database):
     config = get_current_scenario_context(context).get("postgres_config")
-    actual = (config.USERNAME, config.PASSWORD or "(none)", config.HOST, config.PORT, config.DATABASE)
+    password = config.PASSWORD.get_secret_value() if config.PASSWORD else "(none)"
+    actual = (config.USERNAME, password, config.HOST, config.PORT, config.DATABASE)
     assert actual == (user, password, host, port, database), actual
 
 
@@ -409,9 +412,10 @@ def step_then_singleton_key_hides(context, kind, secret):
     manager_class = AsyncPostgresSQlAlchemySessionManager if kind == "async" else PostgresSQlAlchemySessionManager
     key = manager_class._singleton_key(config)
     assert secret not in key, key
-    assert key != manager_class._singleton_key(config.model_copy(update={"PASSWORD": secret + "x"})), (
-        "key ignores password"
-    )
+    from pydantic import SecretStr
+
+    other = config.model_copy(update={"PASSWORD": SecretStr(secret + "x")})
+    assert key != manager_class._singleton_key(other), "key ignores password"
 
 
 @then('the PostgreSQL DSN should be "{dsn}"')
@@ -512,7 +516,8 @@ def _vault_admin_client():
     from hvac import Client
 
     vault = TestConfig.global_config().VAULT
-    return Client(url=vault.ADDR, token=vault.TOKEN)
+    token = vault.TOKEN.get_secret_value() if vault.TOKEN else None
+    return Client(url=vault.ADDR, token=token)
 
 
 @given("Vault accepts {method} logins for a test identity")
@@ -524,7 +529,8 @@ def step_given_vault_accepts_logins(context, method):
     suffix = uuid.uuid4().hex[:8]
     if method == "token file":
         token_file = Path(tempfile.mkdtemp(prefix="archipy_vault_")) / "token"
-        token_file.write_text(f"{vault.TOKEN}\n", encoding="utf-8")
+        token = vault.TOKEN.get_secret_value() if vault.TOKEN else ""
+        token_file.write_text(f"{token}\n", encoding="utf-8")
         settings.update({"AUTH_METHOD": "token", "TOKEN_FILE": str(token_file)})
     elif method == "approle":
         mount = f"approle{suffix}"

@@ -4,7 +4,7 @@ import logging
 from enum import StrEnum
 from typing import Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, SecretStr, model_validator
 
 from archipy.models.errors import ConfigurationError
 
@@ -41,9 +41,8 @@ class RedisConfig(BaseModel):
     SENTINEL_NODES: list[str] = Field(default=[], description="List of sentinel addresses (host:port)")
     SENTINEL_SERVICE_NAME: str | None = Field(default=None, description="Master service name for sentinel")
     SENTINEL_SOCKET_TIMEOUT: float = Field(default=0.1, description="Sentinel socket timeout")
-    SENTINEL_PASSWORD: str | None = Field(
+    SENTINEL_PASSWORD: SecretStr | None = Field(
         default=None,
-        repr=False,
         description="Password for sentinel nodes (if distinct)",
     )
     SENTINEL_USERNAME: str | None = Field(default=None, description="ACL username for sentinel nodes (if distinct)")
@@ -52,7 +51,7 @@ class RedisConfig(BaseModel):
     PORT: int = Field(default=6379, description="Default Redis server port")
     DATABASE: int = Field(default=0, description="Redis database number (standalone and sentinel; ignored in cluster)")
     USERNAME: str | None = Field(default=None, description="Redis ACL username (Redis 6+); None uses the default user")
-    PASSWORD: str | None = Field(default=None, repr=False, description="Redis password")
+    PASSWORD: SecretStr | None = Field(default=None, description="Redis password")
     DECODE_RESPONSES: Literal[True] = Field(default=True, description="Whether to decode responses")
     PROTOCOL: Literal[2, 3] = Field(default=3, description="RESP protocol version (2 or 3)")
     HEALTH_CHECK_INTERVAL: int = Field(default=10, description="Health check interval in seconds")
