@@ -300,7 +300,7 @@ async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # 
 ### Nested atomic calls and savepoints
 
 A nested atomic call joins the outer transaction. By default a nested failure rolls back the whole transaction, and
-the outer block raises `DatabaseTransactionError` even when the nested error was caught. Pass `savepoint=True` to
+the outer block re-raises the original exception even when the nested error was caught. Pass `savepoint=True` to
 isolate the nested call instead:
 
 ```python
@@ -321,6 +321,8 @@ def inner() -> None:
 
 - With `savepoint=True`, a caught nested failure rolls back only that savepoint; the outer transaction and other
   successful nested calls commit.
+- The decorator does not translate logic exceptions: a `ValueError` from your code stays a `ValueError`. Only
+  SQLAlchemy failures become `Database*Error` values; `DatabaseTransactionError` is reserved for transaction failures.
 - Savepoints stack: a failure at level N rolls back level N only; a parent savepoint can catch it and continue.
 - A `savepoint=False` call anywhere in the chain aborts the whole transaction; an enclosing savepoint cannot contain
   it.

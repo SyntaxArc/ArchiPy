@@ -45,7 +45,6 @@ from archipy.models.errors import (
     DatabaseSerializationError,
     DatabaseTimeoutError,
     DatabaseTransactionError,
-    InternalError,
     InvalidArgumentError,
 )
 
@@ -78,6 +77,8 @@ ATOMIC_BLOCK_CONFIGS = {
 
 # Session marker: a nested atomic call failed, so the outer transaction must not be committed
 _ROLLBACK_ONLY_FLAG = "_archipy_atomic_rollback_only"
+# First exception raised by a nested atomic call that did not use a savepoint
+_NESTED_ERROR_FLAG = "_archipy_atomic_nested_error"
 # Number of active savepoint levels on the session
 _SAVEPOINT_DEPTH_FLAG = "_archipy_atomic_savepoint_depth"
 # Databases without SAVEPOINT support
@@ -146,7 +147,9 @@ def _handle_db_exception(exception: BaseException, db_type: str, func_name: str)
         DatabaseTimeoutError: If a database operation times out.
         DatabaseResourceExhaustedError: If the server runs out of memory or connections.
         DatabaseConstraintError: If a constraint violation occurs.
-        DatabaseError: If a generic exception occurs within a database transaction.
+        DatabaseError: If a generic database error occurs.
+
+    Any exception that is not a SQLAlchemy failure is re-raised unchanged.
     """
     logger.debug("Exception in %s atomic block (func: %s): %s", db_type, func_name, exception)
 
@@ -172,7 +175,7 @@ def _handle_db_exception(exception: BaseException, db_type: str, func_name: str)
 
     if isinstance(exception, BaseError):
         raise exception
-    raise InternalError() from exception
+    raise exception
 
 
 def _is_control_flow_exception(exception: BaseException) -> bool:
@@ -290,17 +293,19 @@ async def _run_async_scope[R](
             return await _run_async_savepoint(session, func, args, kwargs)
         # Nested calls join the outer transaction; a failure rolls that transaction back
         return await func(*args, **kwargs)
-    if session.in_transaction():
+    transaction = None
+    if not session.in_transaction():
+        transaction = session.begin()
+        await transaction.start()
+    try:
         result = await func(*args, **kwargs)
         if session.info.get(_ROLLBACK_ONLY_FLAG, False):
-            raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
+            await session.rollback()
+            raise _nested_failure_error(session, db_type)
         await session.commit()
         return result
-    async with session.begin():
-        result = await func(*args, **kwargs)
-        if session.info.get(_ROLLBACK_ONLY_FLAG, False):
-            raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
-        return result
+    finally:
+        del transaction
 
 
 def _run_sync_scope[R](
@@ -319,29 +324,38 @@ def _run_sync_scope[R](
             return _run_sync_savepoint(session, func, args, kwargs)
         # Nested calls join the outer transaction; a failure rolls that transaction back
         return func(*args, **kwargs)
-    if session.in_transaction():
+    transaction = None
+    if not session.in_transaction():
+        transaction = session.begin()
+    try:
         result = func(*args, **kwargs)
         if session.info.get(_ROLLBACK_ONLY_FLAG, False):
-            raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
+            session.rollback()
+            raise _nested_failure_error(session, db_type)
         session.commit()
         return result
-    with session.begin():
-        result = func(*args, **kwargs)
-        if session.info.get(_ROLLBACK_ONLY_FLAG, False):
-            raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
-        return result
+    finally:
+        del transaction
+
+
+def _nested_failure_error(session: Any, db_type: str) -> BaseException:
+    """Return the stored nested failure, else a transaction error."""
+    stored = session.info.get(_NESTED_ERROR_FLAG)
+    if stored is not None:
+        return stored
+    return DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
 
 
 async def _rollback_outer_after_nested_failure(session: Any, db_type: str) -> NoReturn:
-    """Roll back the outer transaction and raise when a nested atomic call failed."""
+    """Roll back the outer transaction and re-raise the nested failure."""
     await session.rollback()
-    raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
+    raise _nested_failure_error(session, db_type)
 
 
 def _rollback_outer_after_nested_failure_sync(session: Any, db_type: str) -> NoReturn:
-    """Roll back the outer transaction and raise when a nested atomic call failed."""
+    """Roll back the outer transaction and re-raise the nested failure."""
     session.rollback()
-    raise DatabaseTransactionError(database=db_type, additional_data={"reason": "nested_atomic_failed"})
+    raise _nested_failure_error(session, db_type)
 
 
 async def _handle_async_atomic_failure(
@@ -360,6 +374,8 @@ async def _handle_async_atomic_failure(
         should_rollback = False
     elif is_nested:
         session.info[_ROLLBACK_ONLY_FLAG] = True
+        if not _is_control_flow_exception(exception):
+            session.info.setdefault(_NESTED_ERROR_FLAG, exception)
         # Defer a full rollback while a savepoint ancestor is unwinding
         should_rollback = session.info.get(_SAVEPOINT_DEPTH_FLAG, 0) == 0
     if should_rollback:
@@ -390,6 +406,8 @@ def _handle_sync_atomic_failure(
         should_rollback = False
     elif is_nested:
         session.info[_ROLLBACK_ONLY_FLAG] = True
+        if not _is_control_flow_exception(exception):
+            session.info.setdefault(_NESTED_ERROR_FLAG, exception)
         # Defer a full rollback while a savepoint ancestor is unwinding
         should_rollback = session.info.get(_SAVEPOINT_DEPTH_FLAG, 0) == 0
     if should_rollback:
@@ -497,6 +515,7 @@ def _create_sync_atomic_wrapper[R](
             if not is_nested:
                 session.info.pop(atomic_flag, None)
                 session.info.pop(_ROLLBACK_ONLY_FLAG, None)
+                session.info.pop(_NESTED_ERROR_FLAG, None)
             if not is_nested and not session.in_transaction():
                 session.close()
                 session_manager.remove_session()
@@ -560,9 +579,9 @@ def sqlalchemy_atomic[**P, R](
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Run a function inside a SQLAlchemy transaction for the given database type.
 
-    If the function succeeds, the transaction is committed; otherwise it is rolled back and the
-    error is mapped to a domain database error. Synchronous and ``async def`` functions are both
-    supported; the kind is detected automatically.
+    If the function succeeds, the transaction is committed; otherwise it is rolled back. SQLAlchemy
+    failures are mapped to domain database errors; every other exception propagates unchanged.
+    Synchronous and ``async def`` functions are both supported; the kind is detected automatically.
 
     Args:
         db_type (str): The database type ("postgres", "sqlite", "starrocks", or "mysql").
