@@ -47,6 +47,7 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
     def __init__(self) -> None:
         """Initialize the TemporalRuntimeManager singleton."""
         self._runtime: Runtime | None = None
+        self._runtime_settings: dict[str, Any] | None = None
 
     def get_runtime(
         self,
@@ -90,9 +91,27 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
             logger.debug("OTLP metrics disabled for Temporal, using default runtime")
             return None
 
+        settings: dict[str, Any] = {
+            "otel_metrics_enabled": otel_metrics_enabled,
+            "otlp_endpoint": otlp_endpoint,
+            "headers": headers or None,
+            "use_http": use_http,
+            "prometheus_bind_address": prometheus_bind_address,
+            "global_tags": global_tags or {},
+            "core_log_level": core_log_level,
+            "disable_environment_info": disable_environment_info,
+        }
+
         # If Runtime already created, return it (can't change once bound)
         if self._runtime is not None:
-            logger.debug("Returning existing Temporal Runtime instance")
+            if settings != self._runtime_settings:
+                changed = sorted(key for key in settings if settings[key] != (self._runtime_settings or {}).get(key))
+                logger.warning(
+                    "Temporal Runtime already exists; ignoring different settings: %s",
+                    ", ".join(changed),
+                )
+            else:
+                logger.debug("Returning existing Temporal Runtime instance")
             return self._runtime
 
         metrics: OpenTelemetryConfig | PrometheusConfig | None
@@ -116,6 +135,7 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
                 telemetry=TelemetryConfig(**telemetry_kwargs),
                 disable_environment_info=disable_environment_info,
             )
+            self._runtime_settings = settings
             logger.info("Temporal Runtime created successfully")
         except Exception as error:
             # Falling back to the default Runtime would drop every SDK metric without a trace, so fail loudly.
@@ -136,3 +156,4 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
         """
         logger.warning("Resetting Temporal Runtime reference (resources remain until process exit)")
         self._runtime = None
+        self._runtime_settings = None

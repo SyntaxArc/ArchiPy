@@ -134,7 +134,7 @@ class WorkerHandle(PortWorkerHandle):
             task.add_done_callback(self._on_worker_done)
 
             self._logger.info(
-                "Worker started successfully",
+                "Worker run task started",
                 extra={
                     "worker_id": self.worker_id,
                     "task_queue": self.task_queue,
@@ -182,9 +182,10 @@ class WorkerHandle(PortWorkerHandle):
         """Stop the worker gracefully.
 
         Args:
-            grace_period (int, optional): Seconds to let running activities finish before the SDK cancels them,
-                as set by ``graceful_shutdown_timeout``. If None, uses the configured graceful shutdown timeout.
-                The call gives up ``SHUTDOWN_MARGIN_SECONDS`` after that, so the SDK's own cancellation completes.
+            grace_period (int, optional): Seconds this call waits for the worker to stop before giving up
+                (plus ``SHUTDOWN_MARGIN_SECONDS``). If None, uses the configured graceful shutdown timeout.
+                It does not change the SDK's own grace period for running activities, which is fixed when the
+                worker is built (``WORKER_GRACEFUL_SHUTDOWN_SECONDS``).
 
         Raises:
             WorkerShutdownError: If the worker fails to stop gracefully.
@@ -240,7 +241,12 @@ class WorkerHandle(PortWorkerHandle):
             ) from error
 
     async def wait_until_stopped(self) -> None:
-        """Wait until the worker is stopped."""
+        """Wait until the worker is stopped.
+
+        Raises:
+            Exception: The error that ended ``Worker.run``, if it crashed; ``asyncio.CancelledError`` if the run
+                task was cancelled.
+        """
         await self._background_task
 
     @property
@@ -615,6 +621,8 @@ class TemporalWorkerManager(WorkerPort):
         Performs cleanup of all resources, including stopping all workers
         and closing the Temporal client connection.
         """
-        await self.shutdown_all_workers()
-        await self._temporal_adapter.close()
+        try:
+            await self.shutdown_all_workers()
+        finally:
+            await self._temporal_adapter.close()
         self._logger.info("Worker manager closed")

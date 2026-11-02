@@ -2759,3 +2759,34 @@ def step_converted_failure_visibility(context, visibility):
     text = get_current_scenario_context(context).get("converted_failure")
     assert text, "activity did not fail"
     assert ("4111111111111111" in text) == (visibility == "contain"), text
+
+
+@when("I request a Temporal Runtime again with different settings")
+def step_runtime_different_settings(context):
+    import logging
+
+    records = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record):
+            records.append(record)
+
+    runtime_logger = logging.getLogger("archipy.adapters.temporal.runtime")
+    handler = _Capture(level=logging.WARNING)
+    runtime_logger.addHandler(handler)
+    manager = TemporalRuntimeManager()
+    manager.reset_runtime()
+    try:
+        first = manager.get_runtime(disable_environment_info=True)
+        again = manager.get_runtime(disable_environment_info=True, global_tags={"service": "other"})
+        assert again is first
+    finally:
+        runtime_logger.removeHandler(handler)
+        manager.reset_runtime()
+    get_current_scenario_context(context).store("runtime_warnings", [record.getMessage() for record in records])
+
+
+@then("a warning should name the ignored Temporal Runtime settings")
+def step_runtime_warning(context):
+    warnings_logged = get_current_scenario_context(context).get("runtime_warnings")
+    assert any("ignoring different settings: global_tags" in message for message in warnings_logged), warnings_logged
