@@ -53,7 +53,9 @@ def get_kafka_consumer_adapter(context, topic_name, group_id):
     key = f"consumer_{topic_name}_{group_id}"
     if not hasattr(scenario_context, key) or getattr(scenario_context, key) is None:
         consumer = KafkaConsumerAdapter(
-            group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context),
+            group_id=group_id,
+            topic_list=[topic_name],
+            kafka_configs=_get_kafka_config(context),
         )
         setattr(scenario_context, key, consumer)
     return getattr(scenario_context, key)
@@ -75,7 +77,9 @@ def get_async_kafka_consumer_adapter(context, topic_name, group_id):
     key = f"async_consumer_{topic_name}_{group_id}"
     if not hasattr(scenario_context, key) or getattr(scenario_context, key) is None:
         consumer = AsyncKafkaConsumerAdapter(
-            group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context),
+            group_id=group_id,
+            topic_list=[topic_name],
+            kafka_configs=_get_kafka_config(context),
         )
         setattr(scenario_context, key, consumer)
     return getattr(scenario_context, key)
@@ -1173,7 +1177,9 @@ def step_consumer_receives_error_message(context, mode, operation, code):
     else:
 
         async def run():
-            consumer = AsyncKafkaConsumerAdapter("error-message-group", topic_list=["error-topic"], kafka_configs=config)
+            consumer = AsyncKafkaConsumerAdapter(
+                "error-message-group", topic_list=["error-topic"], kafka_configs=config,
+            )
             client.poll, client.consume = client.async_poll, client.async_consume
             consumer._adapter = client
             call = consumer.poll if operation == "poll" else consumer.batch_consume
@@ -1190,7 +1196,9 @@ def step_consumer_received_nothing(context):
     assert not scenario_context.get("kafka_consumer_result")
 
 
-@when("I produce {count:d} messages to topic \"{topic_name}\" without flushing through a queue limited to {capacity:d} messages")
+@when(
+    'I produce {count:d} messages to topic "{topic_name}" without flushing through a queue limited to {capacity:d} messages',
+)
 def step_produce_through_small_queue(context, count, topic_name, capacity):
     """Produce far more messages than the local queue holds, relying on delivery reports being served."""
     config = _get_kafka_config(context).model_copy(update={"QUEUE_BUFFERING_MAX_MESSAGES": capacity})
@@ -1234,7 +1242,7 @@ def step_failed_delivery(context, payload, key, topic_name):
     scenario_context.store("kafka_delivery_outcomes", outcomes)
 
 
-@then('the delivery failure should be passed to the on_delivery callback')
+@then("the delivery failure should be passed to the on_delivery callback")
 def step_delivery_failure_reported(context):
     """The caller's callback must observe the failed delivery."""
     outcomes = get_current_scenario_context(context).get("kafka_delivery_outcomes")
@@ -1291,7 +1299,9 @@ def step_keyless_message_key(context, topic_name, key_state, warned):
     assert get_current_scenario_context(context).get("kafka_deprecation_warned") is expected_warning
 
 
-@when("the Kafka settings are assembled with protocol {protocol}, mechanism {mechanism} and username {username} while warnings are collected")
+@when(
+    "the Kafka settings are assembled with protocol {protocol}, mechanism {mechanism} and username {username} while warnings are collected",
+)
 def step_collect_config_warnings(context, protocol, mechanism, username):
     """Build a Kafka configuration and keep the warnings its validators log."""
     import logging
@@ -1387,7 +1397,9 @@ def step_on_commit_callback(context, topic_name):
     producer.close()
     outcomes = []
     consumer = KafkaConsumerAdapter(
-        "on-commit-group", topic_list=[topic_name], kafka_configs=config,
+        "on-commit-group",
+        topic_list=[topic_name],
+        kafka_configs=config,
         on_commit=lambda error, partitions: outcomes.append((error, partitions)),
     )
     try:
@@ -1421,7 +1433,9 @@ def step_on_assign_callback(context, mode, topic_name):
         assigned.extend(partitions)
 
     if mode == "sync":
-        consumer = KafkaConsumerAdapter("on-assign-group-sync", partition_list=None, topic_list=[topic_name], kafka_configs=config)
+        consumer = KafkaConsumerAdapter(
+            "on-assign-group-sync", partition_list=None, topic_list=[topic_name], kafka_configs=config,
+        )
         consumer.subscribe([topic_name], on_assign=on_assign)
         deadline = time.monotonic() + 30
         try:
@@ -1510,7 +1524,9 @@ def step_assigned_consumer_receives(context, mode, topic_name, expected):
 
         async def run():
             consumer = AsyncKafkaConsumerAdapter(
-                "assigned-group-async", partition_list=partitions, kafka_configs=config,
+                "assigned-group-async",
+                partition_list=partitions,
+                kafka_configs=config,
             )
             try:
                 return await _async_poll_until_message(consumer)

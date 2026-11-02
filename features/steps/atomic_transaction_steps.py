@@ -2227,7 +2227,9 @@ async def step_when_async_atomic_in_tasks(context, count, db_type):
         manager.get_session()
 
     await asyncio.gather(*(work() for _ in range(count)))
-    get_current_scenario_context(context).store("session_registry_size", len(manager._session_generator.registry.registry))
+    get_current_scenario_context(context).store(
+        "session_registry_size", len(manager._session_generator.registry.registry),
+    )
 
 
 @then("the async session registry should be empty")

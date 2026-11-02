@@ -114,7 +114,6 @@ TAG_CONTAINER_MAP: dict[str, str] = {
 }
 
 
-
 def _wait_for_log(container: DockerContainer, pattern: str, timeout: int) -> None:
     """Block until the container logs ``pattern`` (a regex), failing after ``timeout`` seconds.
 
@@ -2048,7 +2047,6 @@ def shared_telemetry_stack() -> dict | None:
     """Return the endpoints of the stack another process started, or None when this process owns its own."""
     raw = os.environ.get(SHARED_TELEMETRY_ENV)
     return json.loads(raw) if raw else None
-
 
 
 @ContainerManager.register("apm-server")

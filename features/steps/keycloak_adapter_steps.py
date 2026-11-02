@@ -4397,7 +4397,9 @@ def _unverified_claims(token: str) -> dict[str, Any]:
     return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
 
 
-async def _check_token(kind: str, adapter: AsyncKeycloakAdapter | KeycloakAdapter, token: str) -> tuple[bool, str | None]:
+async def _check_token(
+    kind: str, adapter: AsyncKeycloakAdapter | KeycloakAdapter, token: str,
+) -> tuple[bool, str | None]:
     """Return (validate_token result, error code of get_token_info or None)."""
     if kind == "async":
         valid = await adapter.validate_token(token)
@@ -4453,7 +4455,7 @@ async def step_adapter_enforces_correct_issuer(
     assert await _check_token(kind, adapter, access_token) == (True, None)
 
 
-@then("forged claims with token type \"{token_type}\" are {outcome} by the claim check")
+@then('forged claims with token type "{token_type}" are {outcome} by the claim check')
 def step_forged_claims_checked(context: Context, token_type: str, outcome: str) -> None:
     """A signed non-access token cannot be minted by the container, so feed forged claims to the claim check."""
     import warnings
@@ -4473,4 +4475,6 @@ def step_forged_claims_checked(context: Context, token_type: str, outcome: str) 
         warnings.simplefilter("always")
         _check_token_claims(claims, base)
     warned = any(issubclass(w.category, DeprecationWarning) and "EXPECTED_ISSUER" in str(w.message) for w in caught)
-    assert warned == (outcome == "rejected"), "the default (warn-only) mode must warn exactly when enforcement would reject"
+    assert warned == (outcome == "rejected"), (
+        "the default (warn-only) mode must warn exactly when enforcement would reject"
+    )

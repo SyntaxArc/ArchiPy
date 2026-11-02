@@ -73,6 +73,7 @@ def get_actual_index_name(context: Context, index_name: str) -> str:
 
 # Background and setup steps
 
+
 def _already_exists(error: BadRequestError) -> bool:
     """A retry after a client timeout can race the first, slow but successful, create request."""
     return "resource_already_exists_exception" in str(error)
@@ -88,6 +89,7 @@ async def _create_index(adapter, is_async: bool, **kwargs):
         if not _already_exists(e):
             raise
         return {"acknowledged": True}
+
 
 @given("an Elasticsearch cluster is running")
 async def step_cluster_running(context: Context) -> None:

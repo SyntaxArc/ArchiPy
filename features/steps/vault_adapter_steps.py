@@ -110,8 +110,7 @@ def _adapter_with_token(context, token: str, threshold: int) -> VaultAdapter:
 
 
 @given(
-    "a Vault adapter using a renewable token with TTL {token_ttl:d} seconds "
-    "and renew threshold {threshold:d} seconds",
+    "a Vault adapter using a renewable token with TTL {token_ttl:d} seconds and renew threshold {threshold:d} seconds",
 )
 def step_given_renewing_vault_adapter(context, token_ttl: int, threshold: int):
     """Build an adapter that uses a short-lived renewable child token."""
@@ -240,7 +239,7 @@ def step_given_vault_database_role(context, role_name):
         db_name="postgres",
         creation_statements=(
             "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"
-            "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"
+            'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";'
         ),
         default_ttl="1h",
         max_ttl="2h",
@@ -356,7 +355,6 @@ def step_then_lease_has_db_creds(context):
     assert "password" in lease.data, f"Expected password in lease data, got {lease.data}"
 
 
-
 @when("I renew the Vault lease")
 def step_renew_lease(context):
     adapter = get_vault_adapter(context)
@@ -442,12 +440,9 @@ def step_then_token_renewed(context):
     before_ttl = scenario_context.get("token_ttl_before")
     assert before_ttl is not None, "Missing token TTL before sample"
     assert before_ttl <= adapter.configs.RENEW_THRESHOLD_SECONDS, (
-        f"Precondition failed: TTL {before_ttl} should be <= threshold "
-        f"{adapter.configs.RENEW_THRESHOLD_SECONDS}"
+        f"Precondition failed: TTL {before_ttl} should be <= threshold {adapter.configs.RENEW_THRESHOLD_SECONDS}"
     )
-    assert adapter.token_renew_count >= 1, (
-        f"Expected at least one token renew, got {adapter.token_renew_count}"
-    )
+    assert adapter.token_renew_count >= 1, f"Expected at least one token renew, got {adapter.token_renew_count}"
 
 
 @then('a Vault InvalidArgumentError should be raised for "{argument}"')

@@ -504,6 +504,12 @@ async def send_welcome_email_activity(data: dict[str, str]) -> bool:
 
 ## Error Handling
 
+`BaseActivity` fails an activity at once (non-retryable) when it raises an ArchiPy error with a 4xx HTTP status,
+because retrying the same input cannot succeed. Transient errors are exempt and follow the retry policy: HTTP 408,
+425 and 429, plus `DatabaseDeadlockError`, `DatabaseSerializationError`, `DatabaseTimeoutError`,
+`ConnectionTimeoutError`, `DeadlineExceededError`, `RateLimitExceededError` and `ResourceExhaustedError`. Override
+`_is_non_retryable(error)` in your activity to change the rule.
+
 A non-retryable failure carries only the error type: the original error, with its message and `additional_data`, is
 not attached as the cause and so is not sent to the Temporal server. A retryable error is re-raised as is, so its
 message is part of the activity failure. Set `REDACT_RETRYABLE_ERRORS = True` on your activity class to send only
