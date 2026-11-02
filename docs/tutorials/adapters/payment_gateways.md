@@ -513,6 +513,11 @@ Both configs accept `PROXIES` (a dict such as `{"https": "http://proxy:3128"}`; 
 `https`, `http`, `socks5`, `socks5h`) and `TIMEOUT` (seconds). Set them with environment variables such as
 `PARSIAN_SHAPARAK__PROXIES` and `SAMAN_SHAPARAK__TIMEOUT`.
 
+For Saman, HTTP error statuses from the gateway are mapped as follows: 5xx to `UnavailableError`, 404 to
+`NotFoundError` and other 4xx (for example a bad `RefNum` or terminal) to `InvalidArgumentError`; the HTTP status is
+kept in `additional_data["status_code"]`. A token reply that is inconsistent with its status (status 1 without a
+token) raises `FailedPreconditionError`. Unreadable replies raise `InternalError`.
+
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns

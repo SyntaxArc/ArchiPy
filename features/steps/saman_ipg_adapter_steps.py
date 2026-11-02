@@ -422,3 +422,9 @@ def step_then_logs_redacted(context, res_num, cell, card_hash):
     assert res_num in joined
     for secret in (cell, card_hash, "shop.example.com"):
         assert secret not in joined, f"{secret!r} leaked into the logs"
+
+
+@then("the Saman failure carries HTTP status {status:d}")
+def step_then_failure_http_status(context, status):
+    error = get_current_scenario_context(context).get("error")
+    assert error.additional_data.get("status_code") == status
