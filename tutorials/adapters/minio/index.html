@@ -4084,6 +4084,11 @@ keys from the environment or a secrets store.</p>
 <p>Anyone holding a presigned URL can use it until it expires. Keep the expiry short and do not log or share URLs
 outside the intended client.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Presigning is a local computation: it does not check that the bucket or object exists or that the credentials may
+access it. Such errors only surface when the URL is used.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># Configure logging</span>
@@ -4093,7 +4098,7 @@ outside the intended client.</p>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">download_url</span> <span class="o">=</span> <span class="n">minio</span><span class="o">.</span><span class="n">presigned_get_object</span><span class="p">(</span><span class="s2">"my-bucket"</span><span class="p">,</span> <span class="s2">"document.pdf"</span><span class="p">)</span>
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Download URL: </span><span class="si">{</span><span class="n">download_url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># Generate a presigned URL for uploading (with custom expiry time in seconds)</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># Generate a presigned URL for uploading (expiry 1 to 604800 seconds, otherwise InvalidArgumentError)</span>
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="n">upload_url</span> <span class="o">=</span> <span class="n">minio</span><span class="o">.</span><span class="n">presigned_put_object</span><span class="p">(</span><span class="s2">"my-bucket"</span><span class="p">,</span> <span class="s2">"new-document.pdf"</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mi">7200</span><span class="p">)</span>  <span class="c1"># 2 hours</span>
 </span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Upload URL: </span><span class="si">{</span><span class="n">upload_url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>

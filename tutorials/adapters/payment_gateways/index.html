@@ -3996,6 +3996,11 @@ with proper error handling and Python 3.14 type hints.</p>
 <p>Debug logs name only the order id, the amount and the last four characters of a token. The login account and
 full tokens are never logged.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Timeouts</p>
+<p><code>PARSIAN_SHAPARAK__TIMEOUT</code> (seconds) bounds both the WSDL downloads done in the constructor and every SOAP call.
+If a WSDL cannot be loaded in time, the constructor raises <code>UnavailableError</code>.</p>
+</div>
 <h3 id="initializing-the-adapter">Initializing the Adapter<a class="headerlink" href="#initializing-the-adapter" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
@@ -4426,6 +4431,10 @@ request: check the transaction state before retrying or fulfilling the order.</p
 <p>Both configs accept <code>PROXIES</code> (a dict such as <code>{"https": "http://proxy:3128"}</code>; the async adapters use the first of
 <code>https</code>, <code>http</code>, <code>socks5</code>, <code>socks5h</code>) and <code>TIMEOUT</code> (seconds). Set them with environment variables such as
 <code>PARSIAN_SHAPARAK__PROXIES</code> and <code>SAMAN_SHAPARAK__TIMEOUT</code>.</p>
+<p>For Saman, HTTP error statuses from the gateway are mapped as follows: 5xx to <code>UnavailableError</code>, 404 to
+<code>NotFoundError</code> and other 4xx (for example a bad <code>RefNum</code> or terminal) to <code>InvalidArgumentError</code>; the HTTP status is
+kept in <code>additional_data["status_code"]</code>. A token reply that is inconsistent with its status (status 1 without a
+token) raises <code>FailedPreconditionError</code>. Unreadable replies raise <code>InternalError</code>.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns</li>
