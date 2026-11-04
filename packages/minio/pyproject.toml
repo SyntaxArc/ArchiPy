@@ -10,7 +10,7 @@ requires-python = ">=3.14,<4"
 dependencies = [
     "archipy==0.1.0", # Pinned to core version on publish flow!
     "boto3>=1.43.123",
-    "cachetools>=7.2.7",
+    "cachetools>=7.2.8",
     "async-lru>=2.4.0",
 ]
 license = "Apache-2.0"
