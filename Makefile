@@ -114,6 +114,11 @@ pull-test-images: ## Pull every Docker image the tests use (from .env.test), 4 a
 	@echo "${BLUE}Pulling test images...${NC}"
 	@grep -h '_IMAGE=' .env.test | cut -d= -f2 | xargs -P 4 -n 1 docker pull
 
+.PHONY: pull-test-images-seq
+pull-test-images-seq: ## Pull every Docker image the tests use (from .env.test), one after another
+	@echo "${BLUE}Pulling test images sequentially...${NC}"
+	@grep -h '_IMAGE=' .env.test | cut -d= -f2 | xargs -n 1 docker pull
+
 .PHONY: behave-seq
 behave-seq: ## Run all features one after another in a single behave process
 	@echo "${BLUE}Running tests sequentially...${NC}"
