@@ -1209,6 +1209,7 @@ Feature: Redis Testing
       | container    | products-range-and | rngf   | rngf:1 | rngf:2 | rngf:3 | and  | 1     |
       | container    | products-range-or  | rngo   | rngo:1 | rngo:2 | rngo:3 | or   | 3     |
       | cluster      | cluster-range-and  | {rf}   | {rf}:1 | {rf}:2 | {rf}:3 | and  | 1     |
+      | cluster      | cluster-range-or   | {ro}   | {ro}:1 | {ro}:2 | {ro}:3 | or   | 3     |
 
   Scenario Outline: KNN search with shard ratio on cluster
     Given a configured <adapter_type>

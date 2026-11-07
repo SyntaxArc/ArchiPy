@@ -3068,7 +3068,7 @@ def step_given_search_document_exists(context, doc_id, title, vector, index_type
     r'and vector "(?P<vector>[^"]+)" for (?P<index_type>HASH|JSON) documents',
 )
 def step_given_search_document_with_category_exists(context, doc_id, title, category, vector, index_type):
-    """Seed a HASH or JSON document with a category tag."""
+    """Seed a categorized document and wait until search can retrieve it."""
     scenario_context = get_current_scenario_context(context)
     index_name = scenario_context.get("last_index_name")
     handle = scenario_context.adapter.search_index(index_name)
@@ -3079,6 +3079,9 @@ def step_given_search_document_with_category_exists(context, doc_id, title, cate
         _parse_search_vector(vector),
         _parse_index_type(index_type),
     )
+    query = SearchQueryDTO(query=f"@title:{quote_phrase(title)}", return_fields=["title"])
+    result = _search_until_indexed(lambda: handle.search(query))
+    assert any(hit.doc_id == doc_id for hit in result.hits), f"Document {doc_id} was not indexed"
 
 
 @when(r'I upsert json document "(?P<doc_id>[^"]+)" with payload (?P<payload>\{.*\})')

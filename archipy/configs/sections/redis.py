@@ -120,8 +120,7 @@ class RedisConfig(BaseModel):
             for node in self.SENTINEL_NODES:
                 self._validate_node_address(node, port_required=True)
 
-        elif self.MODE == RedisMode.STANDALONE:
-            if not self.MASTER_HOST:
-                raise ConfigurationError(operation="redis", reason="master_host_required")
+        elif self.MODE == RedisMode.STANDALONE and not self.MASTER_HOST:
+            raise ConfigurationError(operation="redis", reason="master_host_required")
 
         return self
