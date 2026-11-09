@@ -35,7 +35,8 @@ heading_level: 3
 ## Auth Guards
 
 FastAPI dependencies and gRPC decorators that authenticate a bearer token against Keycloak and check roles,
-permissions and resource ownership.
+permissions and resource ownership. Both guards populate typed organization details from authenticated UserInfo in the auth context.
+`require_organization` overrides `KeycloakConfig.REQUIRE_ORGANIZATION`, which defaults to False.
 
 ::: archipy.adapters.keycloak.auth
 options:

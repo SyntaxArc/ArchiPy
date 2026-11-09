@@ -33,6 +33,7 @@ KEYCLOAK__CLIENT_ID=my-client
 KEYCLOAK__CLIENT_SECRET_KEY=client-secret
 KEYCLOAK__VERIFY_SSL=true  # true, false, or the path of a CA bundle for a private CA
 KEYCLOAK__TIMEOUT=10  # seconds, fractions allowed (2.5)
+KEYCLOAK__REQUIRE_ORGANIZATION=false  # guards allow personal and wildcard organization contexts by default
 KEYCLOAK__TOKEN_LEEWAY_SECONDS=0  # clock-skew tolerance when validating token expiry
 KEYCLOAK__EXPECTED_ISSUER=https://keycloak.example.com/realms/my-realm  # enforce the iss claim (and typ=Bearer) of locally verified tokens
 KEYCLOAK__EXPECTED_AUDIENCE=my-client  # enforce the aud claim (and typ=Bearer) of locally verified tokens
@@ -828,6 +829,72 @@ client or logs in to Keycloak.
   `KEYCLOAK__REMOTE_CACHE_TTL_SECONDS` to a few seconds to cache those lookups per access token. A revoked token or a
   changed permission then stays accepted for up to that long, so it is off (`0`) by default.
   `clear_keycloak_remote_cache()` drops the cache.
+
+## Organization Context
+
+`fastapi_auth` and `grpc_auth` read organization details from the authenticated Keycloak UserInfo response and populate
+`AuthenticatedUserDTO.organizations` and `AuthenticatedUserDTO.selected_organization`. No additional dependency or
+organization lookup is needed beyond the guards' existing UserInfo request. `organizations` maps aliases to
+`KeycloakOrganizationClaimDTO` objects. Each DTO carries the organization UUID and matching `domain`; custom attributes
+are preserved in `model_extra`. The organization mapper flattens
+custom attributes into each organization object; the Admin REST API uses a different representation with an
+`attributes` map and `domains` objects.
+
+Enable the Keycloak organization scope and its organization ID mapper. Set "Add to userinfo" on and "Add to access
+token" and "Add to ID token" off to keep tokens minimal. UserInfo carries the organization claim with this shape:
+`{"organization": {"acme": {"id": "5b1f0c1e-2a7e-4c0e-9d0e-3f2f4f1f9a11"}}}`.
+
+- One organization without `organization:*` becomes `selected_organization`.
+- `organization:*` retains every UserInfo organization in `organizations` and leaves `selected_organization` as `None`.
+- No UserInfo organization claim produces an empty mapping and `selected_organization=None`.
+- Alias-only claims remain available as DTOs without IDs. Requiring an organization rejects claims without IDs.
+- Multiple organization IDs without the wildcard scope are denied.
+- Invalid organization field types or UUIDs fail UserInfo DTO validation.
+
+Organizations are optional by default. Set `KEYCLOAK__REQUIRE_ORGANIZATION=true` to require a selected organization
+across both guards. Pass `require_organization=True` or `False` to override this setting for a specific guard;
+omitting the argument inherits the configuration. Requiring an organization rejects personal and wildcard contexts.
+The verified token's `scope` claim distinguishes
+wildcard from selected contexts; organization details come exclusively from UserInfo.
+
+```python
+from fastapi import Depends
+
+from archipy.adapters.keycloak.auth import AuthContextManager, fastapi_auth, grpc_auth
+
+
+@app.get("/projects", dependencies=[Depends(fastapi_auth(require_organization=True))])
+async def list_projects() -> dict[str, str]:
+    auth_context = AuthContextManager.get_auth_context()
+    assert auth_context is not None and auth_context.selected_organization is not None
+    return {"organization_id": str(auth_context.selected_organization.id)}
+
+
+class ProjectServicer:
+    @grpc_auth(require_organization=True)
+    async def ListProjects(self, request, context):
+        auth_context = AuthContextManager.get_auth_context()
+        assert auth_context is not None and auth_context.selected_organization is not None
+        return await load_projects(auth_context.selected_organization.id)
+```
+
+Custom organization attributes keep their Keycloak list-of-strings values. For example, after setting the organization
+attributes `plan=["enterprise"]`, `country=["DE"]`, and `departments=["engineering", "support"]` through the Admin API:
+
+```python
+auth_context = AuthContextManager.get_auth_context()
+assert auth_context is not None and auth_context.selected_organization is not None
+organization_attributes = auth_context.selected_organization.model_extra or {}
+plan = organization_attributes.get("plan", [])  # ["enterprise"]
+country = organization_attributes.get("country", [])  # ["DE"]
+departments = organization_attributes.get("departments", [])  # ["engineering", "support"]
+```
+
+`auth_context.selected_organization.to_dict()` preserves these attributes at the top level, matching UserInfo's wire
+format. The same values remain available on every DTO in `auth_context.organizations`, including wildcard organization contexts.
+
+Only organizations returned by UserInfo are exposed. A token scoped to one organization does not expose the user's
+other memberships through UserInfo. Enable the Keycloak mapper options for organization attributes and domains to include those details.
 
 ## See Also
 

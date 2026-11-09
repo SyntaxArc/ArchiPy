@@ -20,7 +20,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.adapters.keycloak.deprecated_state import deprecated_dict, deprecated_list, deprecated_set
-from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
+from archipy.models.dtos.keycloak.token_dtos import (
+    KeycloakOrganizationClaimDTO,
+    KeycloakTokenClaimsDTO,
+    KeycloakUserInfoDTO,
+)
 from archipy.models.dtos.keycloak_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.errors import (
     BaseError,
@@ -520,16 +524,56 @@ def _parse_actor_chain(token_info: KeycloakTokenClaimsDTO | None) -> list[ActorD
     return chain
 
 
+def _selected_organization(
+    organizations: dict[str, KeycloakOrganizationClaimDTO],
+    scope: str | None,
+    required: bool,
+    lang: LanguageType,
+) -> KeycloakOrganizationClaimDTO | None:
+    """Resolve the selected organization from authenticated UserInfo and verified token scopes."""
+    valid_organizations = {organization.id: organization for organization in organizations.values() if organization.id}
+    if required and organizations and not valid_organizations:
+        raise PermissionDeniedError(lang=lang, additional_data={"reason": "invalid organization claim"})
+    selected_organization = None
+    if "organization:*" not in (scope or "").split():
+        if len(valid_organizations) > 1:
+            raise PermissionDeniedError(
+                lang=lang,
+                additional_data={
+                    "reason": "multiple organizations selected",
+                    "organization_count": len(valid_organizations),
+                },
+            )
+        selected_organization = next(iter(valid_organizations.values()), None)
+    if required and selected_organization is None:
+        raise PermissionDeniedError(lang=lang, additional_data={"reason": "organization not selected"})
+    return selected_organization
+
+
 def _build_auth_context(
     user_info: KeycloakUserInfoDTO,
     token_str: str,
     user_roles: set[str],
     token_info: KeycloakTokenClaimsDTO | None = None,
+    *,
+    require_organization: bool = False,
+    lang: LanguageType = DEFAULT_LANG,
 ) -> AuthenticatedUserDTO:
     """Build an :class:`AuthContext` from UserInfo and decoded token claims."""
     user_id = user_info.sub
     if not user_id:
         raise UnauthenticatedError()
+    claims = token_info or KeycloakTokenClaimsDTO()
+    organization_claim = user_info.organization
+    organizations = (
+        organization_claim
+        if isinstance(organization_claim, dict)
+        else {
+            alias: KeycloakOrganizationClaimDTO()
+            for alias in ([organization_claim] if isinstance(organization_claim, str) else organization_claim or [])
+        }
+    )
+    selected_organization = _selected_organization(organizations, claims.scope, require_organization, lang)
     actors = _parse_actor_chain(token_info)
     if actors:
         logger.info(
@@ -545,7 +589,9 @@ def _build_auth_context(
         token=token_str,
         raw_user_info=user_info,
         actor_chain=actors,
-        token_info=token_info or KeycloakTokenClaimsDTO(),
+        token_info=claims,
+        organizations=organizations,
+        selected_organization=selected_organization,
     )
 
 
@@ -607,6 +653,8 @@ def fastapi_auth(
     required_permissions: tuple[tuple[str, str], ...] | None = None,
     admin_roles: frozenset[str] | None = None,
     lang: LanguageType = DEFAULT_LANG,
+    *,
+    require_organization: bool | None = None,
 ) -> Callable[..., Any]:
     """FastAPI dependency for Keycloak authentication and resource-based authorization.
 
@@ -614,6 +662,9 @@ def fastapi_auth(
     or an ``async def`` function. It returns the UserInfo dict and sets :class:`AuthContextManager` for the request,
     like :func:`grpc_auth` does, so code below the endpoint reads the caller with
     ``AuthContextManager.get_auth_context()``; the context is cleared when the request ends.
+
+    Organization details are available as ``auth_context.organizations`` and ``auth_context.selected_organization``.
+    A selected organization is optional unless required by the guard or Keycloak configuration.
 
     ``request.state.user_info``, ``token_info``, ``actor_chain`` and ``user_roles`` are still filled, but they are
     deprecated: each is a dict, list or set that emits a ``DeprecationWarning`` when read and names the matching
@@ -627,6 +678,8 @@ def fastapi_auth(
         required_permissions: List of (resource, scope) tuples to check
         admin_roles: Set of roles that grant administrative access to all resources
         lang: Language for error messages
+        require_organization: Require a selected organization. None uses KeycloakConfig.REQUIRE_ORGANIZATION (False).
+
     Raises:
         UnauthenticatedError: If no valid Authorization header is provided
         InvalidTokenError: If token is invalid
@@ -670,6 +723,10 @@ def fastapi_auth(
             resource_type,
         )
 
+        organization_required = (
+            keycloak.configs.REQUIRE_ORGANIZATION if require_organization is None else require_organization
+        )
+
         # Still filled for existing code, but each read warns: AuthContextManager carries the same data.
         context_access = "AuthContextManager.get_auth_context()"
         request.state.user_info = deprecated_dict(user_info.to_dict(), "user_info", f"{context_access}.raw_user_info")
@@ -682,8 +739,17 @@ def fastapi_auth(
         request.state.user_roles = deprecated_set(user_roles, "user_roles", f"{context_access}.roles")
         # UserInfo without ``sub`` cannot name a caller; keep serving it, as before, without an auth context.
         auth_token = (
-            AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
-            if user_info.sub
+            AuthContextManager.set_auth_context(
+                _build_auth_context(
+                    user_info,
+                    token_str,
+                    user_roles,
+                    token_info,
+                    require_organization=organization_required,
+                    lang=lang,
+                ),
+            )
+            if user_info.sub or organization_required
             else None
         )
         try:
@@ -754,10 +820,14 @@ def grpc_auth(
     resource_attribute_name: str | None = None,
     admin_roles: frozenset[str] | None = None,
     lang: LanguageType = DEFAULT_LANG,
+    *,
+    require_organization: bool | None = None,
 ) -> Callable[[Callable], Callable]:
     """Decorate gRPC servicer methods with authentication and authorization, sync or ``async def``.
 
     The kind of the decorated method (plain, generator, coroutine or async generator) is detected automatically.
+    The auth context carries ``organizations`` and ``selected_organization``. A selected organization is optional
+    unless required by the guard or Keycloak configuration.
 
     This decorator handles:
     1. Token validation
@@ -773,6 +843,7 @@ def grpc_auth(
         resource_attribute_name: Attribute name to extract resource UUID from context for ownership checking
         admin_roles: Set of admin roles that bypass resource ownership checks
         lang: Language for error messages
+        require_organization: Require a selected organization. None uses KeycloakConfig.REQUIRE_ORGANIZATION (False).
 
     Returns:
         Decorated function with authentication and authorization
@@ -780,8 +851,9 @@ def grpc_auth(
 
     def authorize_sync(request: object, context: object) -> None:
         token_str, resource_uuid = _grpc_token_and_resource(request, context, resource_attribute_name, lang)
+        keycloak = _get_keycloak_adapter()
         user_info, token_info, user_roles = _authorize_sync(
-            _get_keycloak_adapter(),
+            keycloak,
             token_str,
             resource_uuid,
             required_roles,
@@ -790,12 +862,24 @@ def grpc_auth(
             admin_roles,
             lang,
         )
-        AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
+        AuthContextManager.set_auth_context(
+            _build_auth_context(
+                user_info,
+                token_str,
+                user_roles,
+                token_info,
+                require_organization=(
+                    keycloak.configs.REQUIRE_ORGANIZATION if require_organization is None else require_organization
+                ),
+                lang=lang,
+            ),
+        )
 
     async def authorize_async(request: object, context: object) -> None:
         token_str, resource_uuid = _grpc_token_and_resource(request, context, resource_attribute_name, lang)
+        keycloak = _get_async_keycloak_adapter()
         user_info, token_info, user_roles = await _authorize_async(
-            _get_async_keycloak_adapter(),
+            keycloak,
             token_str,
             resource_uuid,
             required_roles,
@@ -804,7 +888,18 @@ def grpc_auth(
             admin_roles,
             lang,
         )
-        AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
+        AuthContextManager.set_auth_context(
+            _build_auth_context(
+                user_info,
+                token_str,
+                user_roles,
+                token_info,
+                require_organization=(
+                    keycloak.configs.REQUIRE_ORGANIZATION if require_organization is None else require_organization
+                ),
+                lang=lang,
+            ),
+        )
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         if inspect.iscoroutinefunction(func) or inspect.isasyncgenfunction(func):

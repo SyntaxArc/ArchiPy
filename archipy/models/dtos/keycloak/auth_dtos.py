@@ -3,7 +3,11 @@
 from pydantic import Field, SecretStr
 
 from archipy.models.dtos.base_dtos import BaseDTO
-from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
+from archipy.models.dtos.keycloak.token_dtos import (
+    KeycloakOrganizationClaimDTO,
+    KeycloakTokenClaimsDTO,
+    KeycloakUserInfoDTO,
+)
 from archipy.models.types.actor_type import ActorType
 
 
@@ -15,7 +19,11 @@ class ActorDTO(BaseDTO):
 
 
 class AuthenticatedUserDTO(BaseDTO):
-    """Authenticated caller (subject, roles, token, and acting parties) passed to business logic."""
+    """Authenticated caller, including UserInfo organizations and the selected organization.
+
+    ``organizations`` preserves UserInfo organization details keyed by alias.
+    ``selected_organization`` is None for personal or ``organization:*`` contexts.
+    """
 
     user_id: str
     username: str
@@ -25,6 +33,8 @@ class AuthenticatedUserDTO(BaseDTO):
     raw_user_info: KeycloakUserInfoDTO
     actor_chain: list[ActorDTO] = Field(default_factory=list)
     token_info: KeycloakTokenClaimsDTO = Field(default_factory=KeycloakTokenClaimsDTO)
+    organizations: dict[str, KeycloakOrganizationClaimDTO] = Field(default_factory=dict)
+    selected_organization: KeycloakOrganizationClaimDTO | None = None
 
     @property
     def is_impersonated(self) -> bool:
