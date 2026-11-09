@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.29.0](5.29.0.md) | 2026-11-09 | Keycloak auth guards expose organization data from UserInfo with optional organization enforcement; dependency bounds and workspace dependencies refreshed |
 | [5.28.0](5.28.0.md) | 2026-11-02 | The atomic decorator preserves logic exceptions and re-raises the original nested failure; only SQLAlchemy failures become `Database*Error` |
 | [5.27.0](5.27.0.md) | 2026-11-02 | Opt-in savepoints for nested `atomic()` calls: a caught nested failure rolls back only its savepoint and the outer transaction commits; the default and StarRocks keep the full-rollback behavior |
 | [5.26.1](5.26.1.md) | 2026-11-02 | Nested `atomic()` failures roll back the outer transaction and raise `DatabaseTransactionError` instead of committing around a swallowed error |
