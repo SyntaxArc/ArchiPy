@@ -1355,6 +1355,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#organization-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organization Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4058,6 +4069,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#organization-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organization Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4114,10 +4136,11 @@ authorization. ArchiPy offers both synchronous and asynchronous implementations.
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">KEYCLOAK__CLIENT_SECRET_KEY</span><span class="o">=</span>client-secret
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">KEYCLOAK__VERIFY_SSL</span><span class="o">=</span><span class="nb">true</span><span class="w">  </span><span class="c1"># true, false, or the path of a CA bundle for a private CA</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">KEYCLOAK__TIMEOUT</span><span class="o">=</span><span class="m">10</span><span class="w">  </span><span class="c1"># seconds, fractions allowed (2.5)</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">KEYCLOAK__TOKEN_LEEWAY_SECONDS</span><span class="o">=</span><span class="m">0</span><span class="w">  </span><span class="c1"># clock-skew tolerance when validating token expiry</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">KEYCLOAK__EXPECTED_ISSUER</span><span class="o">=</span>https://keycloak.example.com/realms/my-realm<span class="w">  </span><span class="c1"># enforce the iss claim (and typ=Bearer) of locally verified tokens</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">KEYCLOAK__EXPECTED_AUDIENCE</span><span class="o">=</span>my-client<span class="w">  </span><span class="c1"># enforce the aud claim (and typ=Bearer) of locally verified tokens</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">KEYCLOAK__REMOTE_CACHE_TTL_SECONDS</span><span class="o">=</span><span class="m">0</span><span class="w">  </span><span class="c1"># opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">KEYCLOAK__REQUIRE_ORGANIZATION</span><span class="o">=</span><span class="nb">false</span><span class="w">  </span><span class="c1"># guards allow personal and wildcard organization contexts by default</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">KEYCLOAK__TOKEN_LEEWAY_SECONDS</span><span class="o">=</span><span class="m">0</span><span class="w">  </span><span class="c1"># clock-skew tolerance when validating token expiry</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">KEYCLOAK__EXPECTED_ISSUER</span><span class="o">=</span>https://keycloak.example.com/realms/my-realm<span class="w">  </span><span class="c1"># enforce the iss claim (and typ=Bearer) of locally verified tokens</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">KEYCLOAK__EXPECTED_AUDIENCE</span><span class="o">=</span>my-client<span class="w">  </span><span class="c1"># enforce the aud claim (and typ=Bearer) of locally verified tokens</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nv">KEYCLOAK__REMOTE_CACHE_TTL_SECONDS</span><span class="o">=</span><span class="m">0</span><span class="w">  </span><span class="c1"># opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)</span>
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Token claim checks</p>
@@ -4957,6 +4980,62 @@ token or a changed permission stays accepted until the cached entry expires.</p>
   changed permission then stays accepted for up to that long, so it is off (<code>0</code>) by default.
   <code>clear_keycloak_remote_cache()</code> drops the cache.</li>
 </ul>
+<h2 id="organization-context">Organization Context<a class="headerlink" href="#organization-context" title="Permanent link">&para;</a></h2>
+<p><code>fastapi_auth</code> and <code>grpc_auth</code> read organization details from the authenticated Keycloak UserInfo response and populate
+<code>AuthenticatedUserDTO.organizations</code> and <code>AuthenticatedUserDTO.selected_organization</code>. No additional dependency or
+organization lookup is needed beyond the guards' existing UserInfo request. <code>organizations</code> maps aliases to
+<code>KeycloakOrganizationClaimDTO</code> objects. Each DTO carries the organization UUID and matching <code>domain</code>; custom attributes
+are preserved in <code>model_extra</code>. The organization mapper flattens
+custom attributes into each organization object; the Admin REST API uses a different representation with an
+<code>attributes</code> map and <code>domains</code> objects.</p>
+<p>Enable the Keycloak organization scope and its organization ID mapper. Set "Add to userinfo" on and "Add to access
+token" and "Add to ID token" off to keep tokens minimal. UserInfo carries the organization claim with this shape:
+<code>{"organization": {"acme": {"id": "5b1f0c1e-2a7e-4c0e-9d0e-3f2f4f1f9a11"}}}</code>.</p>
+<ul>
+<li>One organization without <code>organization:*</code> becomes <code>selected_organization</code>.</li>
+<li><code>organization:*</code> retains every UserInfo organization in <code>organizations</code> and leaves <code>selected_organization</code> as <code>None</code>.</li>
+<li>No UserInfo organization claim produces an empty mapping and <code>selected_organization=None</code>.</li>
+<li>Alias-only claims remain available as DTOs without IDs. Requiring an organization rejects claims without IDs.</li>
+<li>Multiple organization IDs without the wildcard scope are denied.</li>
+<li>Invalid organization field types or UUIDs fail UserInfo DTO validation.</li>
+</ul>
+<p>Organizations are optional by default. Set <code>KEYCLOAK__REQUIRE_ORGANIZATION=true</code> to require a selected organization
+across both guards. Pass <code>require_organization=True</code> or <code>False</code> to override this setting for a specific guard;
+omitting the argument inherits the configuration. Requiring an organization rejects personal and wildcard contexts.
+The verified token's <code>scope</code> claim distinguishes
+wildcard from selected contexts; organization details come exclusively from UserInfo.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Depends</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuthContextManager</span><span class="p">,</span> <span class="n">fastapi_auth</span><span class="p">,</span> <span class="n">grpc_auth</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/projects"</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="n">Depends</span><span class="p">(</span><span class="n">fastapi_auth</span><span class="p">(</span><span class="n">require_organization</span><span class="o">=</span><span class="kc">True</span><span class="p">))])</span>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_projects</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>    <span class="n">auth_context</span> <span class="o">=</span> <span class="n">AuthContextManager</span><span class="o">.</span><span class="n">get_auth_context</span><span class="p">()</span>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>    <span class="k">assert</span> <span class="n">auth_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">auth_context</span><span class="o">.</span><span class="n">selected_organization</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">"organization_id"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">auth_context</span><span class="o">.</span><span class="n">selected_organization</span><span class="o">.</span><span class="n">id</span><span class="p">)}</span>
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProjectServicer</span><span class="p">:</span>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>    <span class="nd">@grpc_auth</span><span class="p">(</span><span class="n">require_organization</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">ListProjects</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a>        <span class="n">auth_context</span> <span class="o">=</span> <span class="n">AuthContextManager</span><span class="o">.</span><span class="n">get_auth_context</span><span class="p">()</span>
+</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a>        <span class="k">assert</span> <span class="n">auth_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">auth_context</span><span class="o">.</span><span class="n">selected_organization</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</span><span id="__span-23-18"><a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a>        <span class="k">return</span> <span class="k">await</span> <span class="n">load_projects</span><span class="p">(</span><span class="n">auth_context</span><span class="o">.</span><span class="n">selected_organization</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Custom organization attributes keep their Keycloak list-of-strings values. For example, after setting the organization
+attributes <code>plan=["enterprise"]</code>, <code>country=["DE"]</code>, and <code>departments=["engineering", "support"]</code> through the Admin API:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">auth_context</span> <span class="o">=</span> <span class="n">AuthContextManager</span><span class="o">.</span><span class="n">get_auth_context</span><span class="p">()</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="k">assert</span> <span class="n">auth_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">auth_context</span><span class="o">.</span><span class="n">selected_organization</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="n">organization_attributes</span> <span class="o">=</span> <span class="n">auth_context</span><span class="o">.</span><span class="n">selected_organization</span><span class="o">.</span><span class="n">model_extra</span> <span class="ow">or</span> <span class="p">{}</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="n">plan</span> <span class="o">=</span> <span class="n">organization_attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"plan"</span><span class="p">,</span> <span class="p">[])</span>  <span class="c1"># ["enterprise"]</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="n">country</span> <span class="o">=</span> <span class="n">organization_attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"country"</span><span class="p">,</span> <span class="p">[])</span>  <span class="c1"># ["DE"]</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="n">departments</span> <span class="o">=</span> <span class="n">organization_attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"departments"</span><span class="p">,</span> <span class="p">[])</span>  <span class="c1"># ["engineering", "support"]</span>
+</span></code></pre></div>
+<p><code>auth_context.selected_organization.to_dict()</code> preserves these attributes at the top level, matching UserInfo's wire
+format. The same values remain available on every DTO in <code>auth_context.organizations</code>, including wildcard organization contexts.</p>
+<p>Only organizations returned by UserInfo are exposed. A token scoped to one organization does not expose the user's
+other memberships through UserInfo. Enable the Keycloak mapper options for organization attributes and domains to include those details.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
