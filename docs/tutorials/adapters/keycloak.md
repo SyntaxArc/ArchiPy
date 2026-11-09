@@ -878,6 +878,21 @@ class ProjectServicer:
         return await load_projects(auth_context.selected_organization.id)
 ```
 
+Custom organization attributes keep their Keycloak list-of-strings values. For example, after setting the organization
+attributes `plan=["enterprise"]`, `country=["DE"]`, and `departments=["engineering", "support"]` through the Admin API:
+
+```python
+auth_context = AuthContextManager.get_auth_context()
+assert auth_context is not None and auth_context.selected_organization is not None
+organization_attributes = auth_context.selected_organization.model_extra or {}
+plan = organization_attributes.get("plan", [])  # ["enterprise"]
+country = organization_attributes.get("country", [])  # ["DE"]
+departments = organization_attributes.get("departments", [])  # ["engineering", "support"]
+```
+
+`auth_context.selected_organization.to_dict()` preserves these attributes at the top level, matching UserInfo's wire
+format. The same values remain available on every DTO in `auth_context.organizations`, including wildcard organization contexts.
+
 Only organizations returned by UserInfo are exposed. A token scoped to one organization does not expose the user's
 other memberships through UserInfo. Enable the Keycloak mapper options for organization attributes and domains to include those details.
 

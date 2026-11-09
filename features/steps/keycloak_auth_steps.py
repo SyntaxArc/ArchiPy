@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 import warnings
 from contextlib import ExitStack, contextmanager
@@ -1098,3 +1099,65 @@ def step_organization_guard_outcome(context, outcome):
     else:
         assert isinstance(selected_organization, KeycloakOrganizationClaimDTO), selected_organization
         assert selected_organization.id == expected_selected_organization
+
+
+@given("the organizations have these attributes")
+def step_organization_custom_attributes(context):
+    scenario_context = _ctx(context)
+    adapter = _real_sync_adapter(scenario_context)
+    attributes = {row["attribute"]: json.loads(row["values"]) for row in context.table}
+    for organization_id in scenario_context.get("token_organizations").values():
+        organization = adapter.get_organization(str(organization_id))
+        adapter.update_organization(
+            str(organization_id),
+            config=KeycloakOrganizationRequestDTO(
+                name=organization.name,
+                alias=organization.alias,
+                enabled=organization.enabled,
+                attributes=attributes,
+                domains=[
+                    KeycloakOrganizationDomainRequestDTO(name=domain.name, verified=domain.verified)
+                    for domain in organization.domains or []
+                ],
+            ),
+        )
+        organization = adapter.get_organization(str(organization_id))
+        assert organization.attributes == attributes, organization
+    scenario_context.store("expected_organization_attributes", attributes)
+
+
+@then("organization DTOs expose the configured attributes and preserve them when serialized")
+def step_organization_attributes_preserved(context):
+    scenario_context = _ctx(context)
+    if scenario_context.get("organization_transport") == "fastapi":
+        response = scenario_context.get("app_response")
+        assert response.status_code == 200, f"{response.status_code}: {response.text}"
+        auth_context = scenario_context.get("organization_auth_context")
+    else:
+        assert not scenario_context.get("aborted"), scenario_context.get("error")
+        calls = _handler_calls(scenario_context)
+        assert len(calls) == 1, calls
+        auth_context = calls[0]
+    assert isinstance(auth_context, AuthenticatedUserDTO), auth_context
+    expected_attributes = scenario_context.get("expected_organization_attributes")
+    expected_organizations = scenario_context.get("expected_organizations")
+    assert set(auth_context.organizations) == set(expected_organizations)
+    serialized_context = auth_context.model_dump(mode="json")
+    for alias, organization in auth_context.organizations.items():
+        assert isinstance(organization, KeycloakOrganizationClaimDTO), organization
+        assert organization.id == expected_organizations[alias]
+        assert organization.model_extra == expected_attributes, organization.model_extra
+        payload = organization.to_dict()
+        for name, values in expected_attributes.items():
+            assert payload[name] == values, payload
+        assert "attributes" not in payload, payload
+        restored = KeycloakOrganizationClaimDTO.model_validate(payload)
+        assert restored == organization, (restored, organization)
+        assert serialized_context["organizations"][alias]["departments"] == ["engineering", "support"]
+    if scenario_context.get("expected_selected_organization") is not None:
+        selected_organization = auth_context.selected_organization
+        assert isinstance(selected_organization, KeycloakOrganizationClaimDTO), selected_organization
+        assert selected_organization.model_extra == expected_attributes, selected_organization
+        assert serialized_context["selected_organization"]["plan"] == ["enterprise"]
+    else:
+        assert auth_context.selected_organization is None

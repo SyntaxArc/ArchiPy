@@ -385,3 +385,31 @@ Feature: Keycloak Auth Guards Testing
       | direct | 2     | multiple | false      | default  | grpc sync  | denied   |
       | direct | 1     | aliases  | false      | default  | grpc async | accepted |
       | direct | 2     | multiple | false      | default  | grpc async | denied   |
+
+  @organization-attributes
+  Scenario Outline: Auth guards preserve organization attributes returned by UserInfo
+    Given a keycloak auth realm with a client
+    And I enable organization of realm named "auth-realm"
+    And I create a user with username "orguser" and password "pass123" using sync adapter
+    And user "orguser" belongs to <count> organizations with organization IDs enabled in UserInfo
+    And the organizations have these attributes
+      | attribute   | values                     |
+      | plan        | ["enterprise"]             |
+      | country     | ["DE"]                     |
+      | website     | ["https://acme.example"]   |
+      | departments | ["engineering", "support"] |
+      | locale      | ["de-DE"]                  |
+      | custom_code | ["customer-42"]            |
+    When user "orguser" obtains a token with organization scope "<scope>"
+    And the organization <transport> guard is called for user "orguser"
+    Then organization DTOs expose the configured attributes and preserve them when serialized
+    And the keycloak auth context is cleared
+
+    Examples:
+      | count | scope    | transport  |
+      | 1     | selected | fastapi    |
+      | 2     | all      | fastapi    |
+      | 1     | selected | grpc sync  |
+      | 2     | all      | grpc sync  |
+      | 1     | selected | grpc async |
+      | 2     | all      | grpc async |
