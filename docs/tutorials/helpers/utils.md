@@ -223,9 +223,9 @@ Authentication and authorization utilities with Keycloak integration:
 !!! note "Moved to the Keycloak adapter"
     The guards are now the functions `fastapi_auth` and `grpc_auth` of `archipy.adapters.keycloak.auth`.
     `fastapi_auth` returns an async dependency and `grpc_auth` detects `async def` servicer methods, so
-    `KeycloakUtils.fastapi_auth`, `async_fastapi_auth`, `grpc_auth` and `async_grpc_auth` (in
-    `archipy.helpers.utils.keycloak_utils`) are deprecated and emit a `DeprecationWarning` when called. They will be
-    removed in 6.0.0. The organization methods of `KeycloakUtils` are not deprecated.
+    `async_fastapi_auth`, `async_grpc_auth` and the `KeycloakUtils` class (in `archipy.helpers.utils.keycloak_utils`)
+    are deprecated and emit a `DeprecationWarning`. They will be removed in 6.0.0, together with the
+    `archipy.helpers.utils.keycloak_utils` module.
 
 ```python
 import logging
@@ -302,54 +302,6 @@ when the request ends.
     `len`, ...), naming its replacement on `AuthContextManager.get_auth_context()`: `raw_user_info`, `token_info`,
     `actor_chain` and `roles`. The values are the same as before. The dict the dependency returns does not warn.
     `request.state` will stop carrying this data in 6.0.0.
-
-## Keycloak Organization Scope {#keycloak-organization-scope}
-
-`KeycloakUtils` reads the organization a Keycloak 26 access token selected. It works on claims you
-have already verified (for example `AuthContextManager.get_auth_context().token_info`) and never checks a signature. It
-needs no extra: it does not import Keycloak.
-
-Keycloak emits the `organization` claim as `{"<alias>": {"id": "<uuid>"}}` when the organization scope and the
-organization id mapper are enabled. The `scope` claim is a space-separated string; `organization:*` requests every
-organization.
-
-```python
-from archipy.helpers.utils.keycloak_utils import KeycloakUtils
-
-claims = {"organization": {"acme": {"id": "5b1f0c1e-2a7e-4c0e-9d0e-3f2f4f1f9a11"}}, "scope": "openid profile"}
-
-KeycloakUtils.parse_organization_uuids(claims)  # {UUID("5b1f0c1e-...")}
-KeycloakUtils.resolve_selected_organization_uuid(claims)  # UUID("5b1f0c1e-...") or None
-KeycloakUtils.require_selected_organization_uuid(claims)  # UUID, or PermissionDeniedError
-```
-
-`resolve_selected_organization_uuid` applies these rules in order:
-
-| # | Condition                                                                          | Result                                                                       |
-|---|------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-| 1 | `organization` claim is present and truthy but yields no valid UUID                | `PermissionDeniedError` (`reason`: `invalid organization claim`), even with `organization:*` |
-| 2 | `scope` contains `organization:*`, or there are no organization UUIDs              | `None` (no organization selected, personal context)                          |
-| 3 | More than one organization UUID                                                    | `PermissionDeniedError` (`additional_data` carries `organization_count`)     |
-| 4 | Otherwise                                                                          | The single UUID                                                              |
-
-A `scope` claim that is missing or not a string counts as no scopes. `parse_organization_uuids` never raises: entries
-that are not mappings, have no `id` or hold an invalid UUID are skipped. `require_selected_organization_uuid` raises
-`PermissionDeniedError` (`reason`: `organization not selected`) when the rules return `None`.
-
-In a FastAPI app with the Keycloak extra, `require_selected_organization` wraps the helper as a dependency. Declare it
-after a `fastapi_auth` guard, which sets the auth context it reads:
-
-```python
-from uuid import UUID
-
-from fastapi import Depends
-
-from archipy.adapters.keycloak.auth import fastapi_auth, require_selected_organization
-
-
-@app.get("/projects", dependencies=[Depends(fastapi_auth())])
-async def list_projects(organization_id: UUID = Depends(require_selected_organization)) -> list[str]: ...
-```
 
 ## See Also
 

@@ -106,15 +106,6 @@ The Keycloak authentication guards moved to the adapters layer; see
 [Keycloak](../adapters/keycloak.md#auth-guards). `archipy.helpers.utils.keycloak_utils` still resolves the old names
 and emits a `DeprecationWarning`; the old module will be removed in 6.0.0.
 
-## Keycloak Organization Scope
-
-Resolves the organization a Keycloak 26 access token selected, from already-verified claims.
-
-::: archipy.helpers.utils.keycloak_utils.KeycloakUtils
-options:
-show_root_toc_entry: false
-heading_level: 3
-
 ## OpenTelemetry Utils
 
 Utilities for OpenTelemetry provider lifecycle, library instrumentation, status mapping, and gRPC client interceptors.

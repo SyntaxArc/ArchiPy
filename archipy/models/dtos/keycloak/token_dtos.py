@@ -4,6 +4,7 @@ OIDC payloads use snake_case on the wire, unlike the admin API representations.
 """
 
 from typing import Any
+from uuid import UUID
 
 from pydantic import ConfigDict, Field
 
@@ -44,11 +45,24 @@ class KeycloakRoleAccessDTO(KeycloakOidcResponseDTO):
     roles: list[str] | None = None
 
 
+class KeycloakOrganizationClaimDTO(KeycloakOidcResponseDTO):
+    """Organization information from Keycloak UserInfo, keyed by organization alias.
+
+    The mapper emits a single matching ``domain`` and flattens custom attributes into this object.
+    Custom attributes and additional mapper claims are preserved in ``model_extra``.
+    See Keycloak 26.8 OrganizationMembershipMapper.resolveValue for the wire format.
+    """
+
+    id: UUID | None = None
+    domain: str | None = None
+
+
 class KeycloakUserInfoDTO(KeycloakOidcResponseDTO):
     """OIDC UserInfo endpoint response.
 
     ``realm_access`` and ``resource_access`` are only present when the Keycloak role mappers have
-    "Add to userinfo" enabled. Other custom claims are kept in ``model_extra``.
+    "Add to userinfo" enabled. The organization membership mapper must also enable "Add to userinfo".
+    Other custom claims are kept in ``model_extra``.
     """
 
     sub: str | None = None
@@ -59,6 +73,7 @@ class KeycloakUserInfoDTO(KeycloakOidcResponseDTO):
     given_name: str | None = None
     family_name: str | None = None
     groups: list[str] | None = None
+    organization: dict[str, KeycloakOrganizationClaimDTO] | list[str] | str | None = None
     realm_access: KeycloakRoleAccessDTO | None = None
     resource_access: dict[str, KeycloakRoleAccessDTO] | None = None
 

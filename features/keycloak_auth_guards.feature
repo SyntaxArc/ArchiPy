@@ -341,3 +341,47 @@ Feature: Keycloak Auth Guards Testing
       | async | direct |
       | sync  | envoy  |
       | async | envoy  |
+
+  @organization-scope
+  Scenario Outline: Auth guards read UserInfo organizations while access tokens stay minimal
+    Given a keycloak auth realm with a client via <via>
+    And I enable organization of realm named "auth-realm"
+    And I create a user with username "orguser" and password "pass123" using sync adapter
+    And user "orguser" belongs to <count> organizations with organization IDs enabled in UserInfo
+    And the default organization requirement is <configured>
+    And the organization requirement of the guard is "<override>"
+    When user "orguser" obtains a token with organization scope "<scope>"
+    And the organization <transport> guard is called for user "orguser"
+    Then the organization guard outcome is "<outcome>"
+    And the keycloak auth context is cleared
+
+    Examples:
+      | via    | count | scope    | configured | override | transport  | outcome  |
+      | direct | 0     | personal | false      | default  | fastapi    | accepted |
+      | direct | 1     | selected | false      | true     | fastapi    | accepted |
+      | direct | 2     | all      | false      | default  | fastapi    | accepted |
+      | direct | 1     | all      | false      | true     | fastapi    | denied   |
+      | direct | 0     | personal | true       | default  | fastapi    | denied   |
+      | direct | 0     | personal | true       | false    | fastapi    | accepted |
+      | direct | 0     | personal | false      | true     | fastapi    | denied   |
+      | direct | 0     | personal | false      | default  | grpc sync  | accepted |
+      | direct | 1     | selected | false      | true     | grpc sync  | accepted |
+      | direct | 2     | all      | false      | default  | grpc sync  | accepted |
+      | direct | 1     | all      | false      | true     | grpc sync  | denied   |
+      | direct | 0     | personal | true       | default  | grpc sync  | denied   |
+      | direct | 0     | personal | true       | false    | grpc sync  | accepted |
+      | direct | 0     | personal | false      | true     | grpc sync  | denied   |
+      | direct | 0     | personal | false      | default  | grpc async | accepted |
+      | direct | 1     | selected | false      | true     | grpc async | accepted |
+      | direct | 2     | all      | false      | default  | grpc async | accepted |
+      | direct | 1     | all      | false      | true     | grpc async | denied   |
+      | direct | 0     | personal | true       | default  | grpc async | denied   |
+      | direct | 0     | personal | true       | false    | grpc async | accepted |
+      | direct | 0     | personal | false      | true     | grpc async | denied   |
+      | envoy  | 1     | selected | false      | true     | fastapi    | accepted |
+      | direct | 1     | aliases  | false      | default  | fastapi    | accepted |
+      | direct | 2     | multiple | false      | default  | fastapi    | denied   |
+      | direct | 1     | aliases  | false      | default  | grpc sync  | accepted |
+      | direct | 2     | multiple | false      | default  | grpc sync  | denied   |
+      | direct | 1     | aliases  | false      | default  | grpc async | accepted |
+      | direct | 2     | multiple | false      | default  | grpc async | denied   |

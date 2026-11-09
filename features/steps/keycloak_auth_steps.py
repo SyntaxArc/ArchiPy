@@ -4,6 +4,7 @@ import warnings
 from contextlib import ExitStack, contextmanager
 from types import SimpleNamespace
 from unittest.mock import patch
+from uuid import UUID, uuid4
 
 import grpc
 import grpc.aio
@@ -17,7 +18,13 @@ from features.test_helpers import get_current_scenario_context
 from archipy.adapters.keycloak import auth as keycloak_auth
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
 from archipy.adapters.keycloak.auth import AuthContextManager
-from archipy.models.dtos.keycloak.token_dtos import KeycloakUserInfoDTO
+from archipy.helpers.errors.fastapi import setup_exception_handlers
+from archipy.models.dtos.keycloak.organization_dtos import (
+    KeycloakOrganizationDomainRequestDTO,
+    KeycloakOrganizationRequestDTO,
+)
+from archipy.models.dtos.keycloak.protocol_mapper_config_dtos import KeycloakOidcOrganizationMembershipMapperConfigDTO
+from archipy.models.dtos.keycloak.token_dtos import KeycloakOrganizationClaimDTO, KeycloakUserInfoDTO
 from archipy.models.dtos.keycloak_dtos import AuthenticatedUserDTO
 from archipy.models.errors import BaseError
 
@@ -917,3 +924,177 @@ def step_keycloak_auth_response_no_caller(context):
     response = _ctx(context).get("app_response")
     assert response.status_code == 200, f"{response.status_code}: {response.text}"
     assert response.json() == {"username": None}
+
+
+@given('user "{username}" belongs to {count:d} organizations with organization IDs enabled in UserInfo')
+def step_organization_token_memberships(context, username, count):
+    scenario_context = _ctx(context)
+    adapter = _real_sync_adapter(scenario_context)
+    user_id = _user_id(scenario_context, username)
+    organizations = {}
+    for index in range(count):
+        alias = f"scope-{uuid4().hex}"
+        domain = "test.com" if index == 0 else f"{alias}.test.com"
+        organization_id = adapter.create_organization(
+            name=alias,
+            alias=alias,
+            config=KeycloakOrganizationRequestDTO(
+                attributes={"plan": ["team"]},
+                domains=[KeycloakOrganizationDomainRequestDTO(name=domain)],
+            ),
+        )
+        assert organization_id, "Keycloak created no organization"
+        context.add_cleanup(adapter.delete_organization, organization_id)
+        adapter.organization_user_add(user_id=user_id, organization_id=organization_id)
+        organizations[alias] = UUID(organization_id)
+    scenario_context.store("token_organizations", organizations)
+    organization_scope = adapter.get_client_scope_by_name("organization")
+    assert organization_scope is not None, "Keycloak has no organization client scope"
+    scope = adapter.get_client_scope(organization_scope.id)
+    mapper = next(m for m in scope.protocol_mappers if m.protocol_mapper == "oidc-organization-membership-mapper")
+    adapter.update_client_scope_mapper_config(
+        scope.id,
+        mapper.id,
+        mapper.name,
+        KeycloakOidcOrganizationMembershipMapperConfigDTO(
+            claim_name="organization",
+            add_organization_id=True,
+            add_organization_attributes=True,
+            add_organization_domain=True,
+            access_token_claim=False,
+            id_token_claim=False,
+            userinfo_token_claim=True,
+        ),
+    )
+    client_id = adapter.get_client_id(adapter.configs.CLIENT_ID)
+    adapter.add_client_optional_client_scope(client_id, scope.id, {})
+
+
+@given("the default organization requirement is {required}")
+def step_organization_config_requirement(context, required):
+    configs = _real_sync_adapter(_ctx(context)).configs
+    previous = configs.REQUIRE_ORGANIZATION
+    configs.REQUIRE_ORGANIZATION = required == "true"
+    context.add_cleanup(lambda: setattr(configs, "REQUIRE_ORGANIZATION", previous))
+
+
+@given('the organization requirement of the guard is "{required}"')
+def step_organization_guard_requirement(context, required):
+    if required != "default":
+        _auth_kwargs(_ctx(context))["require_organization"] = required == "true"
+
+
+@when('user "{username}" obtains a token with organization scope "{scope}"')
+def step_organization_issue_token(context, username, scope):
+    scenario_context = _ctx(context)
+    adapter = _real_sync_adapter(scenario_context)
+    organizations = scenario_context.get("token_organizations")
+    if scope == "selected":
+        alias = next(iter(organizations))
+        requested_scope = f"openid organization:{alias}"
+        expected_organizations = {alias: organizations[alias]}
+    elif scope == "multiple":
+        requested_scope = "openid " + " ".join(f"organization:{alias}" for alias in organizations)
+        expected_organizations = organizations
+    elif scope == "aliases":
+        organization_scope = adapter.get_client_scope_by_name("organization")
+        mapper = next(
+            mapper
+            for mapper in adapter.get_client_scope(organization_scope.id).protocol_mappers
+            if mapper.protocol_mapper == "oidc-organization-membership-mapper"
+        )
+        adapter.update_client_scope_mapper_config(
+            organization_scope.id,
+            mapper.id,
+            mapper.name,
+            KeycloakOidcOrganizationMembershipMapperConfigDTO(
+                claim_name="organization",
+                access_token_claim=False,
+                id_token_claim=False,
+                userinfo_token_claim=True,
+            ),
+        )
+        requested_scope = "openid organization:*"
+        expected_organizations = dict.fromkeys(organizations)
+    elif scope == "all":
+        requested_scope = "openid organization:*"
+        expected_organizations = organizations
+    else:
+        requested_scope = "openid"
+        expected_organizations = {}
+    response = adapter._openid_adapter.token(username=username, password="pass123", scope=requested_scope)
+    verified_claims = adapter.get_token_info(response["access_token"])
+    assert verified_claims is not None, "Keycloak token verification failed"
+    assert "organization" not in verified_claims.to_dict(), "Organization details leaked into the access token"
+    scenario_context.store("access_tokens", {username: response["access_token"]})
+    scenario_context.store("expected_organizations", expected_organizations)
+    scenario_context.store(
+        "expected_selected_organization", next(iter(expected_organizations.values())) if scope == "selected" else None,
+    )
+
+
+@when('the organization {transport} guard is called for user "{username}"')
+async def step_organization_call_guard(context, transport, username):
+    scenario_context = _ctx(context)
+    scenario_context.store("organization_transport", transport)
+    if transport != "fastapi":
+        mode = transport.split()[1]
+        await _invoke_grpc(context, mode, (("authorization", f"Bearer {_access_token(scenario_context, username)}"),))
+        return
+    app = FastAPI()
+    setup_exception_handlers(app)
+
+    @app.get("/organization", dependencies=[Depends(keycloak_auth.fastapi_auth(**_auth_kwargs(scenario_context)))])
+    async def organization_route():
+        auth_context = AuthContextManager.get_auth_context()
+        scenario_context.store("organization_auth_context", auth_context)
+        return {"username": auth_context.username}
+
+    scenario_context.store("fastapi_app", app)
+    await _request_app(
+        context, "/organization", {"Authorization": f"Bearer {_access_token(scenario_context, username)}"},
+    )
+
+
+@then('the organization guard outcome is "{outcome}"')
+def step_organization_guard_outcome(context, outcome):
+    scenario_context = _ctx(context)
+    if scenario_context.get("organization_transport") == "fastapi":
+        response = scenario_context.get("app_response")
+        expected_status = 200 if outcome == "accepted" else 403
+        assert response.status_code == expected_status, f"{response.status_code}: {response.text}"
+        auth_context = scenario_context.get("organization_auth_context")
+    else:
+        if outcome == "denied":
+            step_keycloak_auth_aborted(context, "PERMISSION_DENIED")
+            assert not _handler_calls(scenario_context)
+            return
+        assert not scenario_context.get("aborted"), scenario_context.get("error")
+        calls = _handler_calls(scenario_context)
+        assert len(calls) == 1, calls
+        auth_context = calls[0]
+    if outcome == "denied":
+        assert auth_context is None
+        return
+    assert isinstance(auth_context, AuthenticatedUserDTO), auth_context
+    assert all(
+        isinstance(organization, KeycloakOrganizationClaimDTO) for organization in auth_context.organizations.values()
+    )
+    actual_organizations = {alias: organization.id for alias, organization in auth_context.organizations.items()}
+    assert actual_organizations == scenario_context.get("expected_organizations"), actual_organizations
+    for organization in auth_context.organizations.values():
+        if organization.id is None:
+            assert organization.domain is None
+            continue
+        assert organization.model_extra.get("plan") == ["team"], organization
+        expected_domain = (
+            "test.com" if organization.id == next(iter(scenario_context.get("token_organizations").values())) else None
+        )
+        assert organization.domain == expected_domain, organization
+    selected_organization = auth_context.selected_organization
+    expected_selected_organization = scenario_context.get("expected_selected_organization")
+    if expected_selected_organization is None:
+        assert selected_organization is None, selected_organization
+    else:
+        assert isinstance(selected_organization, KeycloakOrganizationClaimDTO), selected_organization
+        assert selected_organization.id == expected_selected_organization

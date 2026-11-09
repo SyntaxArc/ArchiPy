@@ -60,6 +60,10 @@ class KeycloakConfig(BaseModel):
             "does not include it (and tokens whose `typ` is not Bearer) are rejected."
         ),
     )
+    REQUIRE_ORGANIZATION: bool = Field(
+        default=False,
+        description="Require a selected organization in FastAPI and gRPC guards unless the guard overrides this value",
+    )
     REMOTE_CACHE_TTL_SECONDS: float = Field(
         default=0.0,
         ge=0,
