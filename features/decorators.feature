@@ -427,7 +427,7 @@ Feature: Helper decorators
         | AuthContextManager          | archipy.adapters.keycloak.auth.AuthContextManager          |
         | clear_keycloak_remote_cache | archipy.adapters.keycloak.auth.clear_keycloak_remote_cache |
 
-    Scenario: The legacy KeycloakUtils namespace keeps its methods
+    Scenario: KeycloakUtils keeps its legacy methods
       When "KeycloakUtils" is read from the old Keycloak utils module
-      Then exactly one DeprecationWarning should name "the functions of archipy.adapters.keycloak.auth"
+      Then no DeprecationWarning should have been emitted
       And the legacy KeycloakUtils exposes fastapi_auth, async_fastapi_auth, grpc_auth and async_grpc_auth

@@ -53,6 +53,7 @@ jobs:
           keycloak_auth_guards:
             - 'packages/keycloak/**'
             - 'features/keycloak_auth_guards.feature'
+            - 'features/keycloak_organization_scope_dependency.feature'
           keycloak_auth_guards_grpc:
             - 'packages/keycloak/**'
             - 'features/keycloak_auth_guards_grpc.feature'
@@ -149,6 +150,7 @@ jobs:
             - 'features/file_utils.feature'
             - 'features/grpc_helpers.feature'
             - 'features/jwt_utils.feature'
+            - 'features/keycloak_organization_scope_utils.feature'
             - 'features/optional_dependencies.feature'
             - 'features/password_utils.feature'
             - 'features/range_dtos.feature'
@@ -262,6 +264,7 @@ jobs:
             - '!features/file_utils.feature'
             - '!features/grpc_helpers.feature'
             - '!features/jwt_utils.feature'
+            - '!features/keycloak_organization_scope_utils.feature'
             - '!features/optional_dependencies.feature'
             - '!features/password_utils.feature'
             - '!features/range_dtos.feature'

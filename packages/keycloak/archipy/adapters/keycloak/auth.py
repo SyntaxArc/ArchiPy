@@ -14,12 +14,14 @@ from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
+    from uuid import UUID
 
 from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.adapters.keycloak.deprecated_state import deprecated_dict, deprecated_list, deprecated_set
+from archipy.helpers.utils.keycloak_utils import KeycloakUtils
 from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
 from archipy.models.dtos.keycloak_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.errors import (
@@ -693,6 +695,25 @@ def fastapi_auth(
                 AuthContextManager.clear_auth_context(auth_token)
 
     return dependency
+
+
+def require_selected_organization() -> UUID:
+    """FastAPI dependency returning the organization UUID selected by the authenticated token.
+
+    Declare it after a ``fastapi_auth`` guard (``Depends(require_selected_organization)``), which sets the auth context
+    this dependency reads. The decision rules live in ``KeycloakUtils``.
+
+    Returns:
+        UUID: The selected organization.
+
+    Raises:
+        UnauthenticatedError: If no guard has set an auth context.
+        PermissionDeniedError: If no organization is selected, or the organization claim is malformed or ambiguous.
+    """
+    auth_context = AuthContextManager.get_auth_context()
+    if auth_context is None:
+        raise UnauthenticatedError()
+    return KeycloakUtils.require_selected_organization_uuid(auth_context.token_info.to_dict())
 
 
 def _extract_token_from_metadata(context: object) -> str | None:
