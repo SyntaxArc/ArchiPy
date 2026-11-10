@@ -72,7 +72,7 @@ class SQLiteSQLAlchemyConfig(SQLAlchemyConfig):
     """
 
     DRIVER_NAME: str = Field(default="sqlite+aiosqlite", description="SQLite driver name")
-    DATABASE: str = Field(default=":memory:", description="SQLite database path")  # ty: ignore[invalid-mutable-override]  # SQLite always has a path; narrows the base str | None
+    DATABASE: str = Field(default=":memory:", description="SQLite database path")  # ty: ignore[incompatible-mutable-override]  # SQLite always has a path; narrows the base str | None
     ISOLATION_LEVEL: str | None = Field(default=None, description="SQLite isolation level")
     PORT: int | None = Field(default=None, description="Not used for SQLite")
     TIMEOUT: float | None = Field(
@@ -374,7 +374,7 @@ class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
 
     DRIVER_NAME: str = Field(default="starrocks", description="StarRocks driver name")
     CATALOG: str | None = Field(default=None, description="Starrocks catalog name")
-    ISOLATION_LEVEL: str = Field(  # ty: ignore[invalid-mutable-override]  # StarRocks always sets a level; narrows the base str | None
+    ISOLATION_LEVEL: str = Field(  # ty: ignore[incompatible-mutable-override]  # StarRocks always sets a level; narrows the base str | None
         default="READ COMMITTED",
         description="Transaction isolation level (StarRocks only supports READ COMMITTED)",
     )
