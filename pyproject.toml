@@ -24,7 +24,7 @@ dependency-injection = ["dependency-injector>=4.49.1"]
 elasticsearch = ["archipy-elasticsearch==0.1.0"]  # Pinned to core version on publish flow!
 elasticsearch-async = ["archipy-elasticsearch==0.1.0", "elasticsearch[async]>=9.5.1"]  # Pinned to core version on publish flow!
 fakeredis = ["fakeredis>=2.40.0"]
-fastapi = ["fastapi[all]>=0.162.1"]
+fastapi = ["fastapi[all]>=0.162.2"]
 grpc = ["grpcio>=1.85.1", "grpcio-health-checking>=1.85.1", "protobuf>=7.36.2"]
 jwt = ["pyjwt>=2.15.1"]
 kafka = ["archipy-kafka==0.1.0"]  # Pinned to core version on publish flow!
@@ -97,7 +97,7 @@ archipy-saman-ipg = { workspace = true }
 dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.9.4",
-    "boto3-stubs>=1.43.126",
+    "boto3-stubs>=1.43.127",
     "codespell>=2.4.3",
     "coverage>=7.17.2",
     "gherkin-formatter>=0.1.3",
@@ -105,11 +105,11 @@ dev = [
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.7.0",
     "ruff>=0.17.4",
-    "ty>=0.0.99",
+    "ty>=0.0.100",
     "types-grpcio>=1.85.0.20261028",
     "types-protobuf>=7.35.1.20260906",
     "types-pymysql>=1.2.0.20260923",
-    "types-regex>=2026.9.29.20261030",
+    "types-regex>=2026.11.8.20261109",
     "validate-pyproject>=0.27",
 ]
 
@@ -119,7 +119,7 @@ docs = [
     "mkdocs>=1.6.1",
     "mkdocstrings-python>=2.0.10",
     "mkdocstrings>=1.0.8",
-    "pymdown-extensions>=12.3",
+    "pymdown-extensions>=13.0",
 ]
 
 
@@ -363,7 +363,7 @@ instance-layout-conflict = "error"
 invalid-argument-type = "error"
 invalid-assignment = "error"
 invalid-attribute-access = "error"
-invalid-attribute-override = "error"
+incompatible-attribute-override = "error"
 invalid-await = "error"
 invalid-base = "error"
 invalid-context-manager = "error"
@@ -376,16 +376,20 @@ invalid-explicit-override = "error"
 invalid-frozen-dataclass-subclass = "error"
 invalid-generic-class = "error"
 invalid-generic-enum = "error"
-invalid-key = "error"
+invalid-typed-dict-key = "error"
 invalid-legacy-positional-parameter = "error"
 invalid-legacy-type-variable = "error"
 invalid-match-pattern = "error"
 invalid-metaclass = "error"
-invalid-method-override = "error"
+incompatible-method-override = "error"
 invalid-named-tuple = "error"
 invalid-named-tuple-override = "error"
 invalid-newtype = "error"
-invalid-overload = "error"
+single-overload = "error"
+inconsistent-overload-decorator = "error"
+misplaced-overload-decorator = "error"
+missing-overload-implementation = "error"
+inconsistent-overload-implementation = "error"
 invalid-parameter-default = "error"
 invalid-paramspec = "error"
 invalid-protocol = "error"
@@ -429,7 +433,7 @@ type-assertion-failure = "error"
 unavailable-implicit-super-arguments = "error"
 unbound-type-variable = "error"
 unknown-argument = "error"
-unresolved-attribute = "error"
+missing-attribute = "error"
 import-not-found = "error"
 unresolved-reference = "error"
 unsupported-bool-conversion = "error"

@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-sync = ["pymysql>=1.2.3"]
+sync = ["pymysql>=1.2.4"]
 async = ["sqlalchemy[asyncio]>=2.1.8", "asyncmy>=0.2.18"]
 
 [build-system]

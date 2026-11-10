@@ -76,9 +76,9 @@ def _end_consume_span(consumer: Consumer) -> None:
 
         context.detach(token)
     # State owned by the instrumentor's consumer subclass, unknown to the confluent_kafka stubs.
-    consumer._current_context_token = None  # ty: ignore[unresolved-attribute]
+    consumer._current_context_token = None  # ty: ignore[missing-attribute]
     span.end()
-    consumer._current_consume_span = None  # ty: ignore[unresolved-attribute]
+    consumer._current_consume_span = None  # ty: ignore[missing-attribute]
 
 
 def _apply_security_config(config: dict[str, str | int | float], configs: KafkaConfig) -> None:

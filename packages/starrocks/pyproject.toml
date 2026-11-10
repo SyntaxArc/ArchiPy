@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-sync = ["starrocks>=1.3.4", "pymysql>=1.2.3"]
+sync = ["starrocks>=1.3.4", "pymysql>=1.2.4"]
 async = ["sqlalchemy[asyncio]>=2.1.8", "starrocks>=1.3.4", "asyncmy>=0.2.18"]
 
 [build-system]
