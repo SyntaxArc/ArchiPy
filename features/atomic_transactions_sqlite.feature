@@ -272,6 +272,31 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
       | db_type |
       | sqlite  |
 
+  @async
+  Scenario Outline: Cancelled async atomic blocks leave no session behind in the registry
+    Given the application database is initialized for <db_type>
+    When 20 async atomic blocks are cancelled mid-work on <db_type>
+    Then the async session registry should be empty
+
+    Examples:
+      | db_type |
+      | sqlite  |
+
+  @unit
+  Scenario: A second cancellation during rollback still releases the async atomic session
+    Given a fake async session with a slow rollback behind the atomic decorator
+    When the atomic task is cancelled again while rolling back
+    Then the fake session should have been closed
+    And the async session registry should be empty
+
+  @unit
+  Scenario: An interrupted sync rollback still releases the atomic session
+    Given a fake sync session whose rollback is interrupted
+    When the atomic function raises ValueError
+    Then KeyboardInterrupt should propagate through the atomic block unchanged
+    And the fake session should have been closed
+    And the fake session manager should have removed the session
+
   @unit
   Scenario Outline: Driver error codes map to specific database errors
     When a <kind> error with driver code <code> is handled by the atomic decorator

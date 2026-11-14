@@ -59,6 +59,7 @@ from features.test_helpers import (
     sync_schema_setup_autocommit,
 )
 from sqlalchemy import select
+from sqlalchemy.orm.scoping import ScopedRegistry
 
 
 def store_entity(context, entity, key=None):
@@ -2322,11 +2323,12 @@ class _FakeTransaction:
 class _FakeSession:
     """Records what the atomic decorator does to a session."""
 
-    def __init__(self, *, is_async, rollback_error=None):
+    def __init__(self, *, is_async, rollback_error=None, rollback_interrupted=False):
         self.info = {}
         self.active = False
         self.is_async = is_async
         self.rollback_error = rollback_error
+        self.rollback_interrupted = rollback_interrupted
         self.rolled_back = False
         self.closed = False
         self.committed = False
@@ -2339,7 +2341,8 @@ class _FakeSession:
 
     def _rollback(self):
         self.rolled_back = True
-        self.active = False
+        if not self.rollback_interrupted:
+            self.active = False
         if self.rollback_error is not None:
             raise self.rollback_error
 
@@ -2365,6 +2368,7 @@ class _FakeSession:
 class _FakeSessionManager:
     def __init__(self, session):
         self.session = session
+        self.removed = False
 
     def get_session(self):
         return self.session
@@ -2372,10 +2376,12 @@ class _FakeSessionManager:
     def remove_session(self):
         if self.session.is_async:
 
-            async def noop():
+            async def mark_removed():
+                self.removed = True
                 return None
 
-            return noop()
+            return mark_removed()
+        self.removed = True
         return None
 
 
@@ -2424,6 +2430,135 @@ def step_given_fake_atomic_session(context, mode):
 @given("the fake session fails to roll back")
 def step_given_fake_rollback_fails(context):
     get_current_scenario_context(context).get("fake_session").rollback_error = RuntimeError("rollback broke")
+
+
+class _SlowRollbackFakeSession:
+    """Async session double whose rollback stays in flight long enough to receive a second cancellation."""
+
+    def __init__(self):
+        self.info = {}
+        self.active = False
+        self.closed = False
+        self.rollback_started = asyncio.Event()
+
+    def in_transaction(self):
+        return self.active
+
+    def begin(self):
+        return _FakeTransaction(self)
+
+    async def commit(self):
+        self.active = False
+
+    async def rollback(self):
+        self.rollback_started.set()
+        await asyncio.sleep(0.05)
+        self.active = False
+
+    async def close(self):
+        self.closed = True
+        self.active = False
+
+
+class _ScopedFakeManager:
+    """Fake manager backed by a real task-keyed ScopedRegistry, so leaks are measurable."""
+
+    def __init__(self, session):
+        self.registry = ScopedRegistry(lambda: session, asyncio.current_task)
+
+    def get_session(self):
+        return self.registry()
+
+    async def remove_session(self):
+        if self.registry.has():
+            await self.registry().close()
+        self.registry.clear()
+
+
+@given("a fake async session with a slow rollback behind the atomic decorator")
+def step_given_fake_slow_rollback_session(context):
+    from unittest import mock
+
+    from archipy.adapters.base.sqlalchemy import atomic as atomic_module
+
+    sc = get_current_scenario_context(context)
+    session = _SlowRollbackFakeSession()
+    manager = _ScopedFakeManager(session)
+
+    class FakeRegistry:
+        @staticmethod
+        def get_async_manager():
+            return manager
+
+    patcher = mock.patch.object(
+        atomic_module,
+        "_load_session_manager_registry",
+        lambda _db_type: FakeRegistry,
+    )
+    patcher.start()
+    context.add_cleanup(patcher.stop)
+    sc.store("fake_session", session)
+    sc.store("fake_manager", manager)
+
+
+class _SyncBeginFakeSession(_FakeSession):
+    """Sync session double: begin() activates the transaction at once, like a real Session."""
+
+    def begin(self):
+        self.active = True
+        return _FakeTransaction(self)
+
+
+@given("a fake sync session whose rollback is interrupted")
+def step_given_fake_interrupted_rollback_session(context):
+    from unittest import mock
+
+    from archipy.adapters.base.sqlalchemy import atomic as atomic_module
+
+    sc = get_current_scenario_context(context)
+    session = _SyncBeginFakeSession(is_async=False, rollback_error=KeyboardInterrupt(), rollback_interrupted=True)
+    manager = _FakeSessionManager(session)
+
+    class FakeRegistry:
+        @staticmethod
+        def get_sync_manager():
+            return manager
+
+        @staticmethod
+        def get_async_manager():
+            return manager
+
+    patcher = mock.patch.object(
+        atomic_module,
+        "_load_session_manager_registry",
+        lambda _db_type: FakeRegistry,
+    )
+    patcher.start()
+    context.add_cleanup(patcher.stop)
+    sc.store("fake_session", session)
+    sc.store("fake_manager", manager)
+    sc.store("fake_mode", "sync")
+
+
+@when("the atomic task is cancelled again while rolling back")
+async def step_when_cancelled_again_during_rollback(context):
+    sc = get_current_scenario_context(context)
+    session = sc.get("fake_session")
+
+    @sqlalchemy_atomic("sqlite")
+    async def work():
+        await asyncio.sleep(10)
+
+    task = asyncio.create_task(work())
+    await asyncio.sleep(0)
+    task.cancel()
+    await asyncio.wait_for(session.rollback_started.wait(), timeout=1)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    sc.store("session_registry_size", len(sc.get("fake_manager").registry.registry))
 
 
 def _run_atomic_function(context, body):
@@ -2477,6 +2612,11 @@ def step_then_fake_closed(context):
     assert get_current_scenario_context(context).get("fake_session").closed
 
 
+@then("the fake session manager should have removed the session")
+def step_then_fake_manager_removed(context):
+    assert get_current_scenario_context(context).get("fake_manager").removed
+
+
 @then("the original ValueError should be raised")
 def step_then_original_value_error(context):
     error = get_current_scenario_context(context).get("atomic_error")
@@ -2516,6 +2656,31 @@ async def step_when_async_atomic_in_tasks(context, count, db_type):
         manager.get_session()
 
     await asyncio.gather(*(work() for _ in range(count)))
+    get_current_scenario_context(context).store(
+        "session_registry_size",
+        len(manager._session_generator.registry.registry),
+    )
+
+
+@when("{count:d} async atomic blocks are cancelled mid-work on {db_type}")
+async def step_when_async_atomic_cancelled_mid_work(context, count, db_type):
+    manager = _get_session_registry(db_type).get_async_manager()
+    atomic = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic
+    async def work():
+        await asyncio.sleep(10)
+
+    async def run_cancelled():
+        task = asyncio.create_task(work())
+        await asyncio.sleep(0)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    await asyncio.gather(*(run_cancelled() for _ in range(count)))
     get_current_scenario_context(context).store(
         "session_registry_size",
         len(manager._session_generator.registry.registry),
