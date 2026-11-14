@@ -63,7 +63,7 @@ class GrpcExceptionInterceptor:
         """
         if cls is GrpcExceptionInterceptor:
             variant = _AioGrpcExceptionInterceptor if aio else _SyncGrpcExceptionInterceptor
-            return super().__new__(variant)  # ty: ignore[invalid-return-type]
+            return super().__new__(variant)  # ty: ignore[invalid-explicit-return]
         return super().__new__(cls)
 
     def __init__(self, *, aio: bool = False, validation_errors_as_internal: bool = False) -> None:  # noqa: ARG002
