@@ -295,6 +295,7 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
     When the atomic function raises ValueError
     Then KeyboardInterrupt should propagate through the atomic block unchanged
     And the fake session should have been closed
+    And the fake session manager should have removed the session
 
   @unit
   Scenario Outline: Driver error codes map to specific database errors
