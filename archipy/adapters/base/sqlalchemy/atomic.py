@@ -469,7 +469,8 @@ def _create_async_atomic_wrapper[R](
             if not is_nested:
                 session.info.pop(atomic_flag, None)
                 session.info.pop(_ROLLBACK_ONLY_FLAG, None)
-            if not is_nested and not session.in_transaction():
+                # Always release the session: an interrupted rollback can leave a transaction open, and
+                # close() rolls it back. Keeping the task-keyed registry entry would leak it forever.
                 await _close_async_session(session, session_manager)
 
     return async_wrapper
@@ -516,9 +517,11 @@ def _create_sync_atomic_wrapper[R](
                 session.info.pop(atomic_flag, None)
                 session.info.pop(_ROLLBACK_ONLY_FLAG, None)
                 session.info.pop(_NESTED_ERROR_FLAG, None)
-            if not is_nested and not session.in_transaction():
-                session.close()
-                session_manager.remove_session()
+                # Always release the session, even when a transaction is still open; close() rolls it back
+                try:
+                    session.close()
+                finally:
+                    session_manager.remove_session()
 
     return sync_wrapper
 
