@@ -1858,6 +1858,8 @@ static_resources:
   clusters:
     - name: keycloak
       type: STRICT_DNS
+      # Docker's host-gateway mapping is IPv4; avoid waiting for an IPv6 DNS lookup first.
+      dns_lookup_family: V4_ONLY
       load_assignment:
         cluster_name: keycloak
         endpoints:

@@ -7,6 +7,7 @@ from archipy.models.dtos.keycloak.base import (
     KeycloakRequestDTO,
     KeycloakResponseDTO,
 )
+from archipy.models.dtos.keycloak.owner_dto import Owner
 
 __all__ = [
     "ActorDTO",
@@ -15,4 +16,5 @@ __all__ = [
     "KeycloakBaseDTO",
     "KeycloakRequestDTO",
     "KeycloakResponseDTO",
+    "Owner",
 ]

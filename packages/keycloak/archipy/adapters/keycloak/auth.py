@@ -11,6 +11,7 @@ import time
 from contextvars import ContextVar, Token
 from functools import cache
 from typing import TYPE_CHECKING, Any, NoReturn
+from uuid import UUID
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
@@ -20,6 +21,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.adapters.keycloak.deprecated_state import deprecated_dict, deprecated_list, deprecated_set
+from archipy.models.dtos.keycloak.owner_dto import Owner
 from archipy.models.dtos.keycloak.token_dtos import (
     KeycloakOrganizationClaimDTO,
     KeycloakTokenClaimsDTO,
@@ -37,6 +39,7 @@ from archipy.models.errors import (
 )
 from archipy.models.types.actor_type import ActorType
 from archipy.models.types.language_type import LanguageType
+from archipy.models.types.owner_type import OwnerType
 
 # Enhanced security scheme with OpenAPI documentation
 security = HTTPBearer(scheme_name="OAuth2", description="OAuth2 Access Token", auto_error=False)
@@ -563,6 +566,10 @@ def _build_auth_context(
     user_id = user_info.sub
     if not user_id:
         raise UnauthenticatedError()
+    try:
+        user_uuid = UUID(user_id)
+    except ValueError as error:
+        raise UnauthenticatedError(lang=lang, additional_data={"reason": "invalid user UUID"}) from error
     claims = token_info or KeycloakTokenClaimsDTO()
     organization_claim = user_info.organization
     organizations = (
@@ -582,7 +589,7 @@ def _build_auth_context(
             [a.id for a in actors],
         )
     return AuthenticatedUserDTO(
-        user_id=user_id,
+        user_id=user_uuid,
         username=user_info.preferred_username or "",
         email=user_info.email or "",
         roles=list(user_roles),
@@ -635,6 +642,51 @@ class AuthContextManager:
             _auth_context_var.set(None)
         else:
             _auth_context_var.reset(token)
+
+
+def resolve_owner(context: AuthenticatedUserDTO) -> Owner:
+    """Resolve one resource owner from an authenticated context without performing authorization.
+
+    Wildcard, incomplete, or inconsistent organization contexts raise PermissionDeniedError.
+    Personal ownership uses the subject UUID, never an actor in an impersonation chain.
+
+    Args:
+        context: Authenticated caller with validated UUID identifiers.
+
+    Returns:
+        Immutable owner identified by both UUID and owner type.
+
+    Raises:
+        PermissionDeniedError: If the organization context does not identify one valid owner.
+    """
+    scopes = (context.token_info.scope or "").split()
+    if "organization:*" in scopes:
+        raise PermissionDeniedError(additional_data={"reason": "wildcard organization ownership"})
+    selected = context.selected_organization
+    if selected is not None:
+        organizations = list(context.organizations.values())
+        if (
+            selected.id is None
+            or not organizations
+            or any(organization.id != selected.id for organization in organizations)
+        ):
+            raise PermissionDeniedError(additional_data={"reason": "inconsistent organization selection"})
+        return Owner(uuid=selected.id, type=OwnerType.ORGANIZATION)
+    if (
+        context.organizations
+        or context.raw_user_info.organization is not None
+        or any(scope == "organization" or scope.startswith("organization:") for scope in scopes)
+    ):
+        raise PermissionDeniedError(additional_data={"reason": "organization not selected"})
+    return Owner(uuid=context.user_id, type=OwnerType.USER)
+
+
+def get_authenticated_owner() -> Owner:
+    """Resolve the current request's owner; raise UnauthenticatedError when no context exists."""
+    context = AuthContextManager.get_auth_context()
+    if context is None:
+        raise UnauthenticatedError()
+    return resolve_owner(context)
 
 
 def _get_keycloak_adapter() -> KeycloakAdapter:
@@ -913,5 +965,7 @@ __all__ = [
     "AuthContextManager",
     "clear_keycloak_remote_cache",
     "fastapi_auth",
+    "get_authenticated_owner",
     "grpc_auth",
+    "resolve_owner",
 ]
