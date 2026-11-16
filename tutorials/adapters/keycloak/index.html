@@ -5059,33 +5059,72 @@ format. The same values remain available on every DTO in <code>auth_context.orga
 <p>Only organizations returned by UserInfo are exposed. A token scoped to one organization does not expose the user's
 other memberships through UserInfo. Enable the Keycloak mapper options for organization attributes and domains to include those details.</p>
 <h2 id="resource-ownership">Resource Ownership<a class="headerlink" href="#resource-ownership" title="Permanent link">&para;</a></h2>
-<p><code>AuthenticatedUserDTO.user_id</code> is a <code>UUID</code>. UUID strings are parsed when constructing the DTO, and JSON serialization
-emits a string. Use <code>str(context.user_id)</code> when calling APIs that require string IDs. Invalid user UUIDs raise
+<p>Use <code>get_authenticated_actor()</code> and <code>get_authenticated_owner()</code> inside an authenticated FastAPI or gRPC handler
+to identify who is acting and whose resources are in scope:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_authenticated_actor</span><span class="p">,</span> <span class="n">get_authenticated_owner</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="n">actor</span> <span class="o">=</span> <span class="n">get_authenticated_actor</span><span class="p">()</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="n">owner</span> <span class="o">=</span> <span class="n">get_authenticated_owner</span><span class="p">()</span>
+</span></code></pre></div>
+<p>When both are needed, use the combined helper, which delegates to the two individual helpers:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_authenticated_actor_and_owner</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="n">actor</span><span class="p">,</span> <span class="n">owner</span> <span class="o">=</span> <span class="n">get_authenticated_actor_and_owner</span><span class="p">()</span>
+</span></code></pre></div>
+<p>The combined helper propagates authentication and ownership errors instead of returning a partial result.</p>
+<p>The actor helper returns <code>ActorDTO</code>: the outermost delegated actor when present, otherwise the authenticated user.
+<code>actor.id</code> is a string because client actors may have non-UUID identifiers; <code>actor.type</code> is <code>ActorType.USER</code> or
+<code>ActorType.CLIENT</code>. Both helpers raise <code>UnauthenticatedError</code> without an auth context. The owner can differ from
+the actor during impersonation or organization access. Neither helper authorizes the operation.</p>
+<p><code>AuthenticatedUserDTO.user_uuid</code> is a <code>UUID</code>. UUID strings are parsed when constructing the DTO, and JSON serialization
+emits a string. Use <code>str(context.user_uuid)</code> when calling APIs that require string IDs. Invalid user UUIDs raise
 Pydantic <code>ValidationError</code> during direct DTO construction. Auth guards report invalid UserInfo subject UUIDs as
 <code>UnauthenticatedError</code>.</p>
-<p>Before upgrading a consuming service, replace <code>UUID(context.user_id)</code> with <code>context.user_id</code> when using this API.
-For a service that must support both older string IDs and the new UUID IDs, use <code>UUID(str(context.user_id))</code>.
-Passing a UUID instance directly to the standard-library <code>UUID()</code> constructor raises <code>AttributeError</code>.
+<p>Before upgrading a consuming service, rename <code>AuthenticatedUserDTO.user_id</code> to <code>user_uuid</code> in constructor arguments,
+attribute access, and serialized auth-context payloads. Replace <code>UUID(context.user_id)</code> with <code>context.user_uuid</code>.
+<code>KeycloakUserInfoDTO.user_uuid</code> exposes the string subject in Python while the <code>sub</code> alias preserves OIDC input
+and serialized claim names. Raw UserInfo mappings still use <code>sub</code>; token and actor claims keep their existing fields.
 Also check comparisons against string IDs and convert explicitly at APIs that accept only strings.</p>
 <p>Use <code>resolve_owner(context)</code> to resolve an owner from an explicit authenticated context, or
 <code>get_authenticated_owner()</code> to read the current request's <code>AuthContextManager</code> context. Both return an immutable
-<code>Owner(uuid: UUID, type: OwnerType)</code>; <code>OwnerType</code> contains <code>USER</code> and <code>ORGANIZATION</code>.
-<code>Owner</code> extends Pydantic <code>BaseDTO</code>, inheriting its frozen configuration and UUID/enum serialization.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_authenticated_owner</span><span class="p">,</span> <span class="n">resolve_owner</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.dtos.keycloak</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuthenticatedUserDTO</span><span class="p">,</span> <span class="n">Owner</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">PermissionDeniedError</span>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">OwnerType</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">owner_for</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">AuthenticatedUserDTO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Owner</span><span class="p">:</span>
-</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>    <span class="k">return</span> <span class="n">resolve_owner</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
-</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>
-</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a>
-</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">personal_owner</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Owner</span><span class="p">:</span>
-</span><span id="__span-25-12"><a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>    <span class="n">owner</span> <span class="o">=</span> <span class="n">get_authenticated_owner</span><span class="p">()</span>
-</span><span id="__span-25-13"><a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a>    <span class="k">if</span> <span class="n">owner</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">OwnerType</span><span class="o">.</span><span class="n">USER</span><span class="p">:</span>
-</span><span id="__span-25-14"><a id="__codelineno-25-14" name="__codelineno-25-14" href="#__codelineno-25-14"></a>        <span class="k">raise</span> <span class="n">PermissionDeniedError</span><span class="p">()</span>
-</span><span id="__span-25-15"><a id="__codelineno-25-15" name="__codelineno-25-15" href="#__codelineno-25-15"></a>    <span class="k">return</span> <span class="n">owner</span>
+<code>OwnerDTO(owner_uuid: UUID, type: OwnerType)</code>; <code>OwnerType</code> contains <code>USER</code> and <code>ORGANIZATION</code>.
+<code>OwnerDTO</code> extends Pydantic <code>BaseDTO</code>, inheriting its frozen configuration and UUID/enum serialization.
+<code>OwnerDTO</code> replaces the former <code>Owner</code> class without a compatibility alias. Update imports and type annotations
+from <code>Owner</code> to <code>OwnerDTO</code>, and rename the former <code>uuid</code> attribute and JSON key to <code>owner_uuid</code>.
+The result also includes <code>user: KeycloakUserInfoDTO | None</code> and
+<code>organization: KeycloakOrganizationClaimDTO | None</code>. Personal ownership populates only <code>user</code> from authenticated
+UserInfo; organization ownership populates only <code>organization</code> from the selected organization claim.
+These are available claims, including custom attributes, rather than complete administrative records. No additional
+Keycloak lookup is performed. Caller and impersonator information remains in <code>AuthenticatedUserDTO</code>.
+Direct construction may omit both claim fields for an identity-only value. When supplied, claims must match the
+owner type and UUID; inconsistent claims raise Pydantic <code>ValidationError</code>.
+JSON output includes both claim fields, with the unmatched field set to <code>null</code>. Do not return the enriched DTO
+from a public endpoint unless its UserInfo claims and organization attributes are appropriate for that endpoint.
+The read-only <code>is_user</code> and <code>is_organization</code> properties identify the owner kind. They are convenience properties
+and are not included in JSON output.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_authenticated_owner</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="n">owner</span> <span class="o">=</span> <span class="n">get_authenticated_owner</span><span class="p">()</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="k">if</span> <span class="n">owner</span><span class="o">.</span><span class="n">is_user</span> <span class="ow">and</span> <span class="n">owner</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>    <span class="n">username</span> <span class="o">=</span> <span class="n">owner</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">preferred_username</span>
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="k">elif</span> <span class="n">owner</span><span class="o">.</span><span class="n">is_organization</span> <span class="ow">and</span> <span class="n">owner</span><span class="o">.</span><span class="n">organization</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>    <span class="n">domain</span> <span class="o">=</span> <span class="n">owner</span><span class="o">.</span><span class="n">organization</span><span class="o">.</span><span class="n">domain</span>
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_authenticated_owner</span><span class="p">,</span> <span class="n">resolve_owner</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.dtos.keycloak</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuthenticatedUserDTO</span><span class="p">,</span> <span class="n">OwnerDTO</span>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">PermissionDeniedError</span>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">OwnerType</span>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>
+</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">owner_for</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">AuthenticatedUserDTO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OwnerDTO</span><span class="p">:</span>
+</span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>    <span class="k">return</span> <span class="n">resolve_owner</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+</span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>
+</span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a>
+</span><span id="__span-28-11"><a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">personal_owner</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">OwnerDTO</span><span class="p">:</span>
+</span><span id="__span-28-12"><a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a>    <span class="n">owner</span> <span class="o">=</span> <span class="n">get_authenticated_owner</span><span class="p">()</span>
+</span><span id="__span-28-13"><a id="__codelineno-28-13" name="__codelineno-28-13" href="#__codelineno-28-13"></a>    <span class="k">if</span> <span class="n">owner</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">OwnerType</span><span class="o">.</span><span class="n">USER</span><span class="p">:</span>
+</span><span id="__span-28-14"><a id="__codelineno-28-14" name="__codelineno-28-14" href="#__codelineno-28-14"></a>        <span class="k">raise</span> <span class="n">PermissionDeniedError</span><span class="p">()</span>
+</span><span id="__span-28-15"><a id="__codelineno-28-15" name="__codelineno-28-15" href="#__codelineno-28-15"></a>    <span class="k">return</span> <span class="n">owner</span>
 </span></code></pre></div>
 <p>Ownership resolution fails closed:</p>
 <ul>
