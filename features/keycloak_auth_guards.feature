@@ -413,3 +413,114 @@ Feature: Keycloak Auth Guards Testing
       | 2     | all      | grpc sync  |
       | 1     | selected | grpc async |
       | 2     | all      | grpc async |
+
+  @ownership-integration
+  Scenario Outline: FastAPI resolves resource ownership from real Keycloak authentication
+    Given a keycloak auth realm with a client
+    And I enable organization of realm named "auth-realm"
+    And I create a user with username "orguser" and password "pass123" using sync adapter
+    And user "orguser" belongs to <count> organizations with organization IDs enabled in UserInfo
+    And the default organization requirement is false
+    When user "orguser" obtains a token with organization scope "<scope>"
+    And the fastapi endpoint resolves ownership using "<resolver>" for user "orguser"
+    Then the authenticated ownership outcome is "<outcome>" for user "orguser"
+    And the keycloak auth context is cleared
+
+    Examples:
+      | count | scope            | resolver | outcome      |
+      | 0     | personal         | explicit | USER         |
+      | 2     | personal         | request  | USER         |
+      | 1     | selected         | explicit | ORGANIZATION |
+      | 2     | selected         | request  | ORGANIZATION |
+      | 1     | all              | request  | denied       |
+      | 2     | all              | explicit | denied       |
+      | 1     | aliases-selected | explicit | denied       |
+      | 1     | aliases-selected | request  | denied       |
+
+  @malformed-user-uuid
+  Scenario: FastAPI rejects a malformed UserInfo subject as unauthenticated
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And Keycloak UserInfo reports subject "not-a-uuid" for user "authuser"
+    When the protected identity endpoint is called with the access token of user "authuser"
+    Then the protected identity endpoint rejects the caller as unauthenticated
+    And the keycloak auth context is cleared
+
+  @unit @keycloak-ownership
+  Scenario: Resolve personal ownership
+    Given an ownership context with scope "openid" and organizations "none" and selection "none"
+    When I resolve the authenticated owner explicitly
+    Then the resolved owner is "USER" with UUID "11111111-1111-4111-8111-111111111111"
+    And the authenticated user ID is a UUID and serializes as a string
+    And the resolved owner is immutable
+
+  @unit @keycloak-ownership
+  Scenario: Resolve a selected organization
+    Given an ownership context with scope "openid organization:acme" and organizations "selected" and selection "selected"
+    When I resolve the authenticated owner explicitly
+    Then the resolved owner is "ORGANIZATION" with UUID "22222222-2222-4222-8222-222222222222"
+
+  @unit @keycloak-ownership
+  Scenario Outline: Reject ambiguous and inconsistent organization ownership
+    Given an ownership context with scope "<scope>" and organizations "<organizations>" and selection "<selection>"
+    When I resolve the authenticated owner explicitly
+    Then ownership resolution fails with "PERMISSION_DENIED"
+
+    Examples:
+      | scope                    | organizations | selection  |
+      | openid organization:*    | none          | none       |
+      | openid organization:*    | selected      | none       |
+      | openid organization:*    | selected      | selected   |
+      | openid organization:*    | multiple      | none       |
+      | openid organization      | none          | none       |
+      | openid organization:acme | none          | none       |
+      | openid                   | aliases       | none       |
+      | openid                   | selected      | none       |
+      | openid                   | multiple      | none       |
+      | openid                   | none          | selected   |
+      | openid                   | selected      | other      |
+      | openid                   | selected      | missing-id |
+      | openid                   | multiple      | selected   |
+      | openid                   | mixed         | selected   |
+
+  @unit @keycloak-ownership
+  Scenario: Never fall back to personal ownership when only raw claims contain an organization
+    Given an ownership context with scope "openid" and organizations "none" and selection "none"
+    And only raw UserInfo contains an organization claim
+    When I resolve the authenticated owner explicitly
+    Then ownership resolution fails with "PERMISSION_DENIED"
+
+  @unit @keycloak-ownership
+  Scenario: Personal ownership belongs to the subject during impersonation
+    Given an ownership context with scope "openid" and organizations "none" and selection "none"
+    And the ownership context has an impersonating actor
+    When I resolve the owner through the request context
+    Then the resolved owner is "USER" with UUID "11111111-1111-4111-8111-111111111111"
+
+  @unit @keycloak-ownership
+  Scenario: The request helper resolves organization ownership
+    Given an ownership context with scope "openid organization:acme" and organizations "selected" and selection "selected"
+    When I resolve the owner through the request context
+    Then the resolved owner is "ORGANIZATION" with UUID "22222222-2222-4222-8222-222222222222"
+
+  @unit @keycloak-ownership
+  Scenario: The request helper rejects wildcard ownership
+    Given an ownership context with scope "openid organization:*" and organizations "selected" and selection "none"
+    When I resolve the owner through the request context
+    Then ownership resolution fails with "PERMISSION_DENIED"
+
+  @unit @keycloak-ownership
+  Scenario: The request helper rejects unauthenticated access
+    Given no keycloak auth context is set
+    When I resolve the owner through the request context
+    Then ownership resolution fails with "UNAUTHENTICATED"
+
+  @unit @keycloak-ownership
+  Scenario Outline: Malformed UUIDs cannot enter the authenticated context
+    When I construct an ownership context with malformed "<field>"
+    Then the ownership context fails UUID validation
+
+    Examples:
+      | field                      |
+      | user UUID                  |
+      | organization UUID          |
+      | selected organization UUID |

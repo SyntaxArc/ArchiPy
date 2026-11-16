@@ -5,6 +5,51 @@ Feature: Keycloak Auth Guards for gRPC, Envoy and Caching Testing
   I want to test Keycloak authentication operations
   So that I can ensure secure authentication and management operations
 
+  @ownership-integration
+  Scenario Outline: gRPC resolves resource ownership from real Keycloak authentication
+    Given a keycloak auth realm with a client
+    And I enable organization of realm named "auth-realm"
+    And I create a user with username "orguser" and password "pass123" using sync adapter
+    And user "orguser" belongs to <count> organizations with organization IDs enabled in UserInfo
+    And the default organization requirement is false
+    When user "orguser" obtains a token with organization scope "<scope>"
+    And the grpc <mode> endpoint resolves ownership using "<resolver>" for user "orguser"
+    Then the authenticated ownership outcome is "<outcome>" for user "orguser"
+    And the keycloak auth context is cleared
+
+    Examples:
+      | mode  | count | scope            | resolver | outcome      |
+      | sync  | 0     | personal         | explicit | USER         |
+      | async | 0     | personal         | explicit | USER         |
+      | sync  | 2     | personal         | request  | USER         |
+      | async | 2     | personal         | request  | USER         |
+      | sync  | 1     | selected         | explicit | ORGANIZATION |
+      | async | 1     | selected         | explicit | ORGANIZATION |
+      | sync  | 2     | selected         | request  | ORGANIZATION |
+      | async | 2     | selected         | request  | ORGANIZATION |
+      | sync  | 1     | all              | request  | denied       |
+      | async | 1     | all              | request  | denied       |
+      | sync  | 2     | all              | explicit | denied       |
+      | async | 2     | all              | explicit | denied       |
+      | sync  | 1     | aliases-selected | explicit | denied       |
+      | async | 1     | aliases-selected | explicit | denied       |
+      | sync  | 1     | aliases-selected | request  | denied       |
+      | async | 1     | aliases-selected | request  | denied       |
+
+  @malformed-user-uuid
+  Scenario Outline: gRPC rejects a malformed UserInfo subject as unauthenticated
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And Keycloak UserInfo reports subject "not-a-uuid" for user "authuser"
+    When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
+    Then the keycloak auth servicer context was aborted with status "UNAUTHENTICATED"
+    And the keycloak auth grpc handler did not run
+    And the keycloak auth context is cleared
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
   @auth-guards
   Scenario Outline: Auth gRPC handler allows the owner of a resource
     Given a configured sync Keycloak adapter via <via>
@@ -155,18 +200,18 @@ Feature: Keycloak Auth Guards for gRPC, Envoy and Caching Testing
 
   Scenario: Auth context manager stores and returns the context
     Given no keycloak auth context is set
-    When the keycloak auth context is set for user "user-9"
-    Then the keycloak auth context belongs to user "user-9"
+    When the keycloak auth context is set for user "11111111-1111-4111-8111-111111111111"
+    Then the keycloak auth context belongs to user "11111111-1111-4111-8111-111111111111"
 
   Scenario: Auth context manager clears the context
-    Given the keycloak auth context is set for user "user-9"
+    Given the keycloak auth context is set for user "11111111-1111-4111-8111-111111111111"
     When the keycloak auth context is cleared by the manager
     Then the keycloak auth context is cleared
 
   Scenario: Auth context manager restores the outer context when cleared with the token of a nested one
-    Given the keycloak auth context is set for user "outer-user"
-    When the keycloak auth context of user "inner-user" is set and then cleared with its token
-    Then the keycloak auth context belongs to user "outer-user"
+    Given the keycloak auth context is set for user "22222222-2222-4222-8222-222222222222"
+    When the keycloak auth context of user "33333333-3333-4333-8333-333333333333" is set and then cleared with its token
+    Then the keycloak auth context belongs to user "22222222-2222-4222-8222-222222222222"
 
   Scenario: Auth context manager returns nothing when no context was set
     Given no keycloak auth context is set

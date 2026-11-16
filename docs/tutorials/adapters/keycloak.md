@@ -896,6 +896,57 @@ format. The same values remain available on every DTO in `auth_context.organizat
 Only organizations returned by UserInfo are exposed. A token scoped to one organization does not expose the user's
 other memberships through UserInfo. Enable the Keycloak mapper options for organization attributes and domains to include those details.
 
+## Resource Ownership
+
+`AuthenticatedUserDTO.user_id` is a `UUID`. UUID strings are parsed when constructing the DTO, and JSON serialization
+emits a string. Use `str(context.user_id)` when calling APIs that require string IDs. Invalid user UUIDs raise
+Pydantic `ValidationError` during direct DTO construction. Auth guards report invalid UserInfo subject UUIDs as
+`UnauthenticatedError`.
+
+Before upgrading a consuming service, replace `UUID(context.user_id)` with `context.user_id` when using this API.
+For a service that must support both older string IDs and the new UUID IDs, use `UUID(str(context.user_id))`.
+Passing a UUID instance directly to the standard-library `UUID()` constructor raises `AttributeError`.
+Also check comparisons against string IDs and convert explicitly at APIs that accept only strings.
+
+Use `resolve_owner(context)` to resolve an owner from an explicit authenticated context, or
+`get_authenticated_owner()` to read the current request's `AuthContextManager` context. Both return an immutable
+`Owner(uuid: UUID, type: OwnerType)`; `OwnerType` contains `USER` and `ORGANIZATION`.
+`Owner` extends Pydantic `BaseDTO`, inheriting its frozen configuration and UUID/enum serialization.
+
+```python
+from archipy.adapters.keycloak.auth import get_authenticated_owner, resolve_owner
+from archipy.models.dtos.keycloak import AuthenticatedUserDTO, Owner
+from archipy.models.errors import PermissionDeniedError
+from archipy.models.types import OwnerType
+
+
+def owner_for(context: AuthenticatedUserDTO) -> Owner:
+    return resolve_owner(context)
+
+
+def personal_owner() -> Owner:
+    owner = get_authenticated_owner()
+    if owner.type != OwnerType.USER:
+        raise PermissionDeniedError()
+    return owner
+```
+
+Ownership resolution fails closed:
+
+- A selected organization must have a UUID, and every organization in the context must have that same UUID.
+- Wildcard scope (`organization:*`) is rejected, even when no organizations are returned or a selection is supplied.
+- Organization claims without a selection, or organization scopes without a selection, raise `PermissionDeniedError`.
+- Personal ownership requires no organization claim or organization scope. It uses the subject UUID, including during
+  impersonation; the acting user or client does not become the owner.
+- Malformed organization UUIDs fail DTO validation before resolution.
+- `get_authenticated_owner()` raises `UnauthenticatedError` when no request context exists.
+
+Existing guards still allow personal, wildcard, and alias-only organization contexts when organization selection is
+optional. The resolver applies stricter rules only when a service asks for one resource owner. Neither resolver performs
+operation authorization. Keep service policies, such as restricting an operation to personal owners, in the service.
+Always carry both owner UUID and owner type into persistence queries; a UUID alone does not distinguish user and
+organization resources.
+
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining

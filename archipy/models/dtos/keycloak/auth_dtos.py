@@ -1,5 +1,7 @@
 """Keycloak-related data transfer objects."""
 
+from uuid import UUID
+
 from pydantic import Field, SecretStr
 
 from archipy.models.dtos.base_dtos import BaseDTO
@@ -23,9 +25,10 @@ class AuthenticatedUserDTO(BaseDTO):
 
     ``organizations`` preserves UserInfo organization details keyed by alias.
     ``selected_organization`` is None for personal or ``organization:*`` contexts.
+    ``user_id`` parses the authenticated subject as a UUID; JSON output remains a string.
     """
 
-    user_id: str
+    user_id: UUID
     username: str
     email: str
     roles: list[str]
