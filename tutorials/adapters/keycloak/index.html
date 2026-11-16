@@ -1366,6 +1366,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#resource-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource Ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4080,6 +4091,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#resource-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource Ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5036,6 +5058,50 @@ attributes <code>plan=["enterprise"]</code>, <code>country=["DE"]</code>, and <c
 format. The same values remain available on every DTO in <code>auth_context.organizations</code>, including wildcard organization contexts.</p>
 <p>Only organizations returned by UserInfo are exposed. A token scoped to one organization does not expose the user's
 other memberships through UserInfo. Enable the Keycloak mapper options for organization attributes and domains to include those details.</p>
+<h2 id="resource-ownership">Resource Ownership<a class="headerlink" href="#resource-ownership" title="Permanent link">&para;</a></h2>
+<p><code>AuthenticatedUserDTO.user_id</code> is a <code>UUID</code>. UUID strings are parsed when constructing the DTO, and JSON serialization
+emits a string. Use <code>str(context.user_id)</code> when calling APIs that require string IDs. Invalid user UUIDs raise
+Pydantic <code>ValidationError</code> during direct DTO construction. Auth guards report invalid UserInfo subject UUIDs as
+<code>UnauthenticatedError</code>.</p>
+<p>Before upgrading a consuming service, replace <code>UUID(context.user_id)</code> with <code>context.user_id</code> when using this API.
+For a service that must support both older string IDs and the new UUID IDs, use <code>UUID(str(context.user_id))</code>.
+Passing a UUID instance directly to the standard-library <code>UUID()</code> constructor raises <code>AttributeError</code>.
+Also check comparisons against string IDs and convert explicitly at APIs that accept only strings.</p>
+<p>Use <code>resolve_owner(context)</code> to resolve an owner from an explicit authenticated context, or
+<code>get_authenticated_owner()</code> to read the current request's <code>AuthContextManager</code> context. Both return an immutable
+<code>Owner(uuid: UUID, type: OwnerType)</code>; <code>OwnerType</code> contains <code>USER</code> and <code>ORGANIZATION</code>.
+<code>Owner</code> extends Pydantic <code>BaseDTO</code>, inheriting its frozen configuration and UUID/enum serialization.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_authenticated_owner</span><span class="p">,</span> <span class="n">resolve_owner</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.dtos.keycloak</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuthenticatedUserDTO</span><span class="p">,</span> <span class="n">Owner</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">PermissionDeniedError</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">OwnerType</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">owner_for</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">AuthenticatedUserDTO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Owner</span><span class="p">:</span>
+</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>    <span class="k">return</span> <span class="n">resolve_owner</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>
+</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a>
+</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">personal_owner</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Owner</span><span class="p">:</span>
+</span><span id="__span-25-12"><a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>    <span class="n">owner</span> <span class="o">=</span> <span class="n">get_authenticated_owner</span><span class="p">()</span>
+</span><span id="__span-25-13"><a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a>    <span class="k">if</span> <span class="n">owner</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="n">OwnerType</span><span class="o">.</span><span class="n">USER</span><span class="p">:</span>
+</span><span id="__span-25-14"><a id="__codelineno-25-14" name="__codelineno-25-14" href="#__codelineno-25-14"></a>        <span class="k">raise</span> <span class="n">PermissionDeniedError</span><span class="p">()</span>
+</span><span id="__span-25-15"><a id="__codelineno-25-15" name="__codelineno-25-15" href="#__codelineno-25-15"></a>    <span class="k">return</span> <span class="n">owner</span>
+</span></code></pre></div>
+<p>Ownership resolution fails closed:</p>
+<ul>
+<li>A selected organization must have a UUID, and every organization in the context must have that same UUID.</li>
+<li>Wildcard scope (<code>organization:*</code>) is rejected, even when no organizations are returned or a selection is supplied.</li>
+<li>Organization claims without a selection, or organization scopes without a selection, raise <code>PermissionDeniedError</code>.</li>
+<li>Personal ownership requires no organization claim or organization scope. It uses the subject UUID, including during
+  impersonation; the acting user or client does not become the owner.</li>
+<li>Malformed organization UUIDs fail DTO validation before resolution.</li>
+<li><code>get_authenticated_owner()</code> raises <code>UnauthenticatedError</code> when no request context exists.</li>
+</ul>
+<p>Existing guards still allow personal, wildcard, and alias-only organization contexts when organization selection is
+optional. The resolver applies stricter rules only when a service asks for one resource owner. Neither resolver performs
+operation authorization. Keep service policies, such as restricting an operation to personal owners, in the service.
+Always carry both owner UUID and owner type into persistence queries; a UUID alone does not distinguish user and
+organization resources.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
