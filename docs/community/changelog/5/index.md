@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.31.0](5.31.0.md) | 2026-11-16 | Enriched OwnerDTO, explicit UUID fields, OIDC subject alias, and combined authenticated actor/owner helpers |
 | [5.30.0](5.30.0.md) | 2026-11-16 | Authenticated resource ownership, UUID user identifiers, real-Keycloak BDD coverage, and reliable Envoy startup |
 | [5.29.1](5.29.1.md) | 2026-11-14 | SQLAlchemy atomic blocks release sessions after cancellation or interrupted rollback; dependency minimums and lockfile refreshed |
 | [5.29.0](5.29.0.md) | 2026-11-09 | Keycloak auth guards expose organization data from UserInfo with optional organization enforcement; dependency bounds and workspace dependencies refreshed |
