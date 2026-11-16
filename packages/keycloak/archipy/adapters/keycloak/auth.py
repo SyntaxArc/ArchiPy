@@ -21,7 +21,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.adapters.keycloak.deprecated_state import deprecated_dict, deprecated_list, deprecated_set
-from archipy.models.dtos.keycloak.owner_dto import Owner
+from archipy.models.dtos.keycloak.owner_dto import OwnerDTO
 from archipy.models.dtos.keycloak.token_dtos import (
     KeycloakOrganizationClaimDTO,
     KeycloakTokenClaimsDTO,
@@ -353,7 +353,7 @@ def _check_resource_access(
     resource_type: str | None = None,
 ) -> None:
     """Verify the caller owns the resource or holds an admin role."""
-    sub = user_info.sub
+    sub = user_info.user_uuid
     is_owner = sub == resource_uuid
     is_admin = bool(admin_roles) and not user_roles.isdisjoint(admin_roles)
     if not (is_owner or is_admin):
@@ -563,7 +563,7 @@ def _build_auth_context(
     lang: LanguageType = DEFAULT_LANG,
 ) -> AuthenticatedUserDTO:
     """Build an :class:`AuthContext` from UserInfo and decoded token claims."""
-    user_id = user_info.sub
+    user_id = user_info.user_uuid
     if not user_id:
         raise UnauthenticatedError()
     try:
@@ -589,7 +589,7 @@ def _build_auth_context(
             [a.id for a in actors],
         )
     return AuthenticatedUserDTO(
-        user_id=user_uuid,
+        user_uuid=user_uuid,
         username=user_info.preferred_username or "",
         email=user_info.email or "",
         roles=list(user_roles),
@@ -644,7 +644,7 @@ class AuthContextManager:
             _auth_context_var.reset(token)
 
 
-def resolve_owner(context: AuthenticatedUserDTO) -> Owner:
+def resolve_owner(context: AuthenticatedUserDTO) -> OwnerDTO:
     """Resolve one resource owner from an authenticated context without performing authorization.
 
     Wildcard, incomplete, or inconsistent organization contexts raise PermissionDeniedError.
@@ -671,22 +671,47 @@ def resolve_owner(context: AuthenticatedUserDTO) -> Owner:
             or any(organization.id != selected.id for organization in organizations)
         ):
             raise PermissionDeniedError(additional_data={"reason": "inconsistent organization selection"})
-        return Owner(uuid=selected.id, type=OwnerType.ORGANIZATION)
+        return OwnerDTO(owner_uuid=selected.id, type=OwnerType.ORGANIZATION, organization=selected)
     if (
         context.organizations
         or context.raw_user_info.organization is not None
         or any(scope == "organization" or scope.startswith("organization:") for scope in scopes)
     ):
         raise PermissionDeniedError(additional_data={"reason": "organization not selected"})
-    return Owner(uuid=context.user_id, type=OwnerType.USER)
+    return OwnerDTO(owner_uuid=context.user_uuid, type=OwnerType.USER, user=context.raw_user_info)
 
 
-def get_authenticated_owner() -> Owner:
+def get_authenticated_owner() -> OwnerDTO:
     """Resolve the current request's owner; raise UnauthenticatedError when no context exists."""
     context = AuthContextManager.get_auth_context()
     if context is None:
         raise UnauthenticatedError()
     return resolve_owner(context)
+
+
+def get_authenticated_actor() -> ActorDTO:
+    """Return the current actor, or the authenticated user when no delegation exists.
+
+    Raises:
+        UnauthenticatedError: If no request auth context exists.
+    """
+    context = AuthContextManager.get_auth_context()
+    if context is None:
+        raise UnauthenticatedError()
+    actor = context.current_actor
+    if actor is not None:
+        return actor
+    return ActorDTO(id=str(context.user_uuid), type=ActorType.USER)
+
+
+def get_authenticated_actor_and_owner() -> tuple[ActorDTO, OwnerDTO]:
+    """Return the acting party and resource owner for the current request.
+
+    Raises:
+        UnauthenticatedError: If no request auth context exists.
+        PermissionDeniedError: If the organization context does not identify one valid owner.
+    """
+    return get_authenticated_actor(), get_authenticated_owner()
 
 
 def _get_keycloak_adapter() -> KeycloakAdapter:
@@ -801,7 +826,7 @@ def fastapi_auth(
                     lang=lang,
                 ),
             )
-            if user_info.sub or organization_required
+            if user_info.user_uuid or organization_required
             else None
         )
         try:
@@ -965,6 +990,8 @@ __all__ = [
     "AuthContextManager",
     "clear_keycloak_remote_cache",
     "fastapi_auth",
+    "get_authenticated_actor",
+    "get_authenticated_actor_and_owner",
     "get_authenticated_owner",
     "grpc_auth",
     "resolve_owner",

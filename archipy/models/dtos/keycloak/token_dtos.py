@@ -65,7 +65,9 @@ class KeycloakUserInfoDTO(KeycloakOidcResponseDTO):
     Other custom claims are kept in ``model_extra``.
     """
 
-    sub: str | None = None
+    model_config = ConfigDict(serialize_by_alias=True)
+
+    user_uuid: str | None = Field(default=None, alias="sub", description="User subject UUID from the OIDC sub claim.")
     preferred_username: str | None = None
     email: str | None = None
     email_verified: bool | None = None

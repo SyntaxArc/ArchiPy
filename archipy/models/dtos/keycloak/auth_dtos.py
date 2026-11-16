@@ -25,10 +25,10 @@ class AuthenticatedUserDTO(BaseDTO):
 
     ``organizations`` preserves UserInfo organization details keyed by alias.
     ``selected_organization`` is None for personal or ``organization:*`` contexts.
-    ``user_id`` parses the authenticated subject as a UUID; JSON output remains a string.
+    ``user_uuid`` parses the authenticated subject as a UUID; JSON output remains a string.
     """
 
-    user_id: UUID
+    user_uuid: UUID
     username: str
     email: str
     roles: list[str]
