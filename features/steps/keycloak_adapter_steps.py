@@ -4149,17 +4149,21 @@ def step_components_request_succeed(context: Context, adapter_type: str) -> None
     context.logger.info(f"{adapter_type} components request succeeded")
 
 
-_USER_INFO = {"sub": "user-1", "preferred_username": "alice", "email": "a@example.com"}
+_USER_INFO = {
+    "sub": "11111111-1111-4111-8111-111111111111",
+    "preferred_username": "alice",
+    "email": "a@example.com",
+}
 
 
 @given("a decoded token without an act claim")
 def step_no_act(context: Context) -> None:
-    context.token_info = {"sub": "user-1"}
+    context.token_info = {"sub": _USER_INFO["sub"]}
 
 
 @given('a decoded token with act sub "{sub}" nested under act client "{client}"')
 def step_nested_act(context: Context, sub: str, client: str) -> None:
-    context.token_info = {"sub": "user-1", "act": {"sub": sub, "act": {"client_id": client}}}
+    context.token_info = {"sub": _USER_INFO["sub"], "act": {"sub": sub, "act": {"client_id": client}}}
 
 
 @when("the auth context is built")
