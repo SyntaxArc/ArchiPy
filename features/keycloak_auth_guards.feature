@@ -452,6 +452,56 @@ Feature: Keycloak Auth Guards Testing
     Then the resolved owner is "USER" with UUID "11111111-1111-4111-8111-111111111111"
     And the authenticated user ID is a UUID and serializes as a string
     And the resolved owner is immutable
+    And the public owner DTO has documented fields and no legacy alias
+
+  @unit @keycloak-ownership
+  Scenario Outline: Actor and owner helpers identify both parties consistently
+    Given an ownership context with scope "openid" and organizations "none" and selection "none"
+    And the acting chain is "<chain>"
+    When I resolve the authenticated actor
+    Then the actor is "<type>" with identifier "<identifier>"
+    When I resolve the authenticated actor and owner together
+    Then the actor is "<type>" with identifier "<identifier>"
+    And the resolved owner is "USER" with UUID "11111111-1111-4111-8111-111111111111"
+    And the keycloak auth context is cleared
+
+    Examples:
+      | chain  | type   | identifier                           |
+      | direct | USER   | 11111111-1111-4111-8111-111111111111 |
+      | user   | USER   | 44444444-4444-4444-8444-444444444444 |
+      | client | CLIENT | service-client                       |
+      | nested | CLIENT | service-client                       |
+
+  @unit @keycloak-ownership
+  Scenario: The actor helper rejects unauthenticated access
+    Given no keycloak auth context is set
+    When I resolve the authenticated actor
+    Then ownership resolution fails with "UNAUTHENTICATED"
+
+  @unit @keycloak-ownership
+  Scenario: Combined actor and owner helper rejects unauthenticated access
+    Given no keycloak auth context is set
+    When I resolve the authenticated actor and owner together
+    Then ownership resolution fails with "UNAUTHENTICATED"
+
+  @unit @keycloak-ownership
+  Scenario: Combined helper does not return a partial result for ambiguous ownership
+    Given an ownership context with scope "openid organization:*" and organizations "selected" and selection "none"
+    When I resolve the authenticated actor and owner together
+    Then ownership resolution fails with "PERMISSION_DENIED"
+
+  @unit @keycloak-ownership
+  Scenario Outline: Owner claim details must match the ownership identity
+    When I construct a "<type>" owner with "<claims>" claim details
+    Then the owner rejects inconsistent claim details
+
+    Examples:
+      | type         | claims                 |
+      | USER         | different user         |
+      | USER         | organization           |
+      | ORGANIZATION | user                   |
+      | ORGANIZATION | different organization |
+      | USER         | malformed user subject |
 
   @unit @keycloak-ownership
   Scenario: Resolve a selected organization

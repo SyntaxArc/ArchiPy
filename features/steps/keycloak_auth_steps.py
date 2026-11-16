@@ -402,7 +402,7 @@ def step_keycloak_auth_state_matches_context(context):
         assert set(state.user_roles) == set(during.roles)
         assert list(state.actor_chain) == list(during.actor_chain)
         assert dict(state.token_info) == during.token_info.to_dict()
-    assert during.token_info.sub == str(during.user_id)
+    assert during.token_info.sub == str(during.user_uuid)
 
 
 @then("the keycloak auth context is cleared after the dependency ends")
@@ -616,7 +616,7 @@ def step_keycloak_auth_no_context(context):
 def step_keycloak_auth_set_context(context, sub):
     AuthContextManager.set_auth_context(
         AuthenticatedUserDTO(
-            user_id=sub,
+            user_uuid=sub,
             username=f"{sub}-name",
             email=f"{sub}@example.com",
             roles=["reader"],
@@ -630,9 +630,9 @@ def step_keycloak_auth_set_context(context, sub):
 @when('the keycloak auth context of user "{sub}" is set and then cleared with its token')
 def step_keycloak_auth_nested_context(context, sub):
     token = AuthContextManager.set_auth_context(
-        AuthenticatedUserDTO(user_id=sub, username=sub, email="", roles=[], token="t", raw_user_info={"sub": sub}),
+        AuthenticatedUserDTO(user_uuid=sub, username=sub, email="", roles=[], token="t", raw_user_info={"sub": sub}),
     )
-    assert AuthContextManager.get_auth_context().user_id == UUID(sub)
+    assert AuthContextManager.get_auth_context().user_uuid == UUID(sub)
     AuthContextManager.clear_auth_context(token)
 
 
@@ -644,7 +644,7 @@ def step_keycloak_auth_clear_context(context):
 @then('the keycloak auth context belongs to user "{sub}"')
 def step_keycloak_auth_context_user(context, sub):
     auth = AuthContextManager.get_auth_context()
-    assert auth is not None and auth.user_id == UUID(sub)
+    assert auth is not None and auth.user_uuid == UUID(sub)
 
 
 @then("the keycloak auth context is cleared")
@@ -713,7 +713,7 @@ def step_keycloak_auth_userinfo_subject(context, subject, username):
     context.add_cleanup(adapter.remove_client_mapper, client_id, mapper.id)
     token = _access_token(scenario, username)
     assert adapter.get_token_info(token).sub == _user_id(scenario, username)
-    assert adapter.get_userinfo(token).sub == subject
+    assert adapter.get_userinfo(token).user_uuid == subject
 
 
 @when('the protected identity endpoint is called with the access token of user "{username}"')
@@ -844,11 +844,11 @@ def step_keycloak_auth_result_user(context, username):
     sc = _ctx(context)
     assert sc.get("error") is None, f"unexpected error {sc.get('error')!r}"
     info = sc.get("result")
-    assert info.sub == _user_id(sc, username)
+    assert info.user_uuid == _user_id(sc, username)
     assert info.preferred_username == username
     assert info.email == f"{username}@test.com"
     assert sc.get("request").state.user_info == info.to_dict()
-    assert sc.get("request").state.token_info["sub"] == info.sub
+    assert sc.get("request").state.token_info["sub"] == info.user_uuid
 
 
 @then('the keycloak auth request state user roles include "{roles}"')
@@ -867,7 +867,7 @@ def step_keycloak_auth_grpc_ran_as(context, username, roles):
     assert len(calls) == 1, f"handler ran {len(calls)} times"
     auth = calls[0]
     assert isinstance(auth, AuthenticatedUserDTO)
-    assert auth.user_id == UUID(_user_id(sc, username)), (auth.user_id, _user_id(sc, username))
+    assert auth.user_uuid == UUID(_user_id(sc, username)), (auth.user_uuid, _user_id(sc, username))
     assert auth.username == username, auth.username
     assert auth.token.get_secret_value() == _access_token(sc, username), "token differs"
     assert not set(_split(roles)) - set(auth.roles), auth.roles
@@ -1097,11 +1097,13 @@ def _resolve_request_owner(scenario):
     auth_context = AuthContextManager.get_auth_context()
     assert auth_context is not None, "the guard did not authenticate the caller"
     scenario.store("ownership_authenticated_context", auth_context)
-    owner = (
-        keycloak_auth.resolve_owner(auth_context)
-        if scenario.get("ownership_resolver") == "explicit"
-        else keycloak_auth.get_authenticated_owner()
-    )
+    if scenario.get("ownership_resolver") == "explicit":
+        actor = keycloak_auth.get_authenticated_actor()
+        owner = keycloak_auth.resolve_owner(auth_context)
+    else:
+        actor, owner = keycloak_auth.get_authenticated_actor_and_owner()
+    assert actor.type.value == "USER"
+    assert actor.id == str(auth_context.user_uuid)
     return owner.model_dump(mode="json")
 
 
@@ -1151,7 +1153,15 @@ def step_authenticated_ownership_outcome(context, outcome, username):
         else scenario.get("expected_selected_organization")
     )
     assert expected_uuid is not None
-    assert result == {"uuid": str(expected_uuid), "type": outcome}, result
+    assert result["owner_uuid"] == str(expected_uuid) and result["type"] == outcome, result
+    if outcome == "USER":
+        assert result["organization"] is None
+        assert result["user"]["sub"] == _user_id(scenario, username)
+        assert result["user"]["preferred_username"] == username
+    else:
+        assert result["user"] is None
+        assert result["organization"]["id"] == str(expected_uuid)
+        assert result["organization"]["plan"] == ["team"]
 
 
 @when('the organization {transport} guard is called for user "{username}"')

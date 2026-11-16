@@ -898,33 +898,82 @@ other memberships through UserInfo. Enable the Keycloak mapper options for organ
 
 ## Resource Ownership
 
-`AuthenticatedUserDTO.user_id` is a `UUID`. UUID strings are parsed when constructing the DTO, and JSON serialization
-emits a string. Use `str(context.user_id)` when calling APIs that require string IDs. Invalid user UUIDs raise
+Use `get_authenticated_actor()` and `get_authenticated_owner()` inside an authenticated FastAPI or gRPC handler
+to identify who is acting and whose resources are in scope:
+
+```python
+from archipy.adapters.keycloak.auth import get_authenticated_actor, get_authenticated_owner
+
+actor = get_authenticated_actor()
+owner = get_authenticated_owner()
+```
+
+When both are needed, use the combined helper, which delegates to the two individual helpers:
+
+```python
+from archipy.adapters.keycloak.auth import get_authenticated_actor_and_owner
+
+actor, owner = get_authenticated_actor_and_owner()
+```
+
+The combined helper propagates authentication and ownership errors instead of returning a partial result.
+
+The actor helper returns `ActorDTO`: the outermost delegated actor when present, otherwise the authenticated user.
+`actor.id` is a string because client actors may have non-UUID identifiers; `actor.type` is `ActorType.USER` or
+`ActorType.CLIENT`. Both helpers raise `UnauthenticatedError` without an auth context. The owner can differ from
+the actor during impersonation or organization access. Neither helper authorizes the operation.
+
+`AuthenticatedUserDTO.user_uuid` is a `UUID`. UUID strings are parsed when constructing the DTO, and JSON serialization
+emits a string. Use `str(context.user_uuid)` when calling APIs that require string IDs. Invalid user UUIDs raise
 Pydantic `ValidationError` during direct DTO construction. Auth guards report invalid UserInfo subject UUIDs as
 `UnauthenticatedError`.
 
-Before upgrading a consuming service, replace `UUID(context.user_id)` with `context.user_id` when using this API.
-For a service that must support both older string IDs and the new UUID IDs, use `UUID(str(context.user_id))`.
-Passing a UUID instance directly to the standard-library `UUID()` constructor raises `AttributeError`.
+Before upgrading a consuming service, rename `AuthenticatedUserDTO.user_id` to `user_uuid` in constructor arguments,
+attribute access, and serialized auth-context payloads. Replace `UUID(context.user_id)` with `context.user_uuid`.
+`KeycloakUserInfoDTO.user_uuid` exposes the string subject in Python while the `sub` alias preserves OIDC input
+and serialized claim names. Raw UserInfo mappings still use `sub`; token and actor claims keep their existing fields.
 Also check comparisons against string IDs and convert explicitly at APIs that accept only strings.
 
 Use `resolve_owner(context)` to resolve an owner from an explicit authenticated context, or
 `get_authenticated_owner()` to read the current request's `AuthContextManager` context. Both return an immutable
-`Owner(uuid: UUID, type: OwnerType)`; `OwnerType` contains `USER` and `ORGANIZATION`.
-`Owner` extends Pydantic `BaseDTO`, inheriting its frozen configuration and UUID/enum serialization.
+`OwnerDTO(owner_uuid: UUID, type: OwnerType)`; `OwnerType` contains `USER` and `ORGANIZATION`.
+`OwnerDTO` extends Pydantic `BaseDTO`, inheriting its frozen configuration and UUID/enum serialization.
+`OwnerDTO` replaces the former `Owner` class without a compatibility alias. Update imports and type annotations
+from `Owner` to `OwnerDTO`, and rename the former `uuid` attribute and JSON key to `owner_uuid`.
+The result also includes `user: KeycloakUserInfoDTO | None` and
+`organization: KeycloakOrganizationClaimDTO | None`. Personal ownership populates only `user` from authenticated
+UserInfo; organization ownership populates only `organization` from the selected organization claim.
+These are available claims, including custom attributes, rather than complete administrative records. No additional
+Keycloak lookup is performed. Caller and impersonator information remains in `AuthenticatedUserDTO`.
+Direct construction may omit both claim fields for an identity-only value. When supplied, claims must match the
+owner type and UUID; inconsistent claims raise Pydantic `ValidationError`.
+JSON output includes both claim fields, with the unmatched field set to `null`. Do not return the enriched DTO
+from a public endpoint unless its UserInfo claims and organization attributes are appropriate for that endpoint.
+The read-only `is_user` and `is_organization` properties identify the owner kind. They are convenience properties
+and are not included in JSON output.
+
+```python
+from archipy.adapters.keycloak.auth import get_authenticated_owner
+
+owner = get_authenticated_owner()
+if owner.is_user and owner.user is not None:
+    username = owner.user.preferred_username
+elif owner.is_organization and owner.organization is not None:
+    domain = owner.organization.domain
+```
 
 ```python
 from archipy.adapters.keycloak.auth import get_authenticated_owner, resolve_owner
-from archipy.models.dtos.keycloak import AuthenticatedUserDTO, Owner
+from archipy.models.dtos.keycloak import AuthenticatedUserDTO, OwnerDTO
 from archipy.models.errors import PermissionDeniedError
 from archipy.models.types import OwnerType
 
 
-def owner_for(context: AuthenticatedUserDTO) -> Owner:
+def owner_for(context: AuthenticatedUserDTO) -> OwnerDTO:
     return resolve_owner(context)
 
 
-def personal_owner() -> Owner:
+def personal_owner() -> OwnerDTO:
     owner = get_authenticated_owner()
     if owner.type != OwnerType.USER:
         raise PermissionDeniedError()

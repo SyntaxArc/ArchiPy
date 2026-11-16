@@ -38,7 +38,12 @@ FastAPI dependencies and gRPC decorators that authenticate a bearer token agains
 permissions and resource ownership. Both guards populate typed organization details from authenticated UserInfo in the auth context.
 `require_organization` overrides `KeycloakConfig.REQUIRE_ORGANIZATION`, which defaults to False.
 
-`resolve_owner(context)` returns an immutable `Owner` with a UUID and `OwnerType.USER` or `OwnerType.ORGANIZATION`.
+`resolve_owner(context)` returns an immutable `OwnerDTO` with `owner_uuid` and `OwnerType.USER` or `OwnerType.ORGANIZATION`.
+Only the matching `user` (`KeycloakUserInfoDTO`) or `organization` (`KeycloakOrganizationClaimDTO`) field is populated.
+`is_user` and `is_organization` are read-only convenience properties and do not appear in JSON output.
+`get_authenticated_actor()` returns the current outermost actor, falling back to the authenticated user for direct requests.
+It raises `UnauthenticatedError` when no request context exists.
+`get_authenticated_actor_and_owner()` combines both helpers and returns `(ActorDTO, OwnerDTO)`, propagating their errors.
 `get_authenticated_owner()` delegates using the current request context and raises `UnauthenticatedError` if absent.
 Ambiguous organization ownership raises `PermissionDeniedError`; it never falls back to personal ownership.
 See [resource ownership](../../tutorials/adapters/keycloak.md#resource-ownership) for the contract and UUID migration notes.
