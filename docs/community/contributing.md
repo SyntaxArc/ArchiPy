@@ -90,6 +90,8 @@ Run the tests to ensure your changes don't break existing functionality:
 make behave
 ```
 
+Run the local CI pipeline with a specific interpreter, for example `UV_PYTHON=3.15 make ci`.
+
 ### Documentation
 
 All new features or changes should be documented:

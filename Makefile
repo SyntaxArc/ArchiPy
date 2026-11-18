@@ -162,15 +162,19 @@ pre-commit: ## Run pre-commit hooks
 .PHONY: check
 check: format lint security behave ## Run all checks (format, linting, security, and tests)
 
+.PHONY: ci-install
+ci-install: ## Install locked CI dependencies for the selected Python interpreter
+	$(UV) sync --locked --all-extras
+
 .PHONY: ci
 ci: ## Run CI pipeline locally
 	@echo "${BLUE}Running CI pipeline...${NC}"
 	$(MAKE) clean
-	$(MAKE) install-dev
-	$(MAKE) lint
-	$(MAKE) security
-	$(MAKE) behave
-	$(MAKE) build
+	$(MAKE) ci-install
+	UV_NO_SYNC=true $(MAKE) lint
+	UV_NO_SYNC=true $(MAKE) security
+	UV_NO_SYNC=true $(MAKE) behave
+	$(UV) build --all-packages
 
 .PHONY: format-changes
 format-changes: ## Format only git-changed Python and Gherkin files

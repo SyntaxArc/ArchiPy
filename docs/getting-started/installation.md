@@ -9,7 +9,7 @@ description: Prerequisites, installation methods, and optional extras for ArchiP
 
 Before starting, ensure you have:
 
-- **Python 3.14 or higher**
+- **Python 3.14 or higher**. CI covers CPython 3.14 and 3.15.
 
   Check your version with:
 

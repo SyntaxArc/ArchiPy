@@ -6,14 +6,10 @@ on:
   pull_request:
     branches: [ '*' ]
 
-# A new push to a pull request or to master replaces the run of the same ref that is still going: every run starts
-# about 30 jobs and the runner limit queues the rest, so stale runs only delay the current one.
+# A new push to a pull request or to master cancels the previous run for that ref so stale jobs free runner slots.
 concurrency:
   group: behave-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  PYTHON_VERSION: "3.14"
 
 jobs:
   # Finds which feature groups a pull request can affect. A push to master runs every group.
@@ -269,9 +265,50 @@ jobs:
             - '!features/string_utils.feature'
             - '!features/totp_utils.feature'
 
-  behave:
-    name: behave (${{ matrix.group.name }})
+  dependencies:
+    name: prepare dependencies (Python ${{ matrix.python-version }})
     needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.groups != '[]'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}+gil
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.14", "3.15"]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: ./.github/actions/cache-uv
+      with:
+        suffix: adapters-${{ matrix.python-version }}
+
+    # Build native dependencies once per interpreter before the feature groups fan out.
+    - name: Prepare locked dependencies and verify Python
+      uses: ./.github/actions/run-uv
+      env:
+        EXPECTED_PYTHON: ${{ matrix.python-version }}
+      with:
+        command: |
+          make ci-install
+          uv run --no-sync python - <<'PY'
+          import os
+          import sys
+
+          from archipy.configs.base_config import BaseConfig
+
+          version = f"{sys.version_info.major}.{sys.version_info.minor}"
+          assert version == os.environ["EXPECTED_PYTHON"], version
+          PY
+          uv run --no-sync python -m compileall -q archipy packages
+          uv cache prune --ci
+
+  behave:
+    name: behave (Python ${{ matrix.python-version }}, ${{ matrix.group.name }})
+    needs: [changes, dependencies]
+    if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.dependencies.result == 'success' || needs.dependencies.result == 'skipped') }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -432,42 +469,36 @@ jobs:
             features/atomic_transactions_postgres.feature
             features/atomic_transactions_mysql.feature
             features/atomic_transactions_sqlite.feature
+        python-version: ["3.14", "3.15"]
 
     steps:
     - uses: actions/checkout@v6
       if: env.RUN == 'true'
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
+    - name: Restore uv dependency cache
       if: env.RUN == 'true'
-      uses: actions/setup-python@v6
+      uses: ./.github/actions/cache-uv
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    # The wheels are downloaded once and shared by every group: restoring the uv cache leaves `uv sync` only the
-    # linking of the packages. Only the first job to finish saves it; the others find the key taken.
-    - name: Install UV
-      if: env.RUN == 'true'
-      uses: astral-sh/setup-uv@v7
-      with:
-        enable-cache: true
-        cache-dependency-glob: uv.lock
-        cache-suffix: ${{ env.PYTHON_VERSION }}
-
-    # The locked versions of the extras (they pull in the workspace packages), without the dev tools, the pre-commit
-    # hooks and the dependency upgrade that `make install-dev` adds.
-    - name: Install dependencies
-      if: env.RUN == 'true'
-      run: uv sync --locked --all-extras
+        suffix: adapters-${{ matrix.python-version }}
 
     - name: Run Behave features in parallel
       if: env.RUN == 'true'
-      run: make behave FEATURE="${{ matrix.group.features }}" EXCLUDE="${{ matrix.group.exclude }}"
+      uses: ./.github/actions/run-uv
+      env:
+        UV_PYTHON: ${{ matrix.python-version }}+gil
+        FEATURES: ${{ matrix.group.features }}
+        EXCLUDED_FEATURES: ${{ matrix.group.exclude }}
+      with:
+        testcontainers: "true"
+        command: |
+          make ci-install
+          UV_NO_SYNC=true make behave FEATURE="$FEATURES" EXCLUDE="$EXCLUDED_FEATURES"
 
     - name: Upload feature logs
       if: failure() && env.RUN == 'true'
       uses: actions/upload-artifact@v4
       with:
-        name: behave-logs-${{ matrix.group.name }}
+        name: behave-logs-${{ matrix.python-version }}-${{ matrix.group.name }}
         path: .behave-logs/
         include-hidden-files: true
         retention-days: 7
@@ -476,13 +507,13 @@ jobs:
   behave-tests:
     name: behave-tests
     if: always()
-    needs: [changes, behave]
+    needs: [changes, dependencies, behave]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
     - name: Fail when a group failed
       run: |
         if [ "${{ needs.changes.result }}" != "success" ] || [ "${{ needs.behave.result }}" != "success" ]; then
-          echo "Group selection: ${{ needs.changes.result }}, behave groups: ${{ needs.behave.result }}"
+          echo "Group selection: ${{ needs.changes.result }}, dependencies: ${{ needs.dependencies.result }}, behave groups: ${{ needs.behave.result }}"
           exit 1
         fi
