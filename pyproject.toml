@@ -19,15 +19,22 @@ license = { file = "LICENSE" }
 # Core optional dependencies
 aiosqlite = ["archipy-sqlite==0.1.0"]  # Pinned to core version on publish flow!
 behave = ["behave>=1.3.3"]
-cache = ["cachetools>=8.0.0", "async-lru>=2.4.0"]
+cache = [
+    "cachetools>=8.0.1",
+    "async-lru>=2.4.0",
+]
 dependency-injection = ["dependency-injector>=4.49.1"]
 elasticsearch = ["archipy-elasticsearch==0.1.0"]  # Pinned to core version on publish flow!
 elasticsearch-async = ["archipy-elasticsearch==0.1.0", "elasticsearch[async]>=9.5.1"]  # Pinned to core version on publish flow!
 fakeredis = ["fakeredis>=2.40.0"]
 fastapi = [
-    "fastapi[all]>=0.163.1",
+    "fastapi[all]>=0.163.2",
 ]
-grpc = ["grpcio>=1.85.1", "grpcio-health-checking>=1.85.1", "protobuf>=7.36.2"]
+grpc = [
+    "grpcio>=1.85.3",
+    "grpcio-health-checking>=1.85.3",
+    "protobuf>=7.36.2",
+]
 jwt = ["pyjwt>=2.15.1"]
 kafka = ["archipy-kafka==0.1.0"]  # Pinned to core version on publish flow!
 keycloak = ["archipy-keycloak==0.1.0"]  # Pinned to core version on publish flow!
@@ -38,7 +45,7 @@ mysql = ["archipy-mysql[sync]==0.1.0"]  # Pinned to core version on publish flow
 mysql-async = ["archipy-mysql[async]==0.1.0"]  # Pinned to core version on publish flow!
 postgres = ["archipy-postgres==0.1.0"]  # Pinned to core version on publish flow!
 pydantic-ai = [
-    "pydantic-ai-slim>=2.69.0",
+    "pydantic-ai-slim>=2.70.0",
 ]
 redis = ["archipy-redis==0.1.0"]  # Pinned to core version on publish flow!
 saman-ipg = ["archipy-saman-ipg==0.1.0"]  # Pinned to core version on publish flow!
@@ -105,15 +112,15 @@ archipy-saman-ipg = { workspace = true }
 dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.9.4",
-    "boto3-stubs>=1.44.4",
+    "boto3-stubs>=1.44.5",
     "codespell>=2.4.3",
     "coverage>=7.17.3",
     "gherkin-formatter>=0.1.3",
-    "import-linter>=2.16",
+    "import-linter>=2.17",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.7.0",
     "ruff>=0.17.5",
-    "ty>=0.0.104",
+    "ty>=0.0.105",
     "types-grpcio>=1.85.0.20261028",
     "types-protobuf>=7.35.1.20260906",
     "types-pymysql>=1.2.4.20261116",
