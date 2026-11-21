@@ -577,6 +577,8 @@ class AppUtils:
             responses=responses_dict,
             lifespan=resolved_lifespan,
             telemetry=FastAPIUtils.build_otel_telemetry_config(config),
+            max_body_size=config.FASTAPI.MAX_BODY_SIZE,
+            form_limits=config.FASTAPI.FORM_LIMITS,
         )
 
         FastAPIUtils.setup_cors(app, config)

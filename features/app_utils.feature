@@ -5,6 +5,23 @@ Feature: App Utilities
     Then the app should have the correct title
     And exception handlers should be registered
 
+  Scenario: FastAPI rejects a request body above the configured limit
+    Given a FastAPI form endpoint with request body limit 32 and form field limit 1
+    When I submit the URL-encoded form "name=abcdefghijklmnopqrstuvwxyz0123456789"
+    Then the response should return status code 413
+    And the response media type should be "text/plain"
+
+  Scenario Outline: FastAPI applies the configured form field count limit
+    Given a FastAPI form endpoint with request body limit 32 and form field limit 1
+    When I submit the URL-encoded form "<body>"
+    Then the response should return status code <status>
+    And the response media type should be "application/json"
+
+    Examples:
+      | body                 | status |
+      | name=ArchiPy         | 200    |
+      | name=ArchiPy&extra=1 | 400    |
+
   Scenario: Handle a common custom exception
     Given a FastAPI app
     When an endpoint raises a "BaseError"
