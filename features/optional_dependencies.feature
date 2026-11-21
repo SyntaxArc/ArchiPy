@@ -50,3 +50,5 @@ Feature: Optional dependencies
       | mysql         |
       | postgres      |
       | sqlite        |
+      | starrocks     |
+      | minio         |

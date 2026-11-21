@@ -1,5 +1,6 @@
 """Step definitions for optional dependency scenarios."""
 
+import os
 import subprocess
 import sys
 
@@ -193,7 +194,44 @@ adapter.session_manager.engine.dispose()
 """,
             "SQLiteSQLAlchemyAdapter()",
         ),
+        "starrocks": (
+            """
+from archipy.adapters.starrocks.sqlalchemy.adapters import StarrocksSQLAlchemyAdapter
+from archipy.configs.config_template import StarRocksSQLAlchemyConfig
+adapter = StarrocksSQLAlchemyAdapter(StarRocksSQLAlchemyConfig())
+adapter.session_manager.engine.dispose()
+""",
+            "StarrocksSQLAlchemyAdapter()",
+        ),
+        "minio": (
+            """
+from archipy.adapters.minio.adapters import MinioAdapter
+from archipy.configs.config_template import MinioConfig
+MinioAdapter(MinioConfig(ENDPOINT="localhost:9000", ACCESS_KEY="example", SECRET_KEY="example"))
+""",
+            "MinioAdapter()",
+        ),
+        "vault": (
+            """
+import os
+from archipy.adapters.vault.adapters import VaultAdapter
+from archipy.configs.config_template import VaultConfig
+VaultAdapter(VaultConfig(ADDR=os.environ["BDD_VAULT_ADDR"], TOKEN=os.environ["BDD_VAULT_TOKEN"]))
+""",
+            "VaultAdapter()",
+        ),
     }[package]
+    environment = None
+    if package == "vault":
+        from archipy.configs.base_config import BaseConfig
+
+        vault = BaseConfig.global_config().VAULT
+        assert vault.ADDR and vault.TOKEN is not None
+        environment = {
+            **os.environ,
+            "BDD_VAULT_ADDR": vault.ADDR,
+            "BDD_VAULT_TOKEN": vault.TOKEN.get_secret_value(),
+        }
     script = "import sys\n" + setup + f"""
 assert ("archipy.configs.base_config" in sys.modules) == (sys.version_info < (3, 15))
 
@@ -212,5 +250,12 @@ settings = BaseConfig.model_construct()
 BaseConfig.set_global(settings)
 assert get_settings() is settings
 """
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+        env=environment,
+    )
     assert result.returncode == 0, result.stderr

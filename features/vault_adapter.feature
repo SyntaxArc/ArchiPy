@@ -7,6 +7,9 @@ Feature: Vault Adapter
   Background:
     Given a configured Vault adapter
 
+  Scenario: Authenticate with Vault using explicit settings in a fresh process
+    Then the "vault" adapter can defer global configuration when given explicit settings
+
   Scenario: Write and read a KV v2 secret
     When I write Vault secret "app/db" with key "password" and value "s3cret"
     Then reading Vault secret "app/db" should return key "password" with value "s3cret"
