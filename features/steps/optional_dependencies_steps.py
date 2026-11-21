@@ -108,3 +108,29 @@ assert {name!r} in exports and {implementation!r} in exports
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
     assert result.returncode == 0, result.stderr
+
+
+@then("importing the public Keycloak ports honors the interpreter's import timing")
+def step_keycloak_port_import_timing(context):
+    script = """
+import sys
+
+from archipy.adapters.keycloak.ports import AsyncKeycloakPort, KeycloakPort
+
+eager = sys.version_info < (3, 15)
+mixin_module = "archipy.adapters.keycloak._resources.groups.adapter"
+assert ("keycloak" in sys.modules) == eager
+assert (mixin_module in sys.modules) == eager
+
+from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+from archipy.adapters.keycloak._resources import KeycloakGroupsMixin
+from archipy.adapters.keycloak._resources.groups.adapter import KeycloakGroupsMixin as CanonicalMixin
+
+assert "keycloak" in sys.modules
+assert KeycloakGroupsMixin is CanonicalMixin
+assert issubclass(KeycloakAdapter, KeycloakPort)
+assert issubclass(KeycloakAdapter, KeycloakGroupsMixin)
+assert issubclass(AsyncKeycloakAdapter, AsyncKeycloakPort)
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr

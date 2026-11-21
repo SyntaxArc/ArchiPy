@@ -1,5 +1,35 @@
 """Keycloak resource packages: one port and one adapter mixin per Keycloak admin REST resource."""
 
+# Port classes use this module too. Defer the SDK-backed mixins until the concrete adapters need them.
+__lazy_modules__ = [
+    "archipy.adapters.keycloak._base",
+    "archipy.adapters.keycloak._protocols.authzen.adapter",
+    "archipy.adapters.keycloak._protocols.oidc.adapter",
+    "archipy.adapters.keycloak._protocols.uma.adapter",
+    "archipy.adapters.keycloak._resources.attack_detection.adapter",
+    "archipy.adapters.keycloak._resources.authentication.adapter",
+    "archipy.adapters.keycloak._resources.authorization.adapter",
+    "archipy.adapters.keycloak._resources.client_certificates.adapter",
+    "archipy.adapters.keycloak._resources.client_initial_access.adapter",
+    "archipy.adapters.keycloak._resources.client_registration_policy.adapter",
+    "archipy.adapters.keycloak._resources.client_scopes.adapter",
+    "archipy.adapters.keycloak._resources.clients.adapter",
+    "archipy.adapters.keycloak._resources.components.adapter",
+    "archipy.adapters.keycloak._resources.groups.adapter",
+    "archipy.adapters.keycloak._resources.identity_providers.adapter",
+    "archipy.adapters.keycloak._resources.keys.adapter",
+    "archipy.adapters.keycloak._resources.organizations.adapter",
+    "archipy.adapters.keycloak._resources.organizations.group_adapter",
+    "archipy.adapters.keycloak._resources.protocol_mappers.adapter",
+    "archipy.adapters.keycloak._resources.realms.adapter",
+    "archipy.adapters.keycloak._resources.required_actions.adapter",
+    "archipy.adapters.keycloak._resources.role_mappings.adapter",
+    "archipy.adapters.keycloak._resources.roles.adapter",
+    "archipy.adapters.keycloak._resources.roles_by_id.adapter",
+    "archipy.adapters.keycloak._resources.scope_mappings.adapter",
+    "archipy.adapters.keycloak._resources.users.adapter",
+]
+
 from archipy.adapters.keycloak._base import KeycloakExceptionHandlerMixin
 from archipy.adapters.keycloak._protocols.authzen.adapter import (
     AsyncKeycloakAuthzenMixin,

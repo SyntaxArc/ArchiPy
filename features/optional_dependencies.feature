@@ -35,3 +35,6 @@ Feature: Optional dependencies
       | ScyllaDBPort      | archipy.adapters.scylladb                             | ScyllaDBAdapter                 | adapters.ScyllaDBAdapter                | cassandra           |
       | PaymentRequestDTO | archipy.adapters.internet_payment_gateways.ir.parsian | ParsianShaparakPaymentAdapter   | adapters.ParsianShaparakPaymentAdapter  | zeep                |
       | PaymentRequestDTO | archipy.adapters.internet_payment_gateways.ir.saman   | SamanShaparakPaymentAdapter     | adapters.SamanShaparakPaymentAdapter    | httpx2              |
+
+  Scenario: The Keycloak ports defer the SDK on Python 3.15
+    Then importing the public Keycloak ports honors the interpreter's import timing
