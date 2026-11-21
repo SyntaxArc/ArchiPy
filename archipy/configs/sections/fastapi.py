@@ -18,9 +18,9 @@ class FastAPIFormLimits(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    max_fields: NonNegativeInt | None = None
-    max_files: NonNegativeInt | None = None
-    max_part_size: NonNegativeInt | None = None
+    MAX_FIELDS: NonNegativeInt | None = Field(default=None, serialization_alias="max_fields")
+    MAX_FILES: NonNegativeInt | None = Field(default=None, serialization_alias="max_files")
+    MAX_PART_SIZE: NonNegativeInt | None = Field(default=None, serialization_alias="max_part_size")
 
 
 class FastAPIConfig(BaseModel):
