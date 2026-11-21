@@ -186,7 +186,7 @@ class WorkerHandle(PortWorkerHandle):
             grace_period (int, optional): Seconds this call waits for the worker to stop before giving up
                 (plus ``SHUTDOWN_MARGIN_SECONDS``). If None, uses the configured graceful shutdown timeout.
                 It does not change the SDK's own grace period for running activities, which is fixed when the
-                worker is built (``WORKER_GRACEFUL_SHUTDOWN_SECONDS``).
+                worker is built (``WORKER.GRACEFUL_SHUTDOWN_SECONDS``).
 
         Raises:
             WorkerShutdownError: If the worker fails to stop gracefully.
@@ -336,7 +336,7 @@ class TemporalWorkerManager(WorkerPort):
         Returns:
             PollerBehavior: Autoscaling pollers, or the SDK default of at most 5 pollers.
         """
-        if self.config.WORKER_POLLER_AUTOSCALING:
+        if self.config.WORKER.POLLER_AUTOSCALING:
             return PollerBehaviorAutoscaling()
         return PollerBehaviorSimpleMaximum(maximum=5)
 
@@ -344,9 +344,9 @@ class TemporalWorkerManager(WorkerPort):
         """Resolve how many eager activities one workflow task may reserve.
 
         Returns:
-            int: ``WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS``, or the SDK default when it is unset.
+            int: ``WORKER.MAX_EAGER_ACTIVITY_RESERVATIONS``, or the SDK default when it is unset.
         """
-        reservations = self.config.WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS
+        reservations = self.config.WORKER.MAX_EAGER_ACTIVITY_RESERVATIONS
         return _SDK_EAGER_ACTIVITY_RESERVATIONS if reservations is None else reservations
 
     @override
@@ -439,16 +439,16 @@ class TemporalWorkerManager(WorkerPort):
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
                 max_concurrent_activities=max_concurrent_activities,
-                max_cached_workflows=self.config.WORKER_MAX_CACHED_WORKFLOWS,
-                graceful_shutdown_timeout=timedelta(seconds=self.config.WORKER_GRACEFUL_SHUTDOWN_SECONDS),
-                debug_mode=self.config.WORKER_DEBUG_MODE,
-                disable_eager_activity_execution=self.config.WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION,
+                max_cached_workflows=self.config.WORKER.MAX_CACHED_WORKFLOWS,
+                graceful_shutdown_timeout=timedelta(seconds=self.config.WORKER.GRACEFUL_SHUTDOWN_SECONDS),
+                debug_mode=self.config.WORKER.DEBUG_MODE,
+                disable_eager_activity_execution=self.config.WORKER.DISABLE_EAGER_ACTIVITY_EXECUTION,
                 max_eager_activity_reservations_per_workflow_task=self._eager_activity_reservations(),
-                max_concurrent_local_activities=self.config.WORKER_MAX_CONCURRENT_LOCAL_ACTIVITIES,
+                max_concurrent_local_activities=self.config.WORKER.MAX_CONCURRENT_LOCAL_ACTIVITIES,
                 tuner=tuner,
                 activity_executor=activity_executor,
-                max_activities_per_second=self.config.WORKER_MAX_ACTIVITIES_PER_SECOND,
-                max_task_queue_activities_per_second=self.config.WORKER_MAX_TASK_QUEUE_ACTIVITIES_PER_SECOND,
+                max_activities_per_second=self.config.WORKER.MAX_ACTIVITIES_PER_SECOND,
+                max_task_queue_activities_per_second=self.config.WORKER.MAX_TASK_QUEUE_ACTIVITIES_PER_SECOND,
                 workflow_task_poller_behavior=self._poller_behavior(),
                 activity_task_poller_behavior=self._poller_behavior(),
             )
@@ -464,7 +464,7 @@ class TemporalWorkerManager(WorkerPort):
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
                 max_concurrent_activities=max_concurrent_activities,
-                graceful_shutdown_seconds=self.config.WORKER_GRACEFUL_SHUTDOWN_SECONDS,
+                graceful_shutdown_seconds=self.config.WORKER.GRACEFUL_SHUTDOWN_SECONDS,
             )
 
             # Start the worker

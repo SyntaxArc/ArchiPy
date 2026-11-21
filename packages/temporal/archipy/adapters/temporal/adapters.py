@@ -224,13 +224,13 @@ class TemporalAdapter(TemporalPort):
             "namespace": self.config.NAMESPACE,
             "lazy": self.config.LAZY_CONNECT,
             "keep_alive_config": KeepAliveConfig(
-                interval_millis=self.config.KEEP_ALIVE_INTERVAL_MS,
-                timeout_millis=self.config.KEEP_ALIVE_TIMEOUT_MS,
+                interval_millis=self.config.KEEP_ALIVE.INTERVAL_MS,
+                timeout_millis=self.config.KEEP_ALIVE.TIMEOUT_MS,
             ),
             "retry_config": RetryConfig(
-                initial_interval_millis=self.config.CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS,
-                max_interval_millis=self.config.CLIENT_RPC_RETRY_MAX_INTERVAL_MS,
-                max_retries=self.config.CLIENT_RPC_RETRY_MAX_RETRIES,
+                initial_interval_millis=self.config.CLIENT_RETRY.INITIAL_INTERVAL_MS,
+                max_interval_millis=self.config.CLIENT_RETRY.MAX_INTERVAL_MS,
+                max_retries=self.config.CLIENT_RETRY.MAX_RETRIES,
             ),
         }
         connect_kwargs.update(self._optional_connect_kwargs())
@@ -323,9 +323,9 @@ class TemporalAdapter(TemporalPort):
         """
         return any(
             [
-                self.config.TLS_CA_CERT,
-                self.config.TLS_CLIENT_CERT,
-                self.config.TLS_SERVER_NAME,
+                self.config.TLS.CA_CERT,
+                self.config.TLS.CLIENT_CERT,
+                self.config.TLS.SERVER_NAME,
             ],
         )
 
@@ -334,20 +334,20 @@ class TemporalAdapter(TemporalPort):
 
         Returns:
             TLSConfig | bool | None: A TLS configuration when TLS settings are present (unless TLS is forced off),
-                the ``TLS_ENABLED`` flag otherwise, or None to let the SDK enable TLS when an API key is set.
+                the ``TLS.ENABLED`` flag otherwise, or None to let the SDK enable TLS when an API key is set.
         """
-        if self.config.TLS_ENABLED is False:
+        if self.config.TLS.ENABLED is False:
             return False
         if self._has_tls_config():
             return self._build_tls_config()
-        return self.config.TLS_ENABLED
+        return self.config.TLS.ENABLED
 
     def _build_tls_config(self) -> TLSConfig:
         """Build TLS configuration for secure connections from the configured files.
 
         Server-only TLS needs just the CA certificate (or none, to use the system CA bundle); mutual TLS adds the
-        client certificate and key. ``TLS_VERIFICATION_SERVER_NAME`` checks the certificate name without changing
-        the SNI that ``TLS_SERVER_NAME`` sets.
+        client certificate and key. ``TLS.VERIFICATION_SERVER_NAME`` checks the certificate name without changing
+        the SNI that ``TLS.SERVER_NAME`` sets.
 
         Returns:
             TLSConfig: The TLS configuration object.
@@ -357,11 +357,11 @@ class TemporalAdapter(TemporalPort):
         """
         try:
             return TLSConfig(
-                server_root_ca_cert=self._read_tls_file(self.config.TLS_CA_CERT),
-                client_cert=self._read_tls_file(self.config.TLS_CLIENT_CERT),
-                client_private_key=self._read_tls_file(self.config.TLS_CLIENT_KEY),
-                domain=self.config.TLS_SERVER_NAME,
-                verification_server_name=self.config.TLS_VERIFICATION_SERVER_NAME,
+                server_root_ca_cert=self._read_tls_file(self.config.TLS.CA_CERT),
+                client_cert=self._read_tls_file(self.config.TLS.CLIENT_CERT),
+                client_private_key=self._read_tls_file(self.config.TLS.CLIENT_KEY),
+                domain=self.config.TLS.SERVER_NAME,
+                verification_server_name=self.config.TLS.VERIFICATION_SERVER_NAME,
             )
         except OSError as error:
             raise InvalidArgumentError(additional_data={"error_type": type(error).__name__}) from error
@@ -458,11 +458,11 @@ class TemporalAdapter(TemporalPort):
             RetryPolicy: The configured retry policy.
         """
         return RetryPolicy(
-            initial_interval=timedelta(seconds=self.config.RETRY_INITIAL_INTERVAL),
-            maximum_attempts=self.config.RETRY_MAXIMUM_ATTEMPTS,
-            backoff_coefficient=self.config.RETRY_BACKOFF_COEFFICIENT,
-            maximum_interval=timedelta(seconds=self.config.RETRY_MAXIMUM_INTERVAL),
-            non_retryable_error_types=self.config.RETRY_NON_RETRYABLE_ERROR_TYPES,
+            initial_interval=timedelta(seconds=self.config.RETRY.INITIAL_INTERVAL),
+            maximum_attempts=self.config.RETRY.MAXIMUM_ATTEMPTS,
+            backoff_coefficient=self.config.RETRY.BACKOFF_COEFFICIENT,
+            maximum_interval=timedelta(seconds=self.config.RETRY.MAXIMUM_INTERVAL),
+            non_retryable_error_types=self.config.RETRY.NON_RETRYABLE_ERROR_TYPES,
         )
 
     def _build_workflow_retry_policy(self) -> RetryPolicy | None:
@@ -473,7 +473,7 @@ class TemporalAdapter(TemporalPort):
         Returns:
             RetryPolicy | None: The configured retry policy, or None when workflow retries are disabled.
         """
-        if not self.config.WORKFLOW_RETRY_ENABLED:
+        if not self.config.WORKFLOW.RETRY_ENABLED:
             return None
         return self._build_retry_policy()
 
@@ -559,9 +559,9 @@ class TemporalAdapter(TemporalPort):
                 *positional_args,
                 id=workflow_id,
                 task_queue=task_queue,
-                execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
-                run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
-                task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
+                execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW.EXECUTION_TIMEOUT),
+                run_timeout=self._timeout(run_timeout, self.config.WORKFLOW.RUN_TIMEOUT),
+                task_timeout=self._timeout(task_timeout, self.config.WORKFLOW.TASK_TIMEOUT),
                 retry_policy=self._build_workflow_retry_policy(),
                 memo=memo,
                 search_attributes=search_attributes,
@@ -619,9 +619,9 @@ class TemporalAdapter(TemporalPort):
                 *positional_args,
                 id=workflow_id,
                 task_queue=task_queue,
-                execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
-                run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
-                task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
+                execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW.EXECUTION_TIMEOUT),
+                run_timeout=self._timeout(run_timeout, self.config.WORKFLOW.RUN_TIMEOUT),
+                task_timeout=self._timeout(task_timeout, self.config.WORKFLOW.TASK_TIMEOUT),
                 retry_policy=self._build_workflow_retry_policy(),
                 **self._id_policies(id_reuse_policy, id_conflict_policy),
             )

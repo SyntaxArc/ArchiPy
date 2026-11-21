@@ -678,6 +678,22 @@ _SECTION_SETTINGS = {
     ("Elasticsearch", "an unknown node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "fastest"}),
     ("Elasticsearch", "the random node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "random"}),
     ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
+    ("Temporal", "a grouped client certificate without a key"): (
+        TemporalConfig,
+        {"TLS": {"CLIENT_CERT": "/tmp/client.pem"}},
+    ),
+    ("Temporal", "a grouped run timeout above the execution one"): (
+        TemporalConfig,
+        {"WORKFLOW": {"RUN_TIMEOUT": 7200, "EXECUTION_TIMEOUT": 3600}},
+    ),
+    ("Temporal", "a grouped keep alive timeout above the interval"): (
+        TemporalConfig,
+        {"KEEP_ALIVE": {"TIMEOUT_MS": 60000, "INTERVAL_MS": 30000}},
+    ),
+    ("Temporal", "a grouped client certificate with a key"): (
+        TemporalConfig,
+        {"TLS": {"CLIENT_CERT": "/tmp/client.pem", "CLIENT_KEY": "/tmp/client.key"}},
+    ),
     ("Temporal", "only a CA certificate"): (TemporalConfig, {"TLS_CA_CERT": "/tmp/ca.pem"}),
     ("Temporal", "a client key without a certificate"): (TemporalConfig, {"TLS_CLIENT_KEY": "/tmp/client.key"}),
     ("Temporal", "a verification name without a CA"): (

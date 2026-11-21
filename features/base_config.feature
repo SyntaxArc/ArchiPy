@@ -270,6 +270,10 @@ Feature: Base Configuration System
       | Temporal      | a task timeout above the run timeout               | accepted |
       | Temporal      | a verification name without a CA                   | rejected |
       | Temporal      | a verification name with a CA                      | accepted |
+      | Temporal      | a grouped client certificate without a key         | rejected |
+      | Temporal      | a grouped run timeout above the execution one      | rejected |
+      | Temporal      | a grouped keep alive timeout above the interval    | rejected |
+      | Temporal      | a grouped client certificate with a key            | accepted |
 
   Scenario Outline: A ScyllaDB configuration with <tls> builds <context>
     When a ScyllaDB TLS context is built with <tls>

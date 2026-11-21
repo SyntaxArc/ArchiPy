@@ -87,6 +87,7 @@ from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelMetricsExporter, TemporalConfig
+from archipy.configs.sections.temporal import TemporalWorkerConfig
 from archipy.models.errors import BaseError, ConfigurationError, InvalidArgumentError
 from archipy.models.errors.temporal_errors import WorkerShutdownError
 
@@ -358,7 +359,7 @@ def step_temporal_worker_manager_with_debug_mode(context) -> None:
         if hasattr(scenario_context, "temporal_adapter") and scenario_context.temporal_adapter is not None
         else temporal_container.config
     )
-    temporal_config = base_config.model_copy(update={"WORKER_DEBUG_MODE": True})
+    temporal_config = base_config.model_copy(update={"WORKER": TemporalWorkerConfig(DEBUG_MODE=True)})
     scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
     context.logger.info("Temporal worker manager configured with debug mode enabled")
 
@@ -1733,7 +1734,7 @@ def step_temporal_adapter_config_should_have_client_identity(context, identity: 
 def step_temporal_worker_manager_config_should_have_debug_mode(context) -> None:
     """Verify Temporal worker manager config has debug mode enabled."""
     worker_manager = get_temporal_worker_manager(context)
-    assert worker_manager.config.WORKER_DEBUG_MODE is True, "Expected WORKER_DEBUG_MODE to be enabled"
+    assert worker_manager.config.WORKER.DEBUG_MODE is True, "Expected WORKER.DEBUG_MODE to be enabled"
     context.logger.info("Temporal worker manager config has debug mode enabled")
 
 
@@ -2443,7 +2444,7 @@ def step_same_run_id(context):
 def step_temporal_worker_manager_tuned(context, rate):
     scenario_context = get_current_scenario_context(context)
     temporal_config = get_temporal_adapter(context).config.model_copy(
-        update={"WORKER_POLLER_AUTOSCALING": True, "WORKER_MAX_ACTIVITIES_PER_SECOND": float(rate)},
+        update={"WORKER": TemporalWorkerConfig(POLLER_AUTOSCALING=True, MAX_ACTIVITIES_PER_SECOND=float(rate))},
     )
     scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
 
@@ -2452,7 +2453,7 @@ def step_temporal_worker_manager_tuned(context, rate):
 def step_temporal_worker_manager_eager_reservations(context, value):
     scenario_context = get_current_scenario_context(context)
     temporal_config = get_temporal_adapter(context).config.model_copy(
-        update={"WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS": None if value == "none" else int(value)},
+        update={"WORKER": TemporalWorkerConfig(MAX_EAGER_ACTIVITY_RESERVATIONS=None if value == "none" else int(value))},
     )
     scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
 
