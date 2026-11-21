@@ -201,13 +201,13 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
             A dictionary of pool-related keyword arguments for engine creation.
         """
         return {
-            "pool_pre_ping": configs.POOL_PRE_PING,
-            "pool_size": configs.POOL_SIZE,
-            "pool_recycle": configs.POOL_RECYCLE_SECONDS,
-            "pool_reset_on_return": configs.POOL_RESET_ON_RETURN,
-            "pool_timeout": configs.POOL_TIMEOUT,
-            "pool_use_lifo": configs.POOL_USE_LIFO,
-            "max_overflow": configs.POOL_MAX_OVERFLOW,
+            "pool_pre_ping": configs.POOL.PRE_PING,
+            "pool_size": configs.POOL.SIZE,
+            "pool_recycle": configs.POOL.RECYCLE_SECONDS,
+            "pool_reset_on_return": configs.POOL.RESET_ON_RETURN,
+            "pool_timeout": configs.POOL.TIMEOUT,
+            "pool_use_lifo": configs.POOL.USE_LIFO,
+            "max_overflow": configs.POOL.MAX_OVERFLOW,
         }
 
     def _get_session_generator(self) -> scoped_session:
@@ -430,13 +430,13 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
             A dictionary of pool-related keyword arguments for engine creation.
         """
         return {
-            "pool_pre_ping": configs.POOL_PRE_PING,
-            "pool_size": configs.POOL_SIZE,
-            "pool_recycle": configs.POOL_RECYCLE_SECONDS,
-            "pool_reset_on_return": configs.POOL_RESET_ON_RETURN,
-            "pool_timeout": configs.POOL_TIMEOUT,
-            "pool_use_lifo": configs.POOL_USE_LIFO,
-            "max_overflow": configs.POOL_MAX_OVERFLOW,
+            "pool_pre_ping": configs.POOL.PRE_PING,
+            "pool_size": configs.POOL.SIZE,
+            "pool_recycle": configs.POOL.RECYCLE_SECONDS,
+            "pool_reset_on_return": configs.POOL.RESET_ON_RETURN,
+            "pool_timeout": configs.POOL.TIMEOUT,
+            "pool_use_lifo": configs.POOL.USE_LIFO,
+            "max_overflow": configs.POOL.MAX_OVERFLOW,
         }
 
     def _get_session_generator(self) -> async_scoped_session:
