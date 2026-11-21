@@ -1,9 +1,9 @@
 """FastAPI configuration."""
 
 import warnings
-from typing import Self, TypedDict
+from typing import Self
 
-from pydantic import BaseModel, Field, NonNegativeInt, model_validator, with_config
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, model_validator
 
 from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI
 
@@ -13,13 +13,14 @@ def _moved(name: str) -> str:
     return f"Use UVICORN.{name} instead; FASTAPI.{name} will be removed in 6.0.0"
 
 
-@with_config(extra="forbid")
-class FastAPIFormLimits(TypedDict, total=False):
+class FastAPIFormLimits(BaseModel):
     """Overrides for the number of fields and files and the size of each text field in bytes."""
 
-    max_fields: NonNegativeInt
-    max_files: NonNegativeInt
-    max_part_size: NonNegativeInt
+    model_config = ConfigDict(extra="forbid")
+
+    max_fields: NonNegativeInt | None = None
+    max_files: NonNegativeInt | None = None
+    max_part_size: NonNegativeInt | None = None
 
 
 class FastAPIConfig(BaseModel):

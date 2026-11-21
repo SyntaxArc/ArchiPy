@@ -7,7 +7,7 @@ import re
 import warnings
 from concurrent import futures
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from archipy.configs.base_config import BaseConfig
 from archipy.models.errors import (
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence, Set as AbstractSet
     from contextlib import AbstractAsyncContextManager
 
+    from fastapi._form_limits import _FormLimits
     from fastapi.routing import APIRoute
     from fastapi.telemetry import TelemetryConfig
     from grpc.aio import Server as GrpcAioServer
@@ -567,6 +568,7 @@ class AppUtils:
             responses_dict = dict(common_responses.items())
 
         resolved_lifespan = cls._compose_otel_lifespan(config, lifespan)
+        form_limits = config.FASTAPI.FORM_LIMITS
         app = FastAPI(
             title=config.FASTAPI.PROJECT_NAME,
             openapi_url=config.FASTAPI.OPENAPI_URL,
@@ -578,7 +580,7 @@ class AppUtils:
             lifespan=resolved_lifespan,
             telemetry=FastAPIUtils.build_otel_telemetry_config(config),
             max_body_size=config.FASTAPI.MAX_BODY_SIZE,
-            form_limits=config.FASTAPI.FORM_LIMITS,
+            form_limits=cast("_FormLimits", form_limits.model_dump(exclude_none=True)) if form_limits else None,
         )
 
         FastAPIUtils.setup_cors(app, config)

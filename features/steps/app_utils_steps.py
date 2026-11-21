@@ -19,6 +19,7 @@ from starlette.testclient import TestClient
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import FastAPIConfig, RedisMode
+from archipy.configs.sections.fastapi import FastAPIFormLimits
 from archipy.configs.sections.grpc import GrpcConfig
 from archipy.helpers.utils.app_utils import (
     AppUtils,
@@ -87,7 +88,7 @@ def step_then_check_exception_handlers(context):
 def step_given_fastapi_form_limits(context, body_limit, field_limit):
     scenario_context = get_current_scenario_context(context)
     config = BaseConfig.global_config().model_copy()
-    config.FASTAPI = FastAPIConfig(MAX_BODY_SIZE=body_limit, FORM_LIMITS={"max_fields": field_limit})
+    config.FASTAPI = FastAPIConfig(MAX_BODY_SIZE=body_limit, FORM_LIMITS=FastAPIFormLimits(max_fields=field_limit))
     app = AppUtils.create_fastapi_app(config)
 
     @app.post("/form")
