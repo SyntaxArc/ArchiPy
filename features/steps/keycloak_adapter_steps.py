@@ -4326,10 +4326,14 @@ async def step_async_adapter_reads_claims(context: Context, username: str) -> No
     assert claims is not None and claims.preferred_username == username, claims
 
 
-def _no_admin_adapter(kind: str, **overrides: Any) -> AsyncKeycloakAdapter | KeycloakAdapter:
+def _no_admin_adapter(
+    kind: str,
+    *,
+    token_validation: dict[str, str] | None = None,
+    **overrides: Any,
+) -> AsyncKeycloakAdapter | KeycloakAdapter:
     """Build a sync or async adapter without admin mode, overriding config fields."""
     base = BaseConfig.global_config().KEYCLOAK
-    token_validation = {"EXPECTED_ISSUER": overrides.pop("EXPECTED_ISSUER")} if "EXPECTED_ISSUER" in overrides else {}
     config = base.model_copy(
         update={
             "CLIENT_SECRET_KEY": None,
@@ -4477,7 +4481,7 @@ async def step_adapter_expecting_claim_rejects_token(
     """A token whose issuer or audience differs from the configured expectation is rejected."""
     scenario_context = get_current_scenario_context(context)
     token = scenario_context.get(f"token_response_{username}").access_token
-    adapter = _no_admin_adapter(kind, REALM_NAME=realm_name, CLIENT_ID=client_name, **{setting: value})
+    adapter = _no_admin_adapter(kind, REALM_NAME=realm_name, CLIENT_ID=client_name, token_validation={setting: value})
     valid, code = await _check_token(kind, adapter, token)
     assert not valid and code == "INVALID_TOKEN", f"expected rejection, got valid={valid} code={code}"
 
@@ -4497,7 +4501,12 @@ async def step_adapter_enforces_correct_issuer(
     scenario_context = get_current_scenario_context(context)
     access_token = scenario_context.get(f"token_response_{username}").access_token
     issuer = _unverified_claims(access_token)["iss"]
-    adapter = _no_admin_adapter(kind, REALM_NAME=realm_name, CLIENT_ID=client_name, EXPECTED_ISSUER=issuer)
+    adapter = _no_admin_adapter(
+        kind,
+        REALM_NAME=realm_name,
+        CLIENT_ID=client_name,
+        token_validation={"EXPECTED_ISSUER": issuer},
+    )
     assert await _check_token(kind, adapter, access_token) == (True, None)
 
 
