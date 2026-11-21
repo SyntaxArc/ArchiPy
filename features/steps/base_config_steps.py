@@ -645,6 +645,23 @@ _SECTION_SETTINGS = {
         {"RECONNECTION_POLICY": "EXPONENTIAL", "RECONNECTION_BASE_DELAY": 1.0, "RECONNECTION_MAX_DELAY": 5.0},
     ),
     ("ScyllaDB", "TLS enabled with a CA file"): (ScyllaDBConfig, {"TLS_ENABLED": True, "TLS_CA_FILE": "/tmp/ca.pem"}),
+    ("ScyllaDB", "a grouped client certificate without a key"): (
+        ScyllaDBConfig,
+        {"TLS": {"ENABLED": True, "CERT_FILE": "/tmp/client.pem"}},
+    ),
+    ("ScyllaDB", "a grouped CA file with TLS disabled"): (ScyllaDBConfig, {"TLS": {"CA_FILE": "/tmp/ca.pem"}}),
+    ("ScyllaDB", "a grouped exponential reconnection above the max"): (
+        ScyllaDBConfig,
+        {"RECONNECTION": {"POLICY": "EXPONENTIAL", "BASE_DELAY": 20.0, "MAX_DELAY": 5.0}},
+    ),
+    ("ScyllaDB", "a grouped replication without datacenters"): (
+        ScyllaDBConfig,
+        {"REPLICATION": {"STRATEGY": "NetworkTopologyStrategy", "CONFIG": {}}},
+    ),
+    ("ScyllaDB", "grouped TLS enabled with a CA file"): (
+        ScyllaDBConfig,
+        {"TLS": {"ENABLED": True, "CA_FILE": "/tmp/ca.pem"}},
+    ),
     ("Elasticsearch", "only a username"): (ElasticsearchConfig, {"HTTP_USER_NAME": "user"}),
     ("Elasticsearch", "only a password"): (ElasticsearchConfig, {"HTTP_PASSWORD": "secret"}),
     ("Elasticsearch", "only an API key"): (ElasticsearchConfig, {"API_KEY": "id"}),

@@ -128,22 +128,22 @@ def _cluster_resilience_options(config: ScyllaDBConfig) -> dict[str, Any]:
         dict[str, Any]: Keyword arguments for ``Cluster``.
     """
     options: dict[str, Any] = {}
-    if config.IDLE_HEARTBEAT_INTERVAL is not None:
-        options["idle_heartbeat_interval"] = config.IDLE_HEARTBEAT_INTERVAL
-    if config.IDLE_HEARTBEAT_TIMEOUT is not None:
-        options["idle_heartbeat_timeout"] = config.IDLE_HEARTBEAT_TIMEOUT
+    if config.HEARTBEAT.IDLE_INTERVAL is not None:
+        options["idle_heartbeat_interval"] = config.HEARTBEAT.IDLE_INTERVAL
+    if config.HEARTBEAT.IDLE_TIMEOUT is not None:
+        options["idle_heartbeat_timeout"] = config.HEARTBEAT.IDLE_TIMEOUT
     if config.CONTROL_CONNECTION_TIMEOUT is not None:
         options["control_connection_timeout"] = config.CONTROL_CONNECTION_TIMEOUT
-    if config.RECONNECTION_POLICY == "CONSTANT":
+    if config.RECONNECTION.POLICY == "CONSTANT":
         options["reconnection_policy"] = ConstantReconnectionPolicy(
-            delay=config.RECONNECTION_BASE_DELAY,
-            max_attempts=config.RECONNECTION_MAX_ATTEMPTS,
+            delay=config.RECONNECTION.BASE_DELAY,
+            max_attempts=config.RECONNECTION.MAX_ATTEMPTS,
         )
-    elif config.RECONNECTION_POLICY == "EXPONENTIAL":
+    elif config.RECONNECTION.POLICY == "EXPONENTIAL":
         options["reconnection_policy"] = ExponentialReconnectionPolicy(
-            base_delay=config.RECONNECTION_BASE_DELAY,
-            max_delay=config.RECONNECTION_MAX_DELAY,
-            max_attempts=config.RECONNECTION_MAX_ATTEMPTS,
+            base_delay=config.RECONNECTION.BASE_DELAY,
+            max_delay=config.RECONNECTION.MAX_DELAY,
+            max_attempts=config.RECONNECTION.MAX_ATTEMPTS,
         )
     return options
 
@@ -160,10 +160,10 @@ def _execution_profile_options(config: ScyllaDBConfig) -> dict[str, Any]:
     options: dict[str, Any] = {}
     if config.SERIAL_CONSISTENCY_LEVEL is not None:
         options["serial_consistency_level"] = _SERIAL_CONSISTENCY_LEVELS[config.SERIAL_CONSISTENCY_LEVEL]
-    if config.SPECULATIVE_EXECUTION_DELAY is not None:
+    if config.SPECULATIVE_EXECUTION.DELAY is not None:
         options["speculative_execution_policy"] = ConstantSpeculativeExecutionPolicy(
-            delay=config.SPECULATIVE_EXECUTION_DELAY,
-            max_attempts=config.SPECULATIVE_EXECUTION_MAX_ATTEMPTS,
+            delay=config.SPECULATIVE_EXECUTION.DELAY,
+            max_attempts=config.SPECULATIVE_EXECUTION.MAX_ATTEMPTS,
         )
     return options
 
@@ -177,12 +177,12 @@ def _tls_cluster_options(config: ScyllaDBConfig) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Keyword arguments for ``Cluster``; empty when TLS is disabled.
     """
-    if not config.TLS_ENABLED:
+    if not config.TLS.ENABLED:
         return {}
     options: dict[str, Any] = {}
-    if config.TLS_SERVER_NAME:
-        options["ssl_options"] = {"server_hostname": config.TLS_SERVER_NAME}
-    if not config.TLS_SESSION_CACHE_ENABLED:
+    if config.TLS.SERVER_NAME:
+        options["ssl_options"] = {"server_hostname": config.TLS.SERVER_NAME}
+    if not config.TLS.SESSION_CACHE_ENABLED:
         options["ssl_session_cache"] = None
     return options
 
@@ -218,9 +218,11 @@ def _warn_insecure_connection(config: ScyllaDBConfig) -> None:
     Args:
         config (ScyllaDBConfig): The ScyllaDB configuration.
     """
-    if config.USERNAME and config.PASSWORD and not config.TLS_ENABLED:
-        logger.warning("ScyllaDB credentials are sent in plain text: enable TLS_ENABLED to encrypt the connection")
-    if config.TLS_ENABLED and config.TLS_VERIFY_MODE == "CERT_NONE":
+    if config.USERNAME and config.PASSWORD and not config.TLS.ENABLED:
+        logger.warning(
+            "ScyllaDB credentials are sent in plain text: enable SCYLLADB.TLS.ENABLED to encrypt the connection",
+        )
+    if config.TLS.ENABLED and config.TLS.VERIFY_MODE == "CERT_NONE":
         logger.warning("ScyllaDB TLS certificate verification is disabled: the server identity is not checked")
 
 
@@ -262,13 +264,13 @@ def _build_cluster(config: ScyllaDBConfig) -> Cluster:
     else:
         load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
 
-    if config.RETRY_POLICY == "FALLTHROUGH":
+    if config.RETRY.POLICY == "FALLTHROUGH":
         retry_policy = FallthroughRetryPolicy()
     else:  # EXPONENTIAL_BACKOFF (default)
         retry_policy = _IdempotentSafeRetryPolicy(
-            max_num_retries=config.RETRY_MAX_NUM_RETRIES,
-            min_interval=config.RETRY_MIN_INTERVAL,
-            max_interval=config.RETRY_MAX_INTERVAL,
+            max_num_retries=config.RETRY.MAX_NUM_RETRIES,
+            min_interval=config.RETRY.MIN_INTERVAL,
+            max_interval=config.RETRY.MAX_INTERVAL,
         )
     # Shard awareness disabled for Docker/NAT environments
     shard_aware_options = None
@@ -511,10 +513,10 @@ class ScyllaDBExceptionHandlerMixin:
         if replication_factor is not None:
             replication_factor = cls._validate_non_negative_int(replication_factor, "replication_factor")
 
-        if config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and config.REPLICATION_CONFIG:
+        if config.REPLICATION.STRATEGY == "NetworkTopologyStrategy" and config.REPLICATION.CONFIG:
             parts = ["'class': 'NetworkTopologyStrategy'"]
             factors: list[int] = []
-            for dc, configured in config.REPLICATION_CONFIG.items():
+            for dc, configured in config.REPLICATION.CONFIG.items():
                 validated_dc = cls._validate_cql_identifier(dc, "replication_datacenter")
                 factor = configured if replication_factor is None else replication_factor
                 factors.append(factor)
@@ -763,7 +765,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = self.get_session()
         try:
-            if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+            if self.config.PREPARED_CACHE.ENABLED:
                 # Use cached version if available - call the cached method
                 cached_method: Any = getattr(self, "_prepare_cached", None)
                 if cached_method is not None:
@@ -778,7 +780,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     def __post_init__(self) -> None:
         """Post-initialization hook to apply cache decorator if enabled."""
-        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+        if self.config.PREPARED_CACHE.ENABLED:
             # Create a method to cache
             def _prepare_internal(keyspace: str | None, query: str) -> PreparedStatement:  # noqa: ARG001
                 """Prepare a CQL statement; the keyspace only keys the cache."""
@@ -793,8 +795,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
             # Apply cache decorator
             cached_prepare = ttl_cache(
-                ttl_seconds=self.config.PREPARED_STATEMENT_CACHE_TTL_SECONDS,
-                maxsize=self.config.PREPARED_STATEMENT_CACHE_SIZE,
+                ttl_seconds=self.config.PREPARED_CACHE.TTL_SECONDS,
+                maxsize=self.config.PREPARED_CACHE.SIZE,
             )(_prepare_internal)
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
@@ -814,7 +816,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             ResultSet: The query result set.
         """
-        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+        if self.config.PREPARED_CACHE.ENABLED:
             statement = self.prepare(query.replace("%s", "?"))
             statement.is_idempotent = idempotent
             return self.execute_prepared(statement, params)
@@ -1310,7 +1312,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = await self.get_session()
         try:
-            if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+            if self.config.PREPARED_CACHE.ENABLED:
                 # Use cached version if available - call the cached method
                 cached_method: Any = getattr(self, "_prepare_cached", None)
                 if cached_method is not None:
@@ -1325,7 +1327,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     def __post_init__(self) -> None:
         """Post-initialization hook to apply cache decorator if enabled."""
-        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+        if self.config.PREPARED_CACHE.ENABLED:
             # Create an async method to cache
             async def _prepare_internal(keyspace: str | None, query: str) -> PreparedStatement:  # noqa: ARG001
                 """Prepare a CQL statement asynchronously; the keyspace only keys the cache."""
@@ -1340,8 +1342,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
             # Apply async cache decorator
             cached_prepare = alru_cache(
-                ttl=self.config.PREPARED_STATEMENT_CACHE_TTL_SECONDS,
-                maxsize=self.config.PREPARED_STATEMENT_CACHE_SIZE,
+                ttl=self.config.PREPARED_CACHE.TTL_SECONDS,
+                maxsize=self.config.PREPARED_CACHE.SIZE,
             )(_prepare_internal)
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
@@ -1367,7 +1369,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             ResultSet: The query result set.
         """
-        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+        if self.config.PREPARED_CACHE.ENABLED:
             statement = await self.prepare(query.replace("%s", "?"))
             statement.is_idempotent = idempotent
             return await self.execute_prepared(statement, params)

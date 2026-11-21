@@ -248,6 +248,11 @@ Feature: Base Configuration System
       | ScyllaDB      | TLS enabled with a CA file                         | accepted |
       | ScyllaDB      | an exponential reconnection base above the maximum | rejected |
       | ScyllaDB      | an exponential reconnection within bounds          | accepted |
+      | ScyllaDB      | a grouped client certificate without a key         | rejected |
+      | ScyllaDB      | a grouped CA file with TLS disabled                | rejected |
+      | ScyllaDB      | a grouped exponential reconnection above the max   | rejected |
+      | ScyllaDB      | a grouped replication without datacenters          | rejected |
+      | ScyllaDB      | grouped TLS enabled with a CA file                 | accepted |
       | Elasticsearch | only a username                                    | rejected |
       | Elasticsearch | only a password                                    | rejected |
       | Elasticsearch | only an API key                                    | rejected |
