@@ -460,7 +460,6 @@ dev = [
     { name = "types-grpcio" },
     { name = "types-protobuf" },
     { name = "types-pymysql" },
-    { name = "types-regex" },
     { name = "validate-pyproject" },
 ]
 docs = [
@@ -552,7 +551,6 @@ dev = [
     { name = "types-grpcio", specifier = ">=1.85.0.20261028" },
     { name = "types-protobuf", specifier = ">=7.35.1.20260906" },
     { name = "types-pymysql", specifier = ">=1.2.4.20261116" },
-    { name = "types-regex", specifier = ">=2026.11.19.20261119" },
     { name = "validate-pyproject", specifier = ">=0.27" },
 ]
 docs = [
@@ -4346,15 +4344,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9b/5f/5c75921a6347614498a5a7ba9e8d0bd511eafcfcffd69d346508765b421b/types_pymysql-1.2.4.20261116.tar.gz", hash = "sha256:f3ac18c67025589cb9118afe58d0c46ea50dae9ffac6f7c83030a2456b39c549", size = 23084, upload-time = "2026-11-16T08:43:05.42Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/be/ad88550f6aa77c3497c522d02ea08f9f634b673e03497ad4a1b908f43570/types_pymysql-1.2.4.20261116-py3-none-any.whl", hash = "sha256:9bfa6dad28311fa1f674ce7d26c3435c7f33c86a636d4d6a28a1097dd42cc750", size = 23462, upload-time = "2026-11-16T08:43:04.383Z" },
-]
-
-[[package]]
-name = "types-regex"
-version = "2026.11.19.20261119"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/37/d4/e3586873a6b36be46d231593021edb769ec3341c6a0e234b8ddb02120e56/types_regex-2026.11.19.20261119.tar.gz", hash = "sha256:e26dacbf9f9ca46281ecccc85ab42947cd6c7900d9092435972e80b37c8511d3", size = 14466, upload-time = "2026-11-19T09:36:09.846Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/3d/4319315751ce54a6ef58e95b3135e6d94b89799e9d5bc0851f70e315d670/types_regex-2026.11.19.20261119-py3-none-any.whl", hash = "sha256:bf0ed475d94ed594bfc228378c9ca6b17437f90a03438dc6ddb96652dbb19fe1", size = 11221, upload-time = "2026-11-19T09:36:08.913Z" },
 ]
 
 [[package]]
