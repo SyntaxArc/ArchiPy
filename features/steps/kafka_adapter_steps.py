@@ -1086,15 +1086,23 @@ def step_async_consumer_invalid_subscription(context):
     get_current_scenario_context(context).store("kafka_operation_error", errors[0] if len(errors) == 2 else None)
 
 
-def _rdkafka_thread_count():
-    """Count the native librdkafka threads of this process (they are named ``rdk:*``)."""
+def _rdkafka_thread_ids():
+    """Return the ids of the native librdkafka threads of this process (they are named ``rdk:*``).
+
+    A thread of an earlier client may exit while the listing is read, which removes its ``/proc`` entry. Such a thread
+    is no longer running, so it is skipped instead of failing the step.
+    """
     import os
 
-    count = 0
+    thread_ids = set()
     for task in os.listdir("/proc/self/task"):
-        with open(f"/proc/self/task/{task}/comm") as comm:
-            count += comm.read().startswith("rdk:")
-    return count
+        try:
+            with open(f"/proc/self/task/{task}/comm") as comm:
+                if comm.read().startswith("rdk:"):
+                    thread_ids.add(task)
+        except FileNotFoundError:
+            continue
+    return thread_ids
 
 
 @when("I create {count:d} sync consumers that fail with {failure}")
@@ -1105,7 +1113,7 @@ def step_create_failing_consumers(context, count, failure):
         arguments = {"topic_list": None, "partition_list": None}
     else:
         arguments = {"topic_list": ["^("], "partition_list": None}
-    before = _rdkafka_thread_count()
+    before = _rdkafka_thread_ids()
     errors = []
     for _ in range(count):
         try:
@@ -1114,7 +1122,8 @@ def step_create_failing_consumers(context, count, failure):
             errors.append(error)
     scenario_context = get_current_scenario_context(context)
     scenario_context.store("kafka_failed_consumers", errors)
-    scenario_context.store("kafka_rdkafka_threads_added", _rdkafka_thread_count() - before)
+    # only threads that did not exist before count: older clients shutting down must not change the result
+    scenario_context.store("kafka_rdkafka_threads_added", len(_rdkafka_thread_ids() - before))
     scenario_context.store("kafka_operation_error", errors[0] if len(errors) == count else None)
 
 
