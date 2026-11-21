@@ -1,5 +1,6 @@
 """Step definitions for optional dependency scenarios."""
 
+import os
 import subprocess
 import sys
 
@@ -78,3 +79,183 @@ def step_requires(context, requirement):
 def step_does_not_require(context, requirement):
     requirements = get_current_scenario_context(context).get("package_requirements")
     assert not any(item.startswith(requirement) for item in requirements), f"{requirement} found in {requirements}"
+
+
+@given('a fresh Python process importing "{name}" from "{package}"')
+def step_public_import(context, name, package):
+    get_current_scenario_context(context).store("public_import", (package, name))
+
+
+@then('loading "{implementation}" honors the interpreter\'s import timing for "{definition}" and "{dependency}"')
+def step_check_import_timing(context, implementation, definition, dependency):
+    package, name = get_current_scenario_context(context).get("public_import")
+    submodule, canonical_name = definition.rsplit(".", 1)
+    module = f"{package}.{submodule}"
+    script = f"""
+import sys
+from importlib import import_module
+from {package} import {name}
+
+eager = sys.version_info < (3, 15)
+for target in ({module!r}, {dependency!r}):
+    assert (target in sys.modules) == eager, (target, eager)
+
+from {package} import {implementation}
+
+assert {module!r} in sys.modules and {dependency!r} in sys.modules
+assert {implementation} is getattr(import_module({module!r}), {canonical_name!r})
+exports = import_module({package!r}).__all__
+assert {name!r} in exports and {implementation!r} in exports
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@then("importing the public Keycloak ports honors the interpreter's import timing")
+def step_keycloak_port_import_timing(context):
+    script = """
+import sys
+
+from archipy.adapters.keycloak.ports import AsyncKeycloakPort, KeycloakPort
+
+eager = sys.version_info < (3, 15)
+mixin_module = "archipy.adapters.keycloak._resources.groups.adapter"
+assert ("keycloak" in sys.modules) == eager
+assert (mixin_module in sys.modules) == eager
+
+from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+from archipy.adapters.keycloak._resources import KeycloakGroupsMixin
+from archipy.adapters.keycloak._resources.groups.adapter import KeycloakGroupsMixin as CanonicalMixin
+
+assert "keycloak" in sys.modules
+assert KeycloakGroupsMixin is CanonicalMixin
+assert issubclass(KeycloakAdapter, KeycloakPort)
+assert issubclass(KeycloakAdapter, KeycloakGroupsMixin)
+assert issubclass(AsyncKeycloakAdapter, AsyncKeycloakPort)
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@then('the "{package}" adapter can defer global configuration when given explicit settings')
+def step_explicit_adapter_config(context, package):
+    setup, default_constructor = {
+        "redis": (
+            """
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.configs.config_template import RedisConfig
+adapter = RedisAdapter(RedisConfig())
+adapter.close()
+""",
+            "RedisAdapter()",
+        ),
+        "elasticsearch": (
+            """
+from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+from archipy.configs.config_template import ElasticsearchConfig
+adapter = ElasticsearchAdapter(ElasticsearchConfig())
+adapter.close()
+""",
+            "ElasticsearchAdapter()",
+        ),
+        "kafka": (
+            """
+from archipy.adapters.kafka.adapters import KafkaProducerAdapter
+from archipy.configs.config_template import KafkaConfig
+adapter = KafkaProducerAdapter("example", KafkaConfig())
+adapter.close()
+""",
+            'KafkaProducerAdapter("example")',
+        ),
+        "mysql": (
+            """
+from archipy.adapters.mysql.sqlalchemy.adapters import MySQLSQLAlchemyAdapter
+from archipy.configs.config_template import MySQLSQLAlchemyConfig
+adapter = MySQLSQLAlchemyAdapter(MySQLSQLAlchemyConfig())
+adapter.session_manager.engine.dispose()
+""",
+            "MySQLSQLAlchemyAdapter()",
+        ),
+        "postgres": (
+            """
+from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
+from archipy.configs.config_template import PostgresSQLAlchemyConfig
+adapter = PostgresSQLAlchemyAdapter(PostgresSQLAlchemyConfig())
+adapter.session_manager.engine.dispose()
+""",
+            "PostgresSQLAlchemyAdapter()",
+        ),
+        "sqlite": (
+            """
+from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
+from archipy.configs.config_template import SQLiteSQLAlchemyConfig
+adapter = SQLiteSQLAlchemyAdapter(SQLiteSQLAlchemyConfig())
+adapter.session_manager.engine.dispose()
+""",
+            "SQLiteSQLAlchemyAdapter()",
+        ),
+        "starrocks": (
+            """
+from archipy.adapters.starrocks.sqlalchemy.adapters import StarrocksSQLAlchemyAdapter
+from archipy.configs.config_template import StarRocksSQLAlchemyConfig
+adapter = StarrocksSQLAlchemyAdapter(StarRocksSQLAlchemyConfig())
+adapter.session_manager.engine.dispose()
+""",
+            "StarrocksSQLAlchemyAdapter()",
+        ),
+        "minio": (
+            """
+from archipy.adapters.minio.adapters import MinioAdapter
+from archipy.configs.config_template import MinioConfig
+MinioAdapter(MinioConfig(ENDPOINT="localhost:9000", ACCESS_KEY="example", SECRET_KEY="example"))
+""",
+            "MinioAdapter()",
+        ),
+        "vault": (
+            """
+import os
+from archipy.adapters.vault.adapters import VaultAdapter
+from archipy.configs.config_template import VaultConfig
+VaultAdapter(VaultConfig(ADDR=os.environ["BDD_VAULT_ADDR"], TOKEN=os.environ["BDD_VAULT_TOKEN"]))
+""",
+            "VaultAdapter()",
+        ),
+    }[package]
+    environment = None
+    if package == "vault":
+        from archipy.configs.base_config import BaseConfig
+
+        vault = BaseConfig.global_config().VAULT
+        assert vault.ADDR and vault.TOKEN is not None
+        environment = {
+            **os.environ,
+            "BDD_VAULT_ADDR": vault.ADDR,
+            "BDD_VAULT_TOKEN": vault.TOKEN.get_secret_value(),
+        }
+    script = "import sys\n" + setup + f"""
+assert ("archipy.configs.base_config" in sys.modules) == (sys.version_info < (3, 15))
+
+try:
+    {default_constructor}
+except AssertionError as error:
+    assert "set global configs" in str(error)
+else:
+    raise AssertionError("Expected the default constructor to require global settings")
+assert "archipy.configs.base_config" in sys.modules
+
+from archipy.configs.base_config import BaseConfig
+from archipy.models.runtime_settings import get_settings
+
+settings = BaseConfig.model_construct()
+BaseConfig.set_global(settings)
+assert get_settings() is settings
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+        env=environment,
+    )
+    assert result.returncode == 0, result.stderr

@@ -1,5 +1,7 @@
 """PostgreSQL SQLAlchemy session manager implementations."""
 
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 from typing import Any, override
 
 from sqlalchemy import URL

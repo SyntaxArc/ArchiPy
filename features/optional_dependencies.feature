@@ -21,3 +21,34 @@ Feature: Optional dependencies
       | mysql     | async |
       | starrocks | async |
       | sqlite    | base  |
+
+  Scenario Outline: A caller imports <name> before using <implementation>
+    Given a fresh Python process importing "<name>" from "<package>"
+    Then loading "<implementation>" honors the interpreter's import timing for "<definition>" and "<dependency>"
+
+    Examples:
+      | name              | package                                               | implementation                  | definition                              | dependency          |
+      | BaseError         | archipy.models.errors                                 | KeycloakInvalidCredentialsError | keycloak_errors.InvalidCredentialsError | keycloak.exceptions |
+      | TemporalPort      | archipy.adapters.temporal                             | TemporalWorkerManager           | worker.TemporalWorkerManager            | temporalio.worker   |
+      | TemporalPort      | archipy.adapters.temporal                             | TemporalAdapter                 | adapters.TemporalAdapter                | temporalio.client   |
+      | WorkerPort        | archipy.adapters.temporal                             | BaseWorkflow                    | base.BaseWorkflow                       | temporalio.workflow |
+      | ScyllaDBPort      | archipy.adapters.scylladb                             | ScyllaDBAdapter                 | adapters.ScyllaDBAdapter                | cassandra           |
+      | PaymentRequestDTO | archipy.adapters.internet_payment_gateways.ir.parsian | ParsianShaparakPaymentAdapter   | adapters.ParsianShaparakPaymentAdapter  | zeep                |
+      | PaymentRequestDTO | archipy.adapters.internet_payment_gateways.ir.saman   | SamanShaparakPaymentAdapter     | adapters.SamanShaparakPaymentAdapter    | httpx2              |
+
+  Scenario: The Keycloak ports defer the SDK on Python 3.15
+    Then importing the public Keycloak ports honors the interpreter's import timing
+
+  Scenario Outline: Construct a <package> client with explicit settings
+    Then the "<package>" adapter can defer global configuration when given explicit settings
+
+    Examples:
+      | package       |
+      | redis         |
+      | elasticsearch |
+      | kafka         |
+      | mysql         |
+      | postgres      |
+      | sqlite        |
+      | starrocks     |
+      | minio         |

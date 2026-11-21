@@ -1,5 +1,7 @@
 """MinIO adapter implementations for ArchiPy."""
 
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 import contextlib
 import logging
 import urllib.parse

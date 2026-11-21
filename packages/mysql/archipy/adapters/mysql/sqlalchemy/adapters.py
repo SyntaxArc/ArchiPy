@@ -1,5 +1,7 @@
 """MySQL SQLAlchemy adapter implementations."""
 
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 from typing import override
 
 from archipy.adapters.base.sqlalchemy.adapters import (
