@@ -38,3 +38,12 @@ Feature: Optional dependencies
 
   Scenario: The Keycloak ports defer the SDK on Python 3.15
     Then importing the public Keycloak ports honors the interpreter's import timing
+
+  Scenario Outline: Construct a <package> client with explicit settings
+    Then the "<package>" adapter can defer global configuration when given explicit settings
+
+    Examples:
+      | package       |
+      | redis         |
+      | elasticsearch |
+      | kafka         |

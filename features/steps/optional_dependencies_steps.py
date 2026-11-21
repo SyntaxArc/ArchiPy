@@ -134,3 +134,56 @@ assert issubclass(AsyncKeycloakAdapter, AsyncKeycloakPort)
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
     assert result.returncode == 0, result.stderr
+
+
+@then('the "{package}" adapter can defer global configuration when given explicit settings')
+def step_explicit_adapter_config(context, package):
+    setup, default_constructor = {
+        "redis": (
+            """
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.configs.config_template import RedisConfig
+adapter = RedisAdapter(RedisConfig())
+adapter.close()
+""",
+            "RedisAdapter()",
+        ),
+        "elasticsearch": (
+            """
+from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+from archipy.configs.config_template import ElasticsearchConfig
+adapter = ElasticsearchAdapter(ElasticsearchConfig())
+adapter.close()
+""",
+            "ElasticsearchAdapter()",
+        ),
+        "kafka": (
+            """
+from archipy.adapters.kafka.adapters import KafkaProducerAdapter
+from archipy.configs.config_template import KafkaConfig
+adapter = KafkaProducerAdapter("example", KafkaConfig())
+adapter.close()
+""",
+            'KafkaProducerAdapter("example")',
+        ),
+    }[package]
+    script = "import sys\n" + setup + f"""
+assert ("archipy.configs.base_config" in sys.modules) == (sys.version_info < (3, 15))
+
+try:
+    {default_constructor}
+except AssertionError as error:
+    assert "set global configs" in str(error)
+else:
+    raise AssertionError("Expected the default constructor to require global settings")
+assert "archipy.configs.base_config" in sys.modules
+
+from archipy.configs.base_config import BaseConfig
+from archipy.models.runtime_settings import get_settings
+
+settings = BaseConfig.model_construct()
+BaseConfig.set_global(settings)
+assert get_settings() is settings
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
