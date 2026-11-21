@@ -1,5 +1,7 @@
 """Saman IPG adapter package."""
 
+__lazy_modules__ = ["archipy.adapters.internet_payment_gateways.ir.saman.adapters"]
+
 from archipy.adapters.internet_payment_gateways.ir.saman.adapters import (
     AsyncSamanNeoPgShaparakPaymentAdapter,
     AsyncSamanShaparakPaymentAdapter,

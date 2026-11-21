@@ -78,3 +78,33 @@ def step_requires(context, requirement):
 def step_does_not_require(context, requirement):
     requirements = get_current_scenario_context(context).get("package_requirements")
     assert not any(item.startswith(requirement) for item in requirements), f"{requirement} found in {requirements}"
+
+
+@given('a fresh Python process importing "{name}" from "{package}"')
+def step_public_import(context, name, package):
+    get_current_scenario_context(context).store("public_import", (package, name))
+
+
+@then('loading "{implementation}" honors the interpreter\'s import timing for "{definition}" and "{dependency}"')
+def step_check_import_timing(context, implementation, definition, dependency):
+    package, name = get_current_scenario_context(context).get("public_import")
+    submodule, canonical_name = definition.rsplit(".", 1)
+    module = f"{package}.{submodule}"
+    script = f"""
+import sys
+from importlib import import_module
+from {package} import {name}
+
+eager = sys.version_info < (3, 15)
+for target in ({module!r}, {dependency!r}):
+    assert (target in sys.modules) == eager, (target, eager)
+
+from {package} import {implementation}
+
+assert {module!r} in sys.modules and {dependency!r} in sys.modules
+assert {implementation} is getattr(import_module({module!r}), {canonical_name!r})
+exports = import_module({package!r}).__all__
+assert {name!r} in exports and {implementation!r} in exports
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr

@@ -1,5 +1,7 @@
 """Parsian IPG adapter package."""
 
+__lazy_modules__ = ["archipy.adapters.internet_payment_gateways.ir.parsian.adapters"]
+
 from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import (
     AsyncParsianShaparakPaymentAdapter,
     ParsianShaparakPaymentAdapter,
