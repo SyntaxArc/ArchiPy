@@ -625,8 +625,8 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         # Container properties
         self.host: str | None = None
         self.port: int | None = None
-        self.admin_username: str | None = self.config.ADMIN_USERNAME
-        admin_password = self.config.ADMIN_PASSWORD
+        self.admin_username: str | None = self.config.ADMIN.USERNAME
+        admin_password = self.config.ADMIN.PASSWORD
         self.admin_password: str | None = admin_password.get_secret_value() if admin_password else None
         self.realm: str = self.config.REALM_NAME
 

@@ -224,8 +224,8 @@ async def update_adapter_config(
         adapter.configs.REALM_NAME = realm_name
         adapter._admin_adapter = None
         adapter._admin_token_expiry = 0
-        if adapter.configs.IS_ADMIN_MODE_ENABLED and (
-            adapter.configs.CLIENT_SECRET_KEY or (adapter.configs.ADMIN_USERNAME and adapter.configs.ADMIN_PASSWORD)
+        if adapter.configs.ADMIN.IS_ENABLED and (
+            adapter.configs.CLIENT_SECRET_KEY or (adapter.configs.ADMIN.USERNAME and adapter.configs.ADMIN.PASSWORD)
         ):
             adapter._initialize_admin_client()
         client_result = scenario_context.get(f"client_{client_name}")
@@ -243,8 +243,8 @@ async def update_adapter_config(
         adapter.openid_adapter = adapter._get_openid_client(adapter.configs)
         adapter._admin_adapter = None
         adapter._admin_token_expiry = 0
-        if adapter.configs.IS_ADMIN_MODE_ENABLED and (
-            adapter.configs.CLIENT_SECRET_KEY or (adapter.configs.ADMIN_USERNAME and adapter.configs.ADMIN_PASSWORD)
+        if adapter.configs.ADMIN.IS_ENABLED and (
+            adapter.configs.CLIENT_SECRET_KEY or (adapter.configs.ADMIN.USERNAME and adapter.configs.ADMIN.PASSWORD)
         ):
             adapter._initialize_admin_client()
         scenario_context.store(
@@ -275,7 +275,7 @@ async def _ensure_introspection_audience_mapper(
     adapter.configs.REALM_NAME = realm_name
     adapter._admin_adapter = None
     adapter._admin_token_expiry = 0
-    if adapter.configs.IS_ADMIN_MODE_ENABLED:
+    if adapter.configs.ADMIN.IS_ENABLED:
         adapter._initialize_admin_client()
 
     mapper_name = f"audience-{client_name}"
@@ -347,7 +347,7 @@ async def step_create_client_and_update_adapter(
             # Force reinitialization of the OpenID client
             adapter._admin_adapter = None
             adapter._admin_token_expiry = 0
-            if adapter.configs.IS_ADMIN_MODE_ENABLED:
+            if adapter.configs.ADMIN.IS_ENABLED:
                 adapter._initialize_admin_client()
 
             # Extract the internal client ID from the result
@@ -366,7 +366,7 @@ async def step_create_client_and_update_adapter(
                     adapter.configs.REALM_NAME = realm_name
                     adapter._admin_adapter = None
                     adapter._admin_token_expiry = 0
-                    if adapter.configs.IS_ADMIN_MODE_ENABLED:
+                    if adapter.configs.ADMIN.IS_ENABLED:
                         adapter._initialize_admin_client()
 
                     client_secret = await adapter.get_client_secret(client_id)
@@ -388,9 +388,9 @@ async def step_create_client_and_update_adapter(
             new_config.CLIENT_SECRET_KEY = SecretStr(client_secret)
             new_config.VERIFY_SSL = adapter.configs.VERIFY_SSL
             new_config.TIMEOUT = adapter.configs.TIMEOUT
-            new_config.ADMIN_USERNAME = adapter.configs.ADMIN_USERNAME
-            new_config.ADMIN_PASSWORD = adapter.configs.ADMIN_PASSWORD
-            new_config.ADMIN_REALM_NAME = adapter.configs.ADMIN_REALM_NAME
+            new_config.ADMIN.USERNAME = adapter.configs.ADMIN.USERNAME
+            new_config.ADMIN.PASSWORD = adapter.configs.ADMIN.PASSWORD
+            new_config.ADMIN.REALM_NAME = adapter.configs.ADMIN.REALM_NAME
 
             # Create new adapter instance
             from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
@@ -441,7 +441,7 @@ async def step_create_client_and_update_adapter(
                     adapter.configs.REALM_NAME = realm_name
                     adapter._admin_adapter = None
                     adapter._admin_token_expiry = 0
-                    if adapter.configs.IS_ADMIN_MODE_ENABLED:
+                    if adapter.configs.ADMIN.IS_ENABLED:
                         adapter._initialize_admin_client()
 
                     client_secret = adapter.get_client_secret(client_id)
@@ -460,7 +460,7 @@ async def step_create_client_and_update_adapter(
             adapter._openid_adapter = adapter._get_openid_client(adapter.configs)
             adapter._admin_adapter = None
             adapter._admin_token_expiry = 0
-            if adapter.configs.IS_ADMIN_MODE_ENABLED:
+            if adapter.configs.ADMIN.IS_ENABLED:
                 adapter._initialize_admin_client()
 
             await _ensure_introspection_audience_mapper(
@@ -721,10 +721,10 @@ def step_rotate_realm_signing_key(context: Context, realm_name: str) -> None:
     config = BaseConfig.global_config().KEYCLOAK
     admin = KeycloakAdmin(
         server_url=config.SERVER_URL,
-        username=config.ADMIN_USERNAME,
-        password=config.ADMIN_PASSWORD.get_secret_value() if config.ADMIN_PASSWORD else None,
+        username=config.ADMIN.USERNAME,
+        password=config.ADMIN.PASSWORD.get_secret_value() if config.ADMIN.PASSWORD else None,
         realm_name=realm_name,
-        user_realm_name=config.ADMIN_REALM_NAME,
+        user_realm_name=config.ADMIN.REALM_NAME,
         verify=config.VERIFY_SSL,
     )
     admin.create_component(
@@ -4227,7 +4227,7 @@ def _async_adapter_for(realm_name: str, client_name: str) -> AsyncKeycloakAdapte
             "REALM_NAME": realm_name,
             "CLIENT_ID": client_name,
             "CLIENT_SECRET_KEY": None,
-            "IS_ADMIN_MODE_ENABLED": False,
+            "ADMIN": BaseConfig.global_config().KEYCLOAK.ADMIN.model_copy(update={"IS_ENABLED": False}),
         },
     )
     return AsyncKeycloakAdapter(config)
@@ -4237,7 +4237,10 @@ def _async_adapter_for(realm_name: str, client_name: str) -> AsyncKeycloakAdapte
 def step_adapter_clears_caches_without_admin(context: Context, kind: str) -> None:
     """Clear the caches of an adapter that has no admin credentials: it must neither raise nor build an admin client."""
     config = BaseConfig.global_config().KEYCLOAK.model_copy(
-        update={"CLIENT_SECRET_KEY": None, "IS_ADMIN_MODE_ENABLED": False},
+        update={
+            "CLIENT_SECRET_KEY": None,
+            "ADMIN": BaseConfig.global_config().KEYCLOAK.ADMIN.model_copy(update={"IS_ENABLED": False}),
+        },
     )
     adapter = AsyncKeycloakAdapter(config) if kind == "async" else KeycloakAdapter(config)
     adapter.clear_all_caches()
@@ -4325,8 +4328,15 @@ async def step_async_adapter_reads_claims(context: Context, username: str) -> No
 
 def _no_admin_adapter(kind: str, **overrides: Any) -> AsyncKeycloakAdapter | KeycloakAdapter:
     """Build a sync or async adapter without admin mode, overriding config fields."""
-    config = BaseConfig.global_config().KEYCLOAK.model_copy(
-        update={"CLIENT_SECRET_KEY": None, "IS_ADMIN_MODE_ENABLED": False, **overrides},
+    base = BaseConfig.global_config().KEYCLOAK
+    token_validation = {"EXPECTED_ISSUER": overrides.pop("EXPECTED_ISSUER")} if "EXPECTED_ISSUER" in overrides else {}
+    config = base.model_copy(
+        update={
+            "CLIENT_SECRET_KEY": None,
+            "ADMIN": base.ADMIN.model_copy(update={"IS_ENABLED": False}),
+            "TOKEN_VALIDATION": base.TOKEN_VALIDATION.model_copy(update=token_validation),
+            **overrides,
+        },
     )
     return AsyncKeycloakAdapter(config) if kind == "async" else KeycloakAdapter(config)
 
@@ -4418,7 +4428,7 @@ async def step_adapter_maps_bad_signature(context: Context, kind: str, code: str
 
 @then("the Keycloak config repr does not contain the client secret or the admin password")
 def step_config_repr_hides_secrets(context: Context) -> None:
-    config = KeycloakConfig(CLIENT_SECRET_KEY="client-secret-value", ADMIN_PASSWORD="admin-password-value")
+    config = KeycloakConfig(CLIENT_SECRET_KEY="client-secret-value", ADMIN={"PASSWORD": "admin-password-value"})
     text = repr(config) + str(config) + config.model_dump_json()
     assert "client-secret-value" not in text and "admin-password-value" not in text, text
 
@@ -4500,7 +4510,9 @@ def step_forged_claims_checked(context: Context, token_type: str, outcome: str) 
 
     base = BaseConfig.global_config().KEYCLOAK
     claims = {"iss": f"{base.SERVER_URL}/realms/{base.REALM_NAME}", "typ": token_type}
-    enforcing = base.model_copy(update={"EXPECTED_ISSUER": claims["iss"]})
+    enforcing = base.model_copy(
+        update={"TOKEN_VALIDATION": base.TOKEN_VALIDATION.model_copy(update={"EXPECTED_ISSUER": claims["iss"]})},
+    )
     try:
         _check_token_claims(claims, enforcing)
     except BaseError as error:

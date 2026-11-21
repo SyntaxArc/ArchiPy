@@ -37,7 +37,7 @@ def _client_adapter(adapter, is_async: bool, realm: str, client: str, secret: st
         CLIENT_ID=client,
         CLIENT_SECRET_KEY=secret,
         VERIFY_SSL=False,
-        IS_ADMIN_MODE_ENABLED=False,
+        ADMIN={"IS_ENABLED": False},
     )
     return AsyncKeycloakAdapter(configs) if is_async else KeycloakAdapter(configs)
 

@@ -801,7 +801,9 @@ def fastapi_auth(
         )
 
         organization_required = (
-            keycloak.configs.REQUIRE_ORGANIZATION if require_organization is None else require_organization
+            keycloak.configs.TOKEN_VALIDATION.REQUIRE_ORGANIZATION
+            if require_organization is None
+            else require_organization
         )
 
         # Still filled for existing code, but each read warns: AuthContextManager carries the same data.
@@ -946,7 +948,9 @@ def grpc_auth(
                 user_roles,
                 token_info,
                 require_organization=(
-                    keycloak.configs.REQUIRE_ORGANIZATION if require_organization is None else require_organization
+                    keycloak.configs.TOKEN_VALIDATION.REQUIRE_ORGANIZATION
+                    if require_organization is None
+                    else require_organization
                 ),
                 lang=lang,
             ),
@@ -972,7 +976,9 @@ def grpc_auth(
                 user_roles,
                 token_info,
                 require_organization=(
-                    keycloak.configs.REQUIRE_ORGANIZATION if require_organization is None else require_organization
+                    keycloak.configs.TOKEN_VALIDATION.REQUIRE_ORGANIZATION
+                    if require_organization is None
+                    else require_organization
                 ),
                 lang=lang,
             ),

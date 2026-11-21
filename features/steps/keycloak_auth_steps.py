@@ -1029,9 +1029,9 @@ def step_organization_token_memberships(context, username, count):
 @given("the default organization requirement is {required}")
 def step_organization_config_requirement(context, required):
     configs = _real_sync_adapter(_ctx(context)).configs
-    previous = configs.REQUIRE_ORGANIZATION
-    configs.REQUIRE_ORGANIZATION = required == "true"
-    context.add_cleanup(lambda: setattr(configs, "REQUIRE_ORGANIZATION", previous))
+    previous = configs.TOKEN_VALIDATION.REQUIRE_ORGANIZATION
+    configs.TOKEN_VALIDATION.REQUIRE_ORGANIZATION = required == "true"
+    context.add_cleanup(lambda: setattr(configs.TOKEN_VALIDATION, "REQUIRE_ORGANIZATION", previous))
 
 
 @given('the organization requirement of the guard is "{required}"')
