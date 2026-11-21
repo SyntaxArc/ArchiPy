@@ -47,3 +47,6 @@ Feature: Optional dependencies
       | redis         |
       | elasticsearch |
       | kafka         |
+      | mysql         |
+      | postgres      |
+      | sqlite        |

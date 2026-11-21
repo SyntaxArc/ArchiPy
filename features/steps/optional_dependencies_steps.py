@@ -166,6 +166,33 @@ adapter.close()
 """,
             'KafkaProducerAdapter("example")',
         ),
+        "mysql": (
+            """
+from archipy.adapters.mysql.sqlalchemy.adapters import MySQLSQLAlchemyAdapter
+from archipy.configs.config_template import MySQLSQLAlchemyConfig
+adapter = MySQLSQLAlchemyAdapter(MySQLSQLAlchemyConfig())
+adapter.session_manager.engine.dispose()
+""",
+            "MySQLSQLAlchemyAdapter()",
+        ),
+        "postgres": (
+            """
+from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
+from archipy.configs.config_template import PostgresSQLAlchemyConfig
+adapter = PostgresSQLAlchemyAdapter(PostgresSQLAlchemyConfig())
+adapter.session_manager.engine.dispose()
+""",
+            "PostgresSQLAlchemyAdapter()",
+        ),
+        "sqlite": (
+            """
+from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
+from archipy.configs.config_template import SQLiteSQLAlchemyConfig
+adapter = SQLiteSQLAlchemyAdapter(SQLiteSQLAlchemyConfig())
+adapter.session_manager.engine.dispose()
+""",
+            "SQLiteSQLAlchemyAdapter()",
+        ),
     }[package]
     script = "import sys\n" + setup + f"""
 assert ("archipy.configs.base_config" in sys.modules) == (sys.version_info < (3, 15))
