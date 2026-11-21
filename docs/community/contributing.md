@@ -249,7 +249,7 @@ This section outlines the standards and practices for ArchiPy documentation.
 
 ### Documentation Structure
 
-- `mkdocs.yml` - Main configuration file for MkDocs
+- `mkdocs.yml` - Main [Zensical](https://zensical.org) configuration file (`mkdocs-fast.yml` and `mkdocs-full.yml` override it)
 - `docs/` - Markdown documentation files
     - `index.md` - Get Started page
     - `api_reference/` - API documentation
@@ -277,7 +277,7 @@ When including code examples:
 
 ### Admonitions
 
-Use Material for MkDocs admonitions to highlight important information:
+Use admonitions to highlight important information:
 
 ```markdown
 !!! note
@@ -304,33 +304,13 @@ Build the documentation:
 make docs-build
 ```
 
-Deploy to GitHub Pages:
+Check the build in strict mode (broken links and API reference errors fail):
 
 ```bash
-make docs-deploy
+make docs-check
 ```
 
-### Previewing the Zensical Migration
-
-Material for MkDocs reaches end of life on May 5, 2027. The Zensical preview inherits the full MkDocs
-configuration and sets paths relative to the repository root. Zensical requires its output to stay
-under the configuration directory, so it writes the preview to `site-zensical/`.
-[Upstream migration guide](https://zensical.org/docs/compatibility/mkdocs/migration/)
-
-```bash
-uv sync --python 3.15 --locked --group docs
-uv run --python 3.15 --no-sync --with zensical==0.1.3 zensical build -f zensical-preview.yml
-```
-
-The evaluation produced the same 275 page paths as MkDocs and retained the generated FastAPI and Redis
-API anchors. Zensical generated its own search index. Check representative navigation, search results,
-and existing inbound links in a hosted preview before the switch.
-
-For Pages, publish the generated directory with a static HTML publisher. The preview workflow tests
-a `gh-pages` branch using a temporary Git remote. For Read the Docs, copy the directory contents into
-`$READTHEDOCS_OUTPUT/html/` from the existing custom build command.
-[Zensical publishing guide](https://zensical.org/docs/publish-your-site/) ·
-[Read the Docs build customization](https://docs.readthedocs.com/platform/stable/build-customization.html)
+The `deploy-docs` workflow publishes to GitHub Pages on every push to `master`.
 
 ### Documentation Improvement Guidelines
 

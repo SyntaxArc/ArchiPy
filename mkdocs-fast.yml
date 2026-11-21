@@ -1,6 +1,6 @@
 # Fast build configuration for local development
-# Use this for quick iterations: mkdocs serve -f docs/mkdocs-fast.yml
-# Plugin settings are merged over docs/mkdocs.yml: only the differences are listed here.
+# Use this for quick iterations: zensical serve -f mkdocs-fast.yml
+# Plugin settings are merged over mkdocs.yml: only the differences are listed here.
 
 INHERIT: ./mkdocs.yml
 

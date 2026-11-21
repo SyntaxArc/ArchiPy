@@ -26,7 +26,7 @@ Behave in CI (feature groups in `tests.yml`): `make behave FEATURE="features/a.f
 - `archipy/` — core package: `models/`, `configs/`, `helpers/`, `adapters/`
 - `packages/` — one workspace package per adapter (`redis`, `kafka`, `postgres`, ...), installed through extras
 - `features/` — Behave `.feature` files, `steps/`, `test_containers.py`
-- `scripts/` — tooling (`behave_parallel.py`); `docs/` — MkDocs site and changelog
+- `scripts/` — tooling (`behave_parallel.py`); `docs/` — Zensical site and changelog
 
 ## Essential Facts
 
