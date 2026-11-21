@@ -247,3 +247,6 @@ bandit-report.json
 # Parallel behave runner
 .behave-logs/
 .behave_durations.json
+
+# Zensical preview output
+/site-zensical

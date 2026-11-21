@@ -1,0 +1,52 @@
+name: Zensical preview
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/zensical-evaluation.yml'
+      - 'zensical-preview.yml'
+      - 'docs/mkdocs*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    container: ghcr.io/astral-sh/uv:0.13.9-trixie
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install docs dependencies
+        run: uv sync --python 3.15 --locked --group docs
+
+      - name: Build and check the preview
+        run: |
+          uv run --python 3.15 --no-sync --with zensical==0.1.3 zensical build -f zensical-preview.yml
+          test -s site-zensical/search.json
+          grep -Fq 'id="archipy.configs.config_template.FastAPIConfig"' site-zensical/api_reference/configs/index.html
+          grep -Fq 'id="archipy.adapters.redis.adapters.RedisAdapter"' site-zensical/api_reference/adapters/redis/index.html
+
+      - name: Verify the Read the Docs artifact layout
+        run: |
+          export READTHEDOCS_OUTPUT="$RUNNER_TEMP/rtd-preview"
+          mkdir -p "$READTHEDOCS_OUTPUT/html"
+          cp -a site-zensical/. "$READTHEDOCS_OUTPUT/html/"
+          test -s "$READTHEDOCS_OUTPUT/html/index.html"
+          test -s "$READTHEDOCS_OUTPUT/html/api_reference/configs/index.html"
+
+      - name: Verify the GitHub Pages artifact
+        run: |
+          git init --bare "$RUNNER_TEMP/pages-preview.git"
+          git init "$RUNNER_TEMP/pages-publisher"
+          cd "$RUNNER_TEMP/pages-publisher"
+          git config user.name "Docs preview"
+          git config user.email "docs-preview@example.invalid"
+          git remote add preview "$RUNNER_TEMP/pages-preview.git"
+          "$GITHUB_WORKSPACE/.venv/bin/ghp-import" -n -p -r preview "$GITHUB_WORKSPACE/site-zensical"
+          git --git-dir="$RUNNER_TEMP/pages-preview.git" cat-file -e gh-pages:index.html
+          git --git-dir="$RUNNER_TEMP/pages-preview.git" cat-file -e gh-pages:api_reference/configs/index.html

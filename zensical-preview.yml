@@ -1,0 +1,25 @@
+INHERIT: docs/mkdocs-full.yml
+docs_dir: docs
+site_dir: site-zensical
+theme:
+  variant: classic
+plugins:
+  mkdocstrings:
+    handlers:
+      python:
+        paths:
+          - .
+          - packages/elasticsearch
+          - packages/kafka
+          - packages/keycloak
+          - packages/minio
+          - packages/mysql
+          - packages/parsian-ipg
+          - packages/postgres
+          - packages/redis
+          - packages/saman-ipg
+          - packages/scylladb
+          - packages/sqlite
+          - packages/starrocks
+          - packages/temporal
+          - packages/vault

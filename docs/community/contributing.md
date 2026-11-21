@@ -310,6 +310,28 @@ Deploy to GitHub Pages:
 make docs-deploy
 ```
 
+### Previewing the Zensical Migration
+
+Material for MkDocs reaches end of life on May 5, 2027. The Zensical preview inherits the full MkDocs
+configuration and sets paths relative to the repository root. Zensical requires its output to stay
+under the configuration directory, so it writes the preview to `site-zensical/`.
+[Upstream migration guide](https://zensical.org/docs/compatibility/mkdocs/migration/)
+
+```bash
+uv sync --python 3.15 --locked --group docs
+uv run --python 3.15 --no-sync --with zensical==0.1.3 zensical build -f zensical-preview.yml
+```
+
+The evaluation produced the same 275 page paths as MkDocs and retained the generated FastAPI and Redis
+API anchors. Zensical generated its own search index. Check representative navigation, search results,
+and existing inbound links in a hosted preview before the switch.
+
+For Pages, publish the generated directory with a static HTML publisher. The preview workflow tests
+a `gh-pages` branch using a temporary Git remote. For Read the Docs, copy the directory contents into
+`$READTHEDOCS_OUTPUT/html/` from the existing custom build command.
+[Zensical publishing guide](https://zensical.org/docs/publish-your-site/) ·
+[Read the Docs build customization](https://docs.readthedocs.com/platform/stable/build-customization.html)
+
 ### Documentation Improvement Guidelines
 
 When improving documentation:
