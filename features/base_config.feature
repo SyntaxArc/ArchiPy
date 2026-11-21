@@ -234,6 +234,8 @@ Feature: Base Configuration System
       | section       | problem                                            | outcome  |
       | Kafka         | SASL_SSL without credentials                       | rejected |
       | Kafka         | SASL_SSL with credentials                          | accepted |
+      | Kafka         | grouped SASL_SSL with credentials                  | accepted |
+      | Kafka         | grouped SASL_SSL without a password                | rejected |
       | Kafka         | auto commit and no offset reset                    | rejected |
       | Kafka         | a heartbeat longer than the session                | rejected |
       | Redis         | cluster mode without nodes                         | rejected |

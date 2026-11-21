@@ -610,6 +610,14 @@ _SECTION_SETTINGS = {
         KafkaConfig,
         {"SECURITY_PROTOCOL": "SASL_SSL", "SASL_MECHANISM": "PLAIN", "USERNAME": "user", "PASSWORD": "pass"},
     ),
+    ("Kafka", "grouped SASL_SSL with credentials"): (
+        KafkaConfig,
+        {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "plain", "USERNAME": "user", "PASSWORD": "pass"}},
+    ),
+    ("Kafka", "grouped SASL_SSL without a password"): (
+        KafkaConfig,
+        {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "PLAIN", "USERNAME": "user"}},
+    ),
     ("Kafka", "auto commit and no offset reset"): (
         KafkaConfig,
         {"ENABLE_AUTO_COMMIT": True, "AUTO_OFFSET_RESET": "none"},
