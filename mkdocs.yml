@@ -49,7 +49,6 @@ theme:
     - content.tabs.link
     - content.action.edit
     - navigation.top
-    - search.suggest
     - search.highlight
     - content.code.annotate
     - content.tooltips
