@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.32.0](5.32.0.md) | 2026-11-21 | Configurable FastAPI request and form limits, Zensical docs, and Python 3.15 CI |
 | [5.31.2](5.31.2.md) | 2026-11-18 | Dependency minimums aligned with the refreshed lockfile and PostgreSQL test image updated |
 | [5.31.1](5.31.1.md) | 2026-11-17 | Dependency minimums aligned with uv.lock and Temporal, Vault, Mailpit, and ScyllaDB test images updated |
 | [5.31.0](5.31.0.md) | 2026-11-16 | Enriched OwnerDTO, explicit UUID fields, OIDC subject alias, and combined authenticated actor/owner helpers |
