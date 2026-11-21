@@ -12,7 +12,7 @@ classifiers = [
     "Programming Language :: Python :: 3.15",
 ]
 dependencies = [
-    "pydantic>=2.14.3",
+    "pydantic>=2.14.4",
     "pydantic-settings>=2.16.3",
     "httpx2>=2.16.2",
     "jdatetime>=6.1.1",
@@ -24,7 +24,7 @@ license = { file = "LICENSE" }
 aiosqlite = ["archipy-sqlite==0.1.0"]  # Pinned to core version on publish flow!
 behave = ["behave>=1.3.3"]
 cache = [
-    "cachetools>=8.0.1",
+    "cachetools>=8.0.2",
     "async-lru>=2.4.0",
 ]
 dependency-injection = ["dependency-injector>=4.49.1"]
@@ -32,7 +32,7 @@ elasticsearch = ["archipy-elasticsearch==0.1.0"]  # Pinned to core version on pu
 elasticsearch-async = ["archipy-elasticsearch==0.1.0", "elasticsearch[async]>=9.5.1"]  # Pinned to core version on publish flow!
 fakeredis = ["fakeredis>=2.40.0"]
 fastapi = [
-    "fastapi[all]>=0.163.2",
+    "fastapi[all]>=0.165.0",
 ]
 grpc = [
     "grpcio>=1.85.3",
@@ -49,7 +49,7 @@ mysql = ["archipy-mysql[sync]==0.1.0"]  # Pinned to core version on publish flow
 mysql-async = ["archipy-mysql[async]==0.1.0"]  # Pinned to core version on publish flow!
 postgres = ["archipy-postgres==0.1.0"]  # Pinned to core version on publish flow!
 pydantic-ai = [
-    "pydantic-ai-slim>=2.70.0",
+    "pydantic-ai-slim>=2.71.0",
 ]
 redis = ["archipy-redis==0.1.0"]  # Pinned to core version on publish flow!
 saman-ipg = ["archipy-saman-ipg==0.1.0"]  # Pinned to core version on publish flow!
@@ -116,29 +116,29 @@ archipy-saman-ipg = { workspace = true }
 dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.9.4",
-    "boto3-stubs>=1.44.5",
+    "boto3-stubs>=1.44.9",
     "codespell>=2.4.3",
-    "coverage>=7.17.3",
+    "coverage>=7.17.4",
     "gherkin-formatter>=0.1.3",
     "import-linter>=2.17",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.7.0",
-    "ruff>=0.17.5",
-    "ty>=0.0.105",
+    "ruff>=0.17.6",
+    "ty>=0.0.107",
     "types-grpcio>=1.85.0.20261028",
     "types-protobuf>=7.35.1.20260906",
     "types-pymysql>=1.2.4.20261116",
-    "types-regex>=2026.11.15.20261116",
+    "types-regex>=2026.11.19.20261119",
     "validate-pyproject>=0.27",
 ]
 
 docs = [
     "mkdocs-autorefs>=1.4.5",
-    "mkdocs-material>=9.8.1",
+    "mkdocs-material>=9.8.2",
     "mkdocs>=1.6.1",
     "mkdocstrings-python>=2.0.11",
     "mkdocstrings>=1.0.8",
-    "pymdown-extensions>=13.1",
+    "pymdown-extensions>=13.1.2",
 ]
 
 
