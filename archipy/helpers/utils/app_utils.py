@@ -86,18 +86,18 @@ class FastAPIUtils:
             app (FastAPI): The FastAPI application instance.
             config (BaseConfig): The configuration object containing CORS settings.
         """
-        origins = [str(origin).strip("/") for origin in config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS]
+        origins = [str(origin).strip("/") for origin in config.FASTAPI.CORS.ALLOW_ORIGINS]
         # Use app.add_middleware with CORSMiddleware directly
         # CORSMiddleware is compatible with FastAPI's middleware system at runtime
         app.add_middleware(
             CORSMiddleware,
             allow_origins=origins,
-            allow_credentials=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_CREDENTIALS,
-            allow_methods=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_METHODS,
-            allow_headers=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_HEADERS,
-            allow_origin_regex=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGIN_REGEX,
-            expose_headers=config.FASTAPI.CORS_MIDDLEWARE_EXPOSE_HEADERS,
-            max_age=config.FASTAPI.CORS_MIDDLEWARE_MAX_AGE,
+            allow_credentials=config.FASTAPI.CORS.ALLOW_CREDENTIALS,
+            allow_methods=config.FASTAPI.CORS.ALLOW_METHODS,
+            allow_headers=config.FASTAPI.CORS.ALLOW_HEADERS,
+            allow_origin_regex=config.FASTAPI.CORS.ALLOW_ORIGIN_REGEX,
+            expose_headers=config.FASTAPI.CORS.EXPOSE_HEADERS,
+            max_age=config.FASTAPI.CORS.MAX_AGE,
         )
 
     @staticmethod
@@ -108,13 +108,13 @@ class FastAPIUtils:
             app (FastAPI): The FastAPI application instance.
             config (BaseConfig): The configuration object containing GZip middleware settings.
         """
-        if not config.FASTAPI.GZIP_MIDDLEWARE_IS_ENABLED:
+        if not config.FASTAPI.GZIP.IS_ENABLED:
             return
 
         app.add_middleware(
             GZipMiddleware,
-            minimum_size=config.FASTAPI.GZIP_MIDDLEWARE_MINIMUM_SIZE,
-            compresslevel=config.FASTAPI.GZIP_MIDDLEWARE_COMPRESSLEVEL,
+            minimum_size=config.FASTAPI.GZIP.MINIMUM_SIZE,
+            compresslevel=config.FASTAPI.GZIP.COMPRESSLEVEL,
         )
 
     @staticmethod
@@ -125,20 +125,20 @@ class FastAPIUtils:
             app (FastAPI): The FastAPI application instance.
             config (BaseConfig): The configuration object containing TrustedHost middleware settings.
         """
-        if not config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED:
+        if not config.FASTAPI.TRUSTED_HOST.IS_ENABLED:
             return
 
-        allowed_hosts = config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS
+        allowed_hosts = config.FASTAPI.TRUSTED_HOST.ALLOWED_HOSTS
         if not allowed_hosts:
             logger.warning(
-                "TrustedHost middleware enabled but TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS is empty; skipping",
+                "TrustedHost middleware enabled but TRUSTED_HOST.ALLOWED_HOSTS is empty; skipping",
             )
             return
 
         app.add_middleware(
             TrustedHostMiddleware,
             allowed_hosts=allowed_hosts,
-            www_redirect=config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT,
+            www_redirect=config.FASTAPI.TRUSTED_HOST.WWW_REDIRECT,
         )
 
     @staticmethod
@@ -149,7 +149,7 @@ class FastAPIUtils:
             app (FastAPI): The FastAPI application instance.
             config (BaseConfig): The configuration object containing HTTPS redirect middleware settings.
         """
-        if not config.FASTAPI.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED:
+        if not config.FASTAPI.HTTPS_REDIRECT.IS_ENABLED:
             return
 
         app.add_middleware(HTTPSRedirectMiddleware)
@@ -444,14 +444,23 @@ class AppUtils:
         Returns:
             dict[str, Any]: Keyword arguments for uvicorn. Pass the application separately.
         """
-        from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI
+        from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI, UVICORN_GROUPED_FIELDS
 
         config = config or BaseConfig.global_config()
         uvicorn_section, fastapi_section = config.UVICORN, config.FASTAPI
 
+        def uvicorn_value(name: str) -> tuple[Any, bool]:
+            """Return the ``UVICORN`` value of a setting and whether it was set explicitly."""
+            if name in UVICORN_GROUPED_FIELDS:
+                group_name, field = UVICORN_GROUPED_FIELDS[name]
+                group = getattr(uvicorn_section, group_name)
+                return getattr(group, field), field in group.model_fields_set
+            return getattr(uvicorn_section, name), name in uvicorn_section.model_fields_set
+
         def resolve(name: str) -> Any:  # noqa: ANN401
-            if name in uvicorn_section.model_fields_set or name not in UVICORN_FIELDS_ON_FASTAPI:
-                return getattr(uvicorn_section, name)
+            value, is_set = uvicorn_value(name)
+            if is_set or name not in UVICORN_FIELDS_ON_FASTAPI:
+                return value
             if name in fastapi_section.model_fields_set:
                 warnings.warn(
                     f"FASTAPI.{name} is deprecated and will be removed in 6.0.0; set UVICORN.{name} instead",
@@ -459,7 +468,7 @@ class AppUtils:
                     stacklevel=3,
                 )
                 return vars(fastapi_section)[name]  # read without the pydantic deprecation warning
-            return getattr(uvicorn_section, name)
+            return value
 
         values = {
             "host": fastapi_section.SERVE_HOST,
@@ -479,9 +488,9 @@ class AppUtils:
             "ws_per_message_deflate": resolve("WS_PER_MESSAGE_DEFLATE"),
             "ws_ping_interval": resolve("WS_PING_INTERVAL"),
             "ws_ping_timeout": resolve("WS_PING_TIMEOUT"),
-            "ssl_keyfile": uvicorn_section.SSL_KEYFILE,
-            "ssl_certfile": uvicorn_section.SSL_CERTFILE,
-            "ssl_ca_certs": uvicorn_section.SSL_CA_CERTS,
+            "ssl_keyfile": uvicorn_section.TLS.KEYFILE,
+            "ssl_certfile": uvicorn_section.TLS.CERTFILE,
+            "ssl_ca_certs": uvicorn_section.TLS.CA_CERTS,
         }
         if not values["reload"]:
             values["workers"] = resolve("WORKERS_COUNT")
@@ -697,7 +706,7 @@ class AppUtils:
 
     @classmethod
     def add_grpc_port(cls, server: grpc.Server | GrpcAioServer, config: BaseConfig, address: str | None = None) -> int:
-        """Bind a port on a gRPC server, using TLS when ``GRPC.TLS_ENABLED`` is set.
+        """Bind a port on a gRPC server, using TLS when ``GRPC.TLS.IS_ENABLED`` is set.
 
         Without TLS this calls ``add_insecure_port``, so existing setups keep working.
 
@@ -711,22 +720,22 @@ class AppUtils:
         """
         grpc_config = config.GRPC
         bind_address = address or f"{grpc_config.SERVE_HOST}:{grpc_config.SERVE_PORT}"
-        if not grpc_config.TLS_ENABLED:
+        if not grpc_config.TLS.IS_ENABLED:
             return server.add_insecure_port(bind_address)
-        private_key = cls._read_pem(grpc_config.TLS_KEY_FILE)
-        certificate_chain = cls._read_pem(grpc_config.TLS_CERT_FILE)
+        private_key = cls._read_pem(grpc_config.TLS.KEY_FILE)
+        certificate_chain = cls._read_pem(grpc_config.TLS.CERT_FILE)
         if private_key is None or certificate_chain is None:
             raise ConfigurationError(operation="grpc_tls", reason="missing_server_certificate_or_key")
         credentials = grpc.ssl_server_credentials(
             [(private_key, certificate_chain)],
-            root_certificates=cls._read_pem(grpc_config.TLS_CA_FILE),
-            require_client_auth=grpc_config.TLS_REQUIRE_CLIENT_AUTH,
+            root_certificates=cls._read_pem(grpc_config.TLS.CA_FILE),
+            require_client_auth=grpc_config.TLS.REQUIRE_CLIENT_AUTH,
         )
         return server.add_secure_port(bind_address, credentials)
 
     @classmethod
     def create_grpc_channel(cls, config: BaseConfig, target: str, *, aio: bool = False) -> grpc.Channel:
-        """Create a client channel, using TLS when ``GRPC.STUB_TLS_ENABLED`` is set.
+        """Create a client channel, using TLS when ``GRPC.STUB_TLS.IS_ENABLED`` is set.
 
         Channel options come from ``GRPC.STUB_OPTIONS_CONFIG_LIST`` and compression from
         ``GRPC.STUB_COMPRESSION``. Without TLS the channel is plaintext.
@@ -743,12 +752,12 @@ class AppUtils:
         options = grpc_config.STUB_OPTIONS_CONFIG_LIST
         compression = cls._grpc_compression(grpc_config.STUB_COMPRESSION)
         module: Any = grpc_aio if aio else grpc
-        if not grpc_config.STUB_TLS_ENABLED:
+        if not grpc_config.STUB_TLS.IS_ENABLED:
             return module.insecure_channel(target, options=options, compression=compression)
         credentials = grpc.ssl_channel_credentials(
-            root_certificates=cls._read_pem(grpc_config.STUB_TLS_CA_FILE),
-            private_key=cls._read_pem(grpc_config.STUB_TLS_KEY_FILE),
-            certificate_chain=cls._read_pem(grpc_config.STUB_TLS_CERT_FILE),
+            root_certificates=cls._read_pem(grpc_config.STUB_TLS.CA_FILE),
+            private_key=cls._read_pem(grpc_config.STUB_TLS.KEY_FILE),
+            certificate_chain=cls._read_pem(grpc_config.STUB_TLS.CERT_FILE),
         )
         return module.secure_channel(target, credentials, options=options, compression=compression)
 

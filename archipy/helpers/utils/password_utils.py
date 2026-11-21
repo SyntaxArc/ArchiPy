@@ -43,8 +43,8 @@ class PasswordUtils:
                 ``HASH_ITERATIONS`` or ``SALT_LENGTH`` later does not invalidate existing hashes.
         """
         configs = auth_config or BaseConfig.global_config().AUTH
-        salt = os.urandom(configs.SALT_LENGTH)
-        iterations = configs.HASH_ITERATIONS
+        salt = os.urandom(configs.PASSWORD_POLICY.SALT_LENGTH)
+        iterations = configs.PASSWORD_POLICY.HASH_ITERATIONS
         pw_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
 
         return _HASH_SEPARATOR.join(
@@ -79,9 +79,9 @@ class PasswordUtils:
 
             # Legacy format: base64(salt + hash)
             decoded = b64decode(stored_password.encode("utf-8"))
-            salt = decoded[: configs.SALT_LENGTH]
-            stored_hash = decoded[configs.SALT_LENGTH :]
-            candidates = dict.fromkeys((configs.HASH_ITERATIONS, _LEGACY_DEFAULT_ITERATIONS))
+            salt = decoded[: configs.PASSWORD_POLICY.SALT_LENGTH]
+            stored_hash = decoded[configs.PASSWORD_POLICY.SALT_LENGTH :]
+            candidates = dict.fromkeys((configs.PASSWORD_POLICY.HASH_ITERATIONS, _LEGACY_DEFAULT_ITERATIONS))
             return any(PasswordUtils._matches(password, salt, stored_hash, count) for count in candidates)
         except ValueError, TypeError, IndexError:
             # Catch specific exceptions that could occur during decoding or comparison
@@ -113,20 +113,24 @@ class PasswordUtils:
         configs = auth_config or BaseConfig.global_config().AUTH
         errors = []
 
-        if len(password) < configs.MIN_LENGTH:
-            errors.append(f"Password must be at least {configs.MIN_LENGTH} characters long.")
+        if len(password) < configs.PASSWORD_POLICY.MIN_LENGTH:
+            errors.append(f"Password must be at least {configs.PASSWORD_POLICY.MIN_LENGTH} characters long.")
 
-        if configs.REQUIRE_DIGIT and not any(char.isdigit() for char in password):
+        if configs.PASSWORD_POLICY.REQUIRE_DIGIT and not any(char.isdigit() for char in password):
             errors.append("Password must contain at least one digit.")
 
-        if configs.REQUIRE_LOWERCASE and not any(char.islower() for char in password):
+        if configs.PASSWORD_POLICY.REQUIRE_LOWERCASE and not any(char.islower() for char in password):
             errors.append("Password must contain at least one lowercase letter.")
 
-        if configs.REQUIRE_UPPERCASE and not any(char.isupper() for char in password):
+        if configs.PASSWORD_POLICY.REQUIRE_UPPERCASE and not any(char.isupper() for char in password):
             errors.append("Password must contain at least one uppercase letter.")
 
-        if configs.REQUIRE_SPECIAL and not any(char in configs.SPECIAL_CHARACTERS for char in password):
-            errors.append(f"Password must contain at least one special character: {configs.SPECIAL_CHARACTERS}")
+        if configs.PASSWORD_POLICY.REQUIRE_SPECIAL and not any(
+            char in configs.PASSWORD_POLICY.SPECIAL_CHARACTERS for char in password
+        ):
+            errors.append(
+                f"Password must contain at least one special character: {configs.PASSWORD_POLICY.SPECIAL_CHARACTERS}",
+            )
 
         if errors:
             raise InvalidPasswordError(requirements=errors)
@@ -147,21 +151,21 @@ class PasswordUtils:
         lowercase_chars = string.ascii_lowercase
         uppercase_chars = string.ascii_uppercase
         digit_chars = string.digits
-        special_chars = "".join(configs.SPECIAL_CHARACTERS)
+        special_chars = "".join(configs.PASSWORD_POLICY.SPECIAL_CHARACTERS)
 
         # Initialize with required characters
         password_chars = []
-        if configs.REQUIRE_LOWERCASE:
+        if configs.PASSWORD_POLICY.REQUIRE_LOWERCASE:
             password_chars.append(secrets.choice(lowercase_chars))
-        if configs.REQUIRE_UPPERCASE:
+        if configs.PASSWORD_POLICY.REQUIRE_UPPERCASE:
             password_chars.append(secrets.choice(uppercase_chars))
-        if configs.REQUIRE_DIGIT:
+        if configs.PASSWORD_POLICY.REQUIRE_DIGIT:
             password_chars.append(secrets.choice(digit_chars))
-        if configs.REQUIRE_SPECIAL:
+        if configs.PASSWORD_POLICY.REQUIRE_SPECIAL:
             password_chars.append(secrets.choice(special_chars))
 
         # Calculate remaining length
-        remaining_length = max(0, configs.MIN_LENGTH - len(password_chars))
+        remaining_length = max(0, configs.PASSWORD_POLICY.MIN_LENGTH - len(password_chars))
 
         # Add random characters to meet minimum length
         all_chars = lowercase_chars + uppercase_chars + digit_chars + special_chars
@@ -199,7 +203,7 @@ class PasswordUtils:
         cls.validate_password(new_password, configs)
 
         # Check password history (a size of 0 disables the check)
-        history_size = max(configs.PASSWORD_HISTORY_SIZE, 0)
+        history_size = max(configs.PASSWORD_POLICY.HISTORY_SIZE, 0)
         if history_size and any(
             cls.verify_password(new_password, old_password, configs)
             for old_password in password_history[-history_size:]

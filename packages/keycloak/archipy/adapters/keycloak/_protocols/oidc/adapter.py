@@ -110,15 +110,18 @@ def _check_token_claims(claims: dict[str, Any], configs: KeycloakConfig) -> None
     Raises:
         InvalidTokenError: If an enforced claim does not match.
     """
-    expected_issuer = configs.EXPECTED_ISSUER or f"{(configs.SERVER_URL or '').rstrip('/')}/realms/{configs.REALM_NAME}"
+    expected_issuer = (
+        configs.TOKEN_VALIDATION.EXPECTED_ISSUER
+        or f"{(configs.SERVER_URL or '').rstrip('/')}/realms/{configs.REALM_NAME}"
+    )
     audience = claims.get("aud")
     audiences = [audience] if isinstance(audience, str) else list(audience or [])
-    enforce_any = bool(configs.EXPECTED_ISSUER or configs.EXPECTED_AUDIENCE)
+    enforce_any = bool(configs.TOKEN_VALIDATION.EXPECTED_ISSUER or configs.TOKEN_VALIDATION.EXPECTED_AUDIENCE)
     enforced: list[str] = []
     advisory: list[str] = []
     if claims.get("iss") != expected_issuer:
-        (enforced if configs.EXPECTED_ISSUER else advisory).append("iss")
-    if configs.EXPECTED_AUDIENCE and configs.EXPECTED_AUDIENCE not in audiences:
+        (enforced if configs.TOKEN_VALIDATION.EXPECTED_ISSUER else advisory).append("iss")
+    if configs.TOKEN_VALIDATION.EXPECTED_AUDIENCE and configs.TOKEN_VALIDATION.EXPECTED_AUDIENCE not in audiences:
         enforced.append("aud")
     if claims.get("typ") != "Bearer":
         (enforced if enforce_any else advisory).append("typ")
@@ -126,8 +129,9 @@ def _check_token_claims(claims: dict[str, Any], configs: KeycloakConfig) -> None
         raise InvalidTokenError(additional_data={"claims": enforced})
     if advisory:
         warnings.warn(
-            f"Token claims {advisory} do not match the expected values; set KEYCLOAK.EXPECTED_ISSUER or "
-            "KEYCLOAK.EXPECTED_AUDIENCE to enforce them. Enforcement becomes the default in 6.0.",
+            f"Token claims {advisory} do not match the expected values; set "
+            "KEYCLOAK.TOKEN_VALIDATION.EXPECTED_ISSUER or KEYCLOAK.TOKEN_VALIDATION.EXPECTED_AUDIENCE "
+            "to enforce them. Enforcement becomes the default in 6.0.",
             DeprecationWarning,
             stacklevel=3,
         )
@@ -166,7 +170,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         claims = self._openid_adapter.decode_token(
             token,
             key=_build_jwk_set(self._jwks_raw or {"keys": []}),
-            leeway=self.configs.TOKEN_LEEWAY_SECONDS,
+            leeway=self.configs.TOKEN_VALIDATION.LEEWAY_SECONDS,
         )
         _check_token_claims(claims, self.configs)
         return claims
@@ -606,7 +610,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         claims = await self.openid_adapter.a_decode_token(
             token,
             key=_build_jwk_set(self._jwks_raw or {"keys": []}),
-            leeway=self.configs.TOKEN_LEEWAY_SECONDS,
+            leeway=self.configs.TOKEN_VALIDATION.LEEWAY_SECONDS,
         )
         _check_token_claims(claims, self.configs)
         return claims

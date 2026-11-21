@@ -75,7 +75,7 @@ class EmailConnectionManager:
         """Initialize EmailConnectionManager.
 
         Raises:
-            ConfigurationError: If only one of ``USERNAME`` and ``PASSWORD`` is set while ``TLS_MODE`` is not ``auto``.
+            ConfigurationError: If only one of ``USERNAME`` and ``PASSWORD`` is set while ``TLS.MODE`` is not ``auto``.
         """
         self.config = config
         self.smtp_connection: smtplib.SMTP | None = None
@@ -86,10 +86,10 @@ class EmailConnectionManager:
     def _validate_security(self) -> None:
         """Check the TLS and credential settings; the legacy ``auto`` mode only warns."""
         half_set = bool(self.config.USERNAME) != bool(self.config.PASSWORD)
-        if self.config.TLS_MODE == "auto":
+        if self.config.TLS.MODE == "auto":
             warnings.warn(
-                "EMAIL.TLS_MODE='auto' is deprecated: STARTTLS is opportunistic, the certificate is not verified "
-                "and a failed upgrade falls back to clear text. Set TLS_MODE to 'starttls' or 'implicit'.",
+                "EMAIL.TLS.MODE='auto' is deprecated: STARTTLS is opportunistic, the certificate is not verified "
+                "and a failed upgrade falls back to clear text. Set TLS.MODE to 'starttls' or 'implicit'.",
                 DeprecationWarning,
                 stacklevel=3,
             )
@@ -105,37 +105,37 @@ class EmailConnectionManager:
                 operation="email_credentials",
                 reason="USERNAME and PASSWORD must be set together",
             )
-        if self.config.TLS_MODE == "none" and self.config.USERNAME and self.config.PASSWORD:
+        if self.config.TLS.MODE == "none" and self.config.USERNAME and self.config.PASSWORD:
             warnings.warn(
-                "EMAIL.TLS_MODE='none' sends USERNAME and PASSWORD in clear text. "
-                "Set TLS_MODE to 'starttls' or 'implicit'; clear-text login will be rejected in a future release.",
+                "EMAIL.TLS.MODE='none' sends USERNAME and PASSWORD in clear text. "
+                "Set TLS.MODE to 'starttls' or 'implicit'; clear-text login will be rejected in a future release.",
                 DeprecationWarning,
                 stacklevel=3,
             )
-        if self.config.TLS_MODE in ("starttls", "implicit") and not self.config.TLS_VERIFY:
+        if self.config.TLS.MODE in ("starttls", "implicit") and not self.config.TLS.VERIFY:
             warnings.warn(
-                "EMAIL.TLS_VERIFY=False disables certificate and host name verification, which exposes the "
-                "session and credentials to interception. Use TLS_CA_FILE for a private CA; "
-                "TLS_VERIFY=False will be rejected in a future release.",
+                "EMAIL.TLS.VERIFY=False disables certificate and host name verification, which exposes the "
+                "session and credentials to interception. Use TLS.CA_FILE for a private CA; "
+                "TLS.VERIFY=False will be rejected in a future release.",
                 DeprecationWarning,
                 stacklevel=3,
             )
 
     def _build_ssl_context(self) -> ssl.SSLContext:
-        """Build the TLS context from ``TLS_CA_FILE`` and ``TLS_VERIFY``."""
-        context = ssl.create_default_context(cafile=self.config.TLS_CA_FILE)
-        if not self.config.TLS_VERIFY:
+        """Build the TLS context from ``TLS.CA_FILE`` and ``TLS.VERIFY``."""
+        context = ssl.create_default_context(cafile=self.config.TLS.CA_FILE)
+        if not self.config.TLS.VERIFY:
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
         return context
 
     def _open_session(self) -> tuple[smtplib.SMTP, str]:
         """Open the SMTP session for ``TLS_MODE`` and return it with the TLS mode actually in use."""
-        mode = self.config.TLS_MODE
+        mode = self.config.TLS.MODE
         source_address = (self.config.SOURCE_ADDRESS, self.config.SOURCE_PORT) if self.config.SOURCE_ADDRESS else None
         common: dict[str, Any] = {
             "local_hostname": self.config.LOCAL_HOSTNAME,
-            "timeout": self.config.CONNECTION_TIMEOUT,
+            "timeout": self.config.POOL.CONNECTION_TIMEOUT,
             "source_address": source_address,
         }
         server = cast("str", self.config.SMTP_SERVER)
@@ -158,7 +158,7 @@ class EmailConnectionManager:
 
     def _negotiate_tls(self, session: smtplib.SMTP) -> str:
         """Greet the server and upgrade with STARTTLS as ``TLS_MODE`` demands; return the TLS mode in use."""
-        mode = self.config.TLS_MODE
+        mode = self.config.TLS.MODE
         session.ehlo()
         offered = session.has_extn("starttls")
         if mode == "starttls" and not offered:
@@ -220,7 +220,7 @@ class EmailConnectionManager:
             return
 
         time_diff = (DatetimeUtils.get_datetime_now() - self.last_used).total_seconds()
-        if time_diff > self.config.CONNECTION_REFRESH_SECONDS:
+        if time_diff > self.config.POOL.CONNECTION_REFRESH_SECONDS:
             self.disconnect()
             self.connect()
 
@@ -231,11 +231,11 @@ class EmailConnectionPool:
     def __init__(self, config: EmailConfig) -> None:
         """Initialize EmailConnectionPool."""
         self.config = config
-        self.pool: Queue[EmailConnectionManager] = Queue(maxsize=config.POOL_SIZE)
+        self.pool: Queue[EmailConnectionManager] = Queue(maxsize=config.POOL.SIZE)
         self._initialize_pool()
 
     def _initialize_pool(self) -> None:
-        for _ in range(self.config.POOL_SIZE):
+        for _ in range(self.config.POOL.SIZE):
             connection = EmailConnectionManager(self.config)
             self.pool.put(connection)
 
@@ -249,7 +249,7 @@ class EmailConnectionPool:
             UnavailableError: If no slot becomes free within ``CONNECTION_TIMEOUT`` seconds.
         """
         try:
-            connection = self.pool.get(timeout=self.config.CONNECTION_TIMEOUT)
+            connection = self.pool.get(timeout=self.config.POOL.CONNECTION_TIMEOUT)
         except Empty as exception:
             raise UnavailableError(resource_type="SMTP") from exception
         try:
@@ -287,7 +287,7 @@ class AttachmentHandler:
             content_type: Optional MIME type of the attachment.
             content_disposition: Whether the attachment is inline or a regular attachment.
             content_id: Optional Content-ID for inline attachments.
-            max_size: Maximum size in bytes; defaults to the configured ``ATTACHMENT_MAX_SIZE``.
+            max_size: Maximum size in bytes; defaults to the configured ``ATTACHMENTS.MAX_SIZE``.
 
         Returns:
             EmailAttachmentDTO: The validated attachment.
@@ -297,7 +297,7 @@ class AttachmentHandler:
                 (for example it exceeds the maximum size).
         """
         if max_size is None:
-            max_size = BaseConfig.global_config().EMAIL.ATTACHMENT_MAX_SIZE
+            max_size = BaseConfig.global_config().EMAIL.ATTACHMENTS.MAX_SIZE
         try:
             processed_content = AttachmentHandler._process_source(source, attachment_type, max_size)
 
@@ -362,12 +362,12 @@ class AttachmentHandler:
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
             raise InvalidArgumentError(argument_name="source", additional_data={"reason": "unsupported_url_scheme"})
-        allowed_hosts = config.ATTACHMENT_URL_ALLOWED_HOSTS
+        allowed_hosts = config.ATTACHMENTS.URL_ALLOWED_HOSTS
         if allowed_hosts is not None and parsed.hostname not in allowed_hosts:
             raise InvalidArgumentError(argument_name="source", additional_data={"reason": "url_host_not_allowed"})
-        limit = max_size if max_size is not None else config.ATTACHMENT_MAX_SIZE
+        limit = max_size if max_size is not None else config.ATTACHMENTS.MAX_SIZE
         content = bytearray()
-        with httpx2.stream("GET", url, timeout=config.ATTACHMENT_URL_TIMEOUT) as response:
+        with httpx2.stream("GET", url, timeout=config.ATTACHMENTS.URL_TIMEOUT) as response:
             response.raise_for_status()
             for chunk in response.iter_bytes():
                 content.extend(chunk)

@@ -16,13 +16,14 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import (
     ElasticsearchConfig,
     KafkaConfig,
+    OpentelemetryConfig,
     PostgresSQLAlchemyConfig,
     RedisConfig,
     ScyllaDBConfig,
@@ -31,6 +32,7 @@ from archipy.configs.config_template import (
     VaultConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
+from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.configs.vault_settings_source import create_vault_client
 from archipy.models.errors import ConfigurationError
 
@@ -224,7 +226,7 @@ def step_given_app_name_with_identity_defaults(context, app_name):
     config.APP_NAME = app_name
     config.OTEL.SERVICE_NAME = None
     config.FASTAPI.PROJECT_NAME = "project_name"
-    config.AUTH.JWT_ISSUER = "your-app-name"
+    config.AUTH.JWT.ISSUER = "your-app-name"
     config.TEMPORAL.CLIENT_IDENTITY = None
     scenario_context.store("pending_global_config", config)
 
@@ -250,10 +252,10 @@ def step_then_fastapi_project_name(context, expected):
     assert actual == expected, f"Expected FASTAPI.PROJECT_NAME={expected!r}, got {actual!r}"
 
 
-@then('AUTH.JWT_ISSUER should be "{expected}"')
+@then('AUTH.JWT.ISSUER should be "{expected}"')
 def step_then_auth_jwt_issuer(context, expected):
-    actual = BaseConfig.global_config().AUTH.JWT_ISSUER
-    assert actual == expected, f"Expected AUTH.JWT_ISSUER={expected!r}, got {actual!r}"
+    actual = BaseConfig.global_config().AUTH.JWT.ISSUER
+    assert actual == expected, f"Expected AUTH.JWT.ISSUER={expected!r}, got {actual!r}"
 
 
 @then('TEMPORAL.CLIENT_IDENTITY should be "{expected}"')
@@ -609,6 +611,14 @@ _SECTION_SETTINGS = {
         KafkaConfig,
         {"SECURITY_PROTOCOL": "SASL_SSL", "SASL_MECHANISM": "PLAIN", "USERNAME": "user", "PASSWORD": "pass"},
     ),
+    ("Kafka", "grouped SASL_SSL with credentials"): (
+        KafkaConfig,
+        {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "plain", "USERNAME": "user", "PASSWORD": "pass"}},
+    ),
+    ("Kafka", "grouped SASL_SSL without a password"): (
+        KafkaConfig,
+        {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "PLAIN", "USERNAME": "user"}},
+    ),
     ("Kafka", "auto commit and no offset reset"): (
         KafkaConfig,
         {"ENABLE_AUTO_COMMIT": True, "AUTO_OFFSET_RESET": "none"},
@@ -618,6 +628,20 @@ _SECTION_SETTINGS = {
         {"HEARTBEAT_INTERVAL_MS": 20000, "SESSION_TIMEOUT_MS": 10000},
     ),
     ("Redis", "cluster mode without nodes"): (RedisConfig, {"MODE": "CLUSTER"}),
+    ("Redis", "grouped cluster mode without nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER": {"NODES": []}}),
+    ("Redis", "grouped cluster mode with nodes"): (
+        RedisConfig,
+        {"MODE": "CLUSTER", "CLUSTER": {"NODES": ["localhost:7000"]}},
+    ),
+    ("Redis", "grouped sentinel mode without a service name"): (
+        RedisConfig,
+        {"MODE": "SENTINEL", "SENTINEL": {"NODES": ["localhost:26379"]}},
+    ),
+    ("Redis", "grouped client certificate without a key"): (
+        RedisConfig,
+        {"TLS": {"IS_ENABLED": True, "CERTFILE": "/tmp/c.pem"}},
+    ),
+    ("Redis", "grouped CA file with TLS disabled"): (RedisConfig, {"TLS": {"CA_CERTS": "/tmp/ca.pem"}}),
     ("Redis", "cluster mode with nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER_NODES": ["localhost:7000"]}),
     ("Redis", "sentinel mode without a service name"): (
         RedisConfig,
@@ -644,6 +668,32 @@ _SECTION_SETTINGS = {
         {"RECONNECTION_POLICY": "EXPONENTIAL", "RECONNECTION_BASE_DELAY": 1.0, "RECONNECTION_MAX_DELAY": 5.0},
     ),
     ("ScyllaDB", "TLS enabled with a CA file"): (ScyllaDBConfig, {"TLS_ENABLED": True, "TLS_CA_FILE": "/tmp/ca.pem"}),
+    ("ScyllaDB", "a grouped client certificate without a key"): (
+        ScyllaDBConfig,
+        {"TLS": {"IS_ENABLED": True, "CERT_FILE": "/tmp/client.pem"}},
+    ),
+    ("ScyllaDB", "a grouped CA file with TLS disabled"): (ScyllaDBConfig, {"TLS": {"CA_FILE": "/tmp/ca.pem"}}),
+    ("ScyllaDB", "a grouped exponential reconnection above the max"): (
+        ScyllaDBConfig,
+        {"RECONNECTION": {"POLICY": "EXPONENTIAL", "BASE_DELAY": 20.0, "MAX_DELAY": 5.0}},
+    ),
+    ("ScyllaDB", "a grouped replication without datacenters"): (
+        ScyllaDBConfig,
+        {"REPLICATION": {"STRATEGY": "NetworkTopologyStrategy", "CONFIG": {}}},
+    ),
+    ("ScyllaDB", "grouped TLS enabled with a CA file"): (
+        ScyllaDBConfig,
+        {"TLS": {"IS_ENABLED": True, "CA_FILE": "/tmp/ca.pem"}},
+    ),
+    ("Elasticsearch", "grouped username without a password"): (ElasticsearchConfig, {"AUTH": {"USER_NAME": "user"}}),
+    ("Elasticsearch", "grouped client cert without a key"): (
+        ElasticsearchConfig,
+        {"TLS": {"CLIENT_CERT": "/tmp/c.pem"}},
+    ),
+    ("Elasticsearch", "grouped CA file with verification disabled"): (
+        ElasticsearchConfig,
+        {"TLS": {"VERIFY_CERTS": False, "CA_CERTS": "/tmp/ca.pem"}},
+    ),
     ("Elasticsearch", "only a username"): (ElasticsearchConfig, {"HTTP_USER_NAME": "user"}),
     ("Elasticsearch", "only a password"): (ElasticsearchConfig, {"HTTP_PASSWORD": "secret"}),
     ("Elasticsearch", "only an API key"): (ElasticsearchConfig, {"API_KEY": "id"}),
@@ -659,7 +709,31 @@ _SECTION_SETTINGS = {
     ),
     ("Elasticsearch", "an unknown node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "fastest"}),
     ("Elasticsearch", "the random node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "random"}),
+    ("OpenTelemetry", "a pushgateway exporter without a URL"): (
+        OpentelemetryConfig,
+        {"METRICS_EXPORTER": "pushgateway"},
+    ),
+    ("OpenTelemetry", "a pushgateway exporter with a grouped URL"): (
+        OpentelemetryConfig,
+        {"METRICS_EXPORTER": "pushgateway", "PUSHGATEWAY": {"URL": "http://pushgateway:9091"}},
+    ),
     ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
+    ("Temporal", "a grouped client certificate without a key"): (
+        TemporalConfig,
+        {"TLS": {"CLIENT_CERT": "/tmp/client.pem"}},
+    ),
+    ("Temporal", "a grouped run timeout above the execution one"): (
+        TemporalConfig,
+        {"WORKFLOW": {"RUN_TIMEOUT": 7200, "EXECUTION_TIMEOUT": 3600}},
+    ),
+    ("Temporal", "a grouped keep alive timeout above the interval"): (
+        TemporalConfig,
+        {"KEEP_ALIVE": {"TIMEOUT_MS": 60000, "INTERVAL_MS": 30000}},
+    ),
+    ("Temporal", "a grouped client certificate with a key"): (
+        TemporalConfig,
+        {"TLS": {"CLIENT_CERT": "/tmp/client.pem", "CLIENT_KEY": "/tmp/client.key"}},
+    ),
     ("Temporal", "only a CA certificate"): (TemporalConfig, {"TLS_CA_CERT": "/tmp/ca.pem"}),
     ("Temporal", "a client key without a certificate"): (TemporalConfig, {"TLS_CLIENT_KEY": "/tmp/client.key"}),
     ("Temporal", "a verification name without a CA"): (
@@ -736,12 +810,12 @@ def step_when_elasticsearch_client_backoff(context, base, cap):
     from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
     from archipy.configs.config_template import ElasticsearchConfig
 
-    updates = {}
+    retry = {}
     if base != "none":
-        updates["RETRY_BACKOFF_BASE"] = float(base)
+        retry["BACKOFF_BASE"] = float(base)
     if cap != "none":
-        updates["RETRY_BACKOFF_CAP"] = float(cap)
-    client = ElasticsearchAdapter._get_client(ElasticsearchConfig(**updates))
+        retry["BACKOFF_CAP"] = float(cap)
+    client = ElasticsearchAdapter._get_client(ElasticsearchConfig(RETRY=retry))
     get_current_scenario_context(context).store("es_backoff", (client._retry_backoff_base, client._retry_backoff_cap))
 
 
@@ -910,3 +984,53 @@ def step_when_elasticsearch_insecure_config(context, credential, transport):
 def step_then_elasticsearch_warning_count(context, count):
     messages = get_current_scenario_context(context).get("es_config_warnings")
     assert len(messages) == count, messages
+
+
+class _FoldGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    NAME: str | None = None
+
+
+class _FoldSection(BaseModel):
+    NAME: str | None = Field(default=None, deprecated=deprecated_flat_message("TEST", "NAME", "GROUP", "NAME"))
+    GROUP: _FoldGroup | None = None
+
+    @model_validator(mode="after")
+    def _fold(self):
+        fold_flat_fields(self, "GROUP", _FoldGroup, {"NAME": "NAME"})
+        return self
+
+
+@given('a test section with flat "{flat}" set to {flat_value} and group "{group}" set to {group_value}')
+def step_given_fold_section(context, flat, flat_value, group, group_value):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("fold_flat", {} if flat == "none" else {flat: json.loads(flat_value)})
+    scenario_context.store("fold_group", None if group == "none" else {group: json.loads(group_value)})
+
+
+@when("the test section is validated")
+def step_when_fold_validated(context):
+    scenario_context = get_current_scenario_context(context)
+    group = scenario_context.get("fold_group")
+    data = dict(scenario_context.get("fold_flat"))
+    if group is not None:
+        data["GROUP"] = group
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        section = _FoldSection(**data)
+    scenario_context.store("fold_section", section)
+    scenario_context.store("fold_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
+@then("the group value should be {expected}")
+def step_then_fold_value(context, expected):
+    section = get_current_scenario_context(context).get("fold_section")
+    actual = section.GROUP.NAME if section.GROUP else None
+    assert actual == json.loads(expected), actual
+
+
+@then("{count:d} deprecation warning should be raised")
+def step_then_fold_warnings(context, count):
+    caught = get_current_scenario_context(context).get("fold_warnings")
+    assert len(caught) == count, [str(w.message) for w in caught]

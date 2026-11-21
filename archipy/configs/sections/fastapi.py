@@ -5,6 +5,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, model_validator
 
+from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI
 
 
@@ -21,6 +22,72 @@ class FastAPIFormLimits(BaseModel):
     MAX_FIELDS: NonNegativeInt | None = Field(default=None, serialization_alias="max_fields")
     MAX_FILES: NonNegativeInt | None = Field(default=None, serialization_alias="max_files")
     MAX_PART_SIZE: NonNegativeInt | None = Field(default=None, serialization_alias="max_part_size")
+
+
+class FastAPICorsConfig(BaseModel):
+    """CORS middleware settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ALLOW_CREDENTIALS: bool = Field(default=True, description="Whether to allow credentials in CORS")
+    ALLOW_HEADERS: list[str] = Field(default=["*"], description="Allowed CORS headers")
+    ALLOW_METHODS: list[str] = Field(default=["*"], description="Allowed CORS methods")
+    ALLOW_ORIGIN_REGEX: str | None = Field(
+        default=None,
+        description="Regex pattern for allowed origins",
+    )
+    ALLOW_ORIGINS: list[str] = Field(default=["*"], description="Allowed CORS origins")
+    EXPOSE_HEADERS: list[str] = Field(default=[], description="Exposed CORS headers")
+    MAX_AGE: int = Field(default=600, description="Preflight cache duration in seconds")
+
+
+class FastAPIGzipConfig(BaseModel):
+    """GZip response compression settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    IS_ENABLED: bool = Field(default=False, description="Whether GZip response compression is enabled")
+    MINIMUM_SIZE: int = Field(
+        default=500,
+        ge=0,
+        description="Minimum response body size in bytes before compression is applied",
+    )
+    COMPRESSLEVEL: int = Field(
+        default=6,
+        ge=1,
+        le=9,
+        description="GZip compression level (1=fastest, 9=best compression)",
+    )
+
+
+class FastAPITrustedHostConfig(BaseModel):
+    """TrustedHost middleware settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    IS_ENABLED: bool = Field(
+        default=False,
+        description="Whether TrustedHost middleware validates the Host header",
+    )
+    ALLOWED_HOSTS: list[str] = Field(
+        default=[],
+        description="Allowed hostnames (e.g. example.com, *.example.com)",
+    )
+    WWW_REDIRECT: bool = Field(
+        default=True,
+        description="Redirect www hosts to bare domain when allowed",
+    )
+
+
+class FastAPIHttpsRedirectConfig(BaseModel):
+    """HTTPS redirect middleware settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    IS_ENABLED: bool = Field(
+        default=False,
+        description="Whether HTTP requests are redirected to HTTPS",
+    )
 
 
 class FastAPIConfig(BaseModel):
@@ -40,7 +107,6 @@ class FastAPIConfig(BaseModel):
         default=None,
         description="Limits for automatic form parsing, with FastAPI defaults for omitted keys",
     )
-
     ACCESS_LOG: bool = Field(
         default=True,
         description="Whether to enable access logging",
@@ -66,44 +132,6 @@ class FastAPIConfig(BaseModel):
         default=None,
         description="Maximum number of requests",
         deprecated=_moved("LIMIT_MAX_REQUESTS"),
-    )
-    CORS_MIDDLEWARE_ALLOW_CREDENTIALS: bool = Field(default=True, description="Whether to allow credentials in CORS")
-    CORS_MIDDLEWARE_ALLOW_HEADERS: list[str] = Field(default=["*"], description="Allowed CORS headers")
-    CORS_MIDDLEWARE_ALLOW_METHODS: list[str] = Field(default=["*"], description="Allowed CORS methods")
-    CORS_MIDDLEWARE_ALLOW_ORIGIN_REGEX: str | None = Field(
-        default=None,
-        description="Regex pattern for allowed origins",
-    )
-    CORS_MIDDLEWARE_ALLOW_ORIGINS: list[str] = Field(default=["*"], description="Allowed CORS origins")
-    CORS_MIDDLEWARE_EXPOSE_HEADERS: list[str] = Field(default=[], description="Exposed CORS headers")
-    CORS_MIDDLEWARE_MAX_AGE: int = Field(default=600, description="Preflight cache duration in seconds")
-    GZIP_MIDDLEWARE_IS_ENABLED: bool = Field(default=False, description="Whether GZip response compression is enabled")
-    GZIP_MIDDLEWARE_MINIMUM_SIZE: int = Field(
-        default=500,
-        ge=0,
-        description="Minimum response body size in bytes before compression is applied",
-    )
-    GZIP_MIDDLEWARE_COMPRESSLEVEL: int = Field(
-        default=6,
-        ge=1,
-        le=9,
-        description="GZip compression level (1=fastest, 9=best compression)",
-    )
-    TRUSTED_HOST_MIDDLEWARE_IS_ENABLED: bool = Field(
-        default=False,
-        description="Whether TrustedHost middleware validates the Host header",
-    )
-    TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS: list[str] = Field(
-        default=[],
-        description="Allowed hostnames (e.g. example.com, *.example.com)",
-    )
-    TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT: bool = Field(
-        default=True,
-        description="Redirect www hosts to bare domain when allowed",
-    )
-    HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED: bool = Field(
-        default=False,
-        description="Whether HTTP requests are redirected to HTTPS",
     )
     PROXY_HEADERS: bool = Field(
         default=True,
@@ -159,6 +187,161 @@ class FastAPIConfig(BaseModel):
         default={"docExpansion": "none"},
         description="Swagger UI parameters",
     )
+
+    CORS: FastAPICorsConfig = Field(default_factory=FastAPICorsConfig, description="CORS middleware settings")
+    GZIP: FastAPIGzipConfig = Field(default_factory=FastAPIGzipConfig, description="GZip response compression settings")
+    TRUSTED_HOST: FastAPITrustedHostConfig = Field(
+        default_factory=FastAPITrustedHostConfig,
+        description="TrustedHost middleware settings",
+    )
+    HTTPS_REDIRECT: FastAPIHttpsRedirectConfig = Field(
+        default_factory=FastAPIHttpsRedirectConfig,
+        description="HTTPS redirect middleware settings",
+    )
+
+    CORS_MIDDLEWARE_ALLOW_CREDENTIALS: bool = Field(
+        default=True,
+        description="Whether to allow credentials in CORS",
+        deprecated=deprecated_flat_message("FASTAPI", "CORS_MIDDLEWARE_ALLOW_CREDENTIALS", "CORS", "ALLOW_CREDENTIALS"),
+    )
+    CORS_MIDDLEWARE_ALLOW_HEADERS: list[str] = Field(
+        default=["*"],
+        description="Allowed CORS headers",
+        deprecated=deprecated_flat_message("FASTAPI", "CORS_MIDDLEWARE_ALLOW_HEADERS", "CORS", "ALLOW_HEADERS"),
+    )
+    CORS_MIDDLEWARE_ALLOW_METHODS: list[str] = Field(
+        default=["*"],
+        description="Allowed CORS methods",
+        deprecated=deprecated_flat_message("FASTAPI", "CORS_MIDDLEWARE_ALLOW_METHODS", "CORS", "ALLOW_METHODS"),
+    )
+    CORS_MIDDLEWARE_ALLOW_ORIGIN_REGEX: str | None = Field(
+        default=None,
+        description="Regex pattern for allowed origins",
+        deprecated=deprecated_flat_message(
+            "FASTAPI",
+            "CORS_MIDDLEWARE_ALLOW_ORIGIN_REGEX",
+            "CORS",
+            "ALLOW_ORIGIN_REGEX",
+        ),
+    )
+    CORS_MIDDLEWARE_ALLOW_ORIGINS: list[str] = Field(
+        default=["*"],
+        description="Allowed CORS origins",
+        deprecated=deprecated_flat_message("FASTAPI", "CORS_MIDDLEWARE_ALLOW_ORIGINS", "CORS", "ALLOW_ORIGINS"),
+    )
+    CORS_MIDDLEWARE_EXPOSE_HEADERS: list[str] = Field(
+        default=[],
+        description="Exposed CORS headers",
+        deprecated=deprecated_flat_message("FASTAPI", "CORS_MIDDLEWARE_EXPOSE_HEADERS", "CORS", "EXPOSE_HEADERS"),
+    )
+    CORS_MIDDLEWARE_MAX_AGE: int = Field(
+        default=600,
+        description="Preflight cache duration in seconds",
+        deprecated=deprecated_flat_message("FASTAPI", "CORS_MIDDLEWARE_MAX_AGE", "CORS", "MAX_AGE"),
+    )
+    GZIP_MIDDLEWARE_IS_ENABLED: bool = Field(
+        default=False,
+        description="Whether GZip response compression is enabled",
+        deprecated=deprecated_flat_message("FASTAPI", "GZIP_MIDDLEWARE_IS_ENABLED", "GZIP", "IS_ENABLED"),
+    )
+    GZIP_MIDDLEWARE_MINIMUM_SIZE: int = Field(
+        default=500,
+        ge=0,
+        description="Minimum response body size in bytes before compression is applied",
+        deprecated=deprecated_flat_message("FASTAPI", "GZIP_MIDDLEWARE_MINIMUM_SIZE", "GZIP", "MINIMUM_SIZE"),
+    )
+    GZIP_MIDDLEWARE_COMPRESSLEVEL: int = Field(
+        default=6,
+        ge=1,
+        le=9,
+        description="GZip compression level (1=fastest, 9=best compression)",
+        deprecated=deprecated_flat_message("FASTAPI", "GZIP_MIDDLEWARE_COMPRESSLEVEL", "GZIP", "COMPRESSLEVEL"),
+    )
+    TRUSTED_HOST_MIDDLEWARE_IS_ENABLED: bool = Field(
+        default=False,
+        description="Whether TrustedHost middleware validates the Host header",
+        deprecated=deprecated_flat_message(
+            "FASTAPI",
+            "TRUSTED_HOST_MIDDLEWARE_IS_ENABLED",
+            "TRUSTED_HOST",
+            "IS_ENABLED",
+        ),
+    )
+    TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS: list[str] = Field(
+        default=[],
+        description="Allowed hostnames (e.g. example.com, *.example.com)",
+        deprecated=deprecated_flat_message(
+            "FASTAPI",
+            "TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS",
+            "TRUSTED_HOST",
+            "ALLOWED_HOSTS",
+        ),
+    )
+    TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT: bool = Field(
+        default=True,
+        description="Redirect www hosts to bare domain when allowed",
+        deprecated=deprecated_flat_message(
+            "FASTAPI",
+            "TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT",
+            "TRUSTED_HOST",
+            "WWW_REDIRECT",
+        ),
+    )
+    HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED: bool = Field(
+        default=False,
+        description="Whether HTTP requests are redirected to HTTPS",
+        deprecated=deprecated_flat_message(
+            "FASTAPI",
+            "HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED",
+            "HTTPS_REDIRECT",
+            "IS_ENABLED",
+        ),
+    )
+
+    @model_validator(mode="after")
+    def fold_deprecated_flat_fields(self) -> Self:
+        """Copy deprecated flat settings into their groups."""
+        fold_flat_fields(
+            self,
+            "CORS",
+            FastAPICorsConfig,
+            {
+                "CORS_MIDDLEWARE_ALLOW_CREDENTIALS": "ALLOW_CREDENTIALS",
+                "CORS_MIDDLEWARE_ALLOW_HEADERS": "ALLOW_HEADERS",
+                "CORS_MIDDLEWARE_ALLOW_METHODS": "ALLOW_METHODS",
+                "CORS_MIDDLEWARE_ALLOW_ORIGIN_REGEX": "ALLOW_ORIGIN_REGEX",
+                "CORS_MIDDLEWARE_ALLOW_ORIGINS": "ALLOW_ORIGINS",
+                "CORS_MIDDLEWARE_EXPOSE_HEADERS": "EXPOSE_HEADERS",
+                "CORS_MIDDLEWARE_MAX_AGE": "MAX_AGE",
+            },
+        )
+        fold_flat_fields(
+            self,
+            "GZIP",
+            FastAPIGzipConfig,
+            {
+                "GZIP_MIDDLEWARE_IS_ENABLED": "IS_ENABLED",
+                "GZIP_MIDDLEWARE_MINIMUM_SIZE": "MINIMUM_SIZE",
+                "GZIP_MIDDLEWARE_COMPRESSLEVEL": "COMPRESSLEVEL",
+            },
+        )
+        fold_flat_fields(
+            self,
+            "TRUSTED_HOST",
+            FastAPITrustedHostConfig,
+            {
+                "TRUSTED_HOST_MIDDLEWARE_IS_ENABLED": "IS_ENABLED",
+                "TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS": "ALLOWED_HOSTS",
+                "TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT": "WWW_REDIRECT",
+            },
+        )
+        fold_flat_fields(
+            self,
+            "HTTPS_REDIRECT",
+            FastAPIHttpsRedirectConfig,
+            {"HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED": "IS_ENABLED"},
+        )
+        return self
 
     @model_validator(mode="after")
     def warn_deprecated_uvicorn_fields(self) -> Self:

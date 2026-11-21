@@ -25,6 +25,22 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from archipy.configs.config_template import VaultConfig
+from archipy.configs.sections.vault import (
+    VaultAppRoleConfig,
+    VaultAwsConfig,
+    VaultAzureConfig,
+    VaultCertConfig,
+    VaultGcpConfig,
+    VaultGithubConfig,
+    VaultHttpConfig,
+    VaultJwtConfig,
+    VaultKubernetesConfig,
+    VaultLdapConfig,
+    VaultOktaConfig,
+    VaultTlsConfig,
+    VaultTokenRenewalConfig,
+    VaultUserpassConfig,
+)
 from archipy.models.errors import ConfigurationError
 
 if TYPE_CHECKING:
@@ -91,9 +107,9 @@ def _resolve_token(config: VaultConfig) -> str | None:
 
 def _resolve_approle_secret_id(config: VaultConfig) -> str | None:
     """Resolve the AppRole secret_id from file or inline value."""
-    if config.APPROLE_SECRET_ID_FILE:
-        return _read_file_secret(config.APPROLE_SECRET_ID_FILE)
-    return _secret_value(config.APPROLE_SECRET_ID)
+    if config.APPROLE.SECRET_ID_FILE:
+        return _read_file_secret(config.APPROLE.SECRET_ID_FILE)
+    return _secret_value(config.APPROLE.SECRET_ID)
 
 
 def _resolve_password(config: VaultConfig) -> str | None:
@@ -127,10 +143,10 @@ def _build_session(config: VaultConfig) -> Session:
     """
     session = Session()
     retry = Retry(
-        total=config.RETRIES_MAX_ATTEMPTS,
-        connect=config.RETRIES_MAX_ATTEMPTS,
-        read=config.RETRIES_MAX_ATTEMPTS,
-        status=config.RETRIES_MAX_ATTEMPTS,
+        total=config.HTTP.RETRIES_MAX_ATTEMPTS,
+        connect=config.HTTP.RETRIES_MAX_ATTEMPTS,
+        read=config.HTTP.RETRIES_MAX_ATTEMPTS,
+        status=config.HTTP.RETRIES_MAX_ATTEMPTS,
         backoff_factor=0.3,
         status_forcelist=(500, 502, 503, 504),
         # Only idempotent reads are retried on read errors and 5xx statuses: replaying
@@ -138,7 +154,7 @@ def _build_session(config: VaultConfig) -> Session:
         # are retried for every method.
         allowed_methods=frozenset({"GET", "HEAD", "LIST"}),
     )
-    timeout = (config.CONNECT_TIMEOUT, config.READ_TIMEOUT)
+    timeout = (config.HTTP.CONNECT_TIMEOUT, config.HTTP.READ_TIMEOUT)
     adapter = _TimeoutHTTPAdapter(timeout=timeout, max_retries=retry)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
@@ -204,11 +220,11 @@ def create_vault_client(config: VaultConfig) -> hvac.Client:
     if not config.ADDR:
         raise ConfigurationError(operation="vault_connect", reason="VAULT.ADDR is required when Vault is enabled")
 
-    verify: bool | str = config.CA_CERT_PATH or config.VERIFY_SSL
+    verify: bool | str = config.TLS.CA_CERT_PATH or config.TLS.VERIFY_SSL
     cert: tuple[str, str] | None = None
-    if config.CLIENT_CERT_PATH and config.CLIENT_KEY_PATH:
-        cert = (config.CLIENT_CERT_PATH, config.CLIENT_KEY_PATH)
-    elif config.CLIENT_CERT_PATH or config.CLIENT_KEY_PATH:
+    if config.TLS.CLIENT_CERT_PATH and config.TLS.CLIENT_KEY_PATH:
+        cert = (config.TLS.CLIENT_CERT_PATH, config.TLS.CLIENT_KEY_PATH)
+    elif config.TLS.CLIENT_CERT_PATH or config.TLS.CLIENT_KEY_PATH:
         raise ConfigurationError(
             operation="vault_tls",
             reason="Both CLIENT_CERT_PATH and CLIENT_KEY_PATH must be set for mutual TLS",
@@ -226,7 +242,7 @@ def create_vault_client(config: VaultConfig) -> hvac.Client:
         namespace=config.NAMESPACE,
         verify=verify,
         cert=cert,
-        timeout=(config.CONNECT_TIMEOUT, config.READ_TIMEOUT),
+        timeout=(config.HTTP.CONNECT_TIMEOUT, config.HTTP.READ_TIMEOUT),
         session=session,
     )
 
@@ -268,7 +284,7 @@ def _authenticate_token(client: hvac.Client, config: VaultConfig) -> None:
 
 def _authenticate_approle(client: hvac.Client, config: VaultConfig) -> None:
     """Authenticate with AppRole."""
-    if not config.APPROLE_ROLE_ID:
+    if not config.APPROLE.ROLE_ID:
         raise ConfigurationError(
             operation="vault_auth",
             reason="APPROLE_ROLE_ID is required for approle auth",
@@ -280,25 +296,25 @@ def _authenticate_approle(client: hvac.Client, config: VaultConfig) -> None:
             reason="APPROLE_SECRET_ID or APPROLE_SECRET_ID_FILE is required for approle auth",
         )
     response = client.auth.approle.login(
-        role_id=config.APPROLE_ROLE_ID,
+        role_id=config.APPROLE.ROLE_ID,
         secret_id=secret_id,
-        mount_point=config.APPROLE_MOUNT_POINT,
+        mount_point=config.APPROLE.MOUNT_POINT,
     )
     _set_client_token_from_auth_response(client, response)
 
 
 def _authenticate_kubernetes(client: hvac.Client, config: VaultConfig) -> None:
     """Authenticate with Kubernetes service account JWT."""
-    if not config.KUBERNETES_ROLE:
+    if not config.KUBERNETES.ROLE:
         raise ConfigurationError(
             operation="vault_auth",
             reason="KUBERNETES_ROLE is required for kubernetes auth",
         )
-    jwt = _read_file_secret(config.KUBERNETES_JWT_PATH)
+    jwt = _read_file_secret(config.KUBERNETES.JWT_PATH)
     response = client.auth.kubernetes.login(
-        role=config.KUBERNETES_ROLE,
+        role=config.KUBERNETES.ROLE,
         jwt=jwt,
-        mount_point=config.KUBERNETES_MOUNT_POINT,
+        mount_point=config.KUBERNETES.MOUNT_POINT,
     )
     _set_client_token_from_auth_response(client, response)
 
@@ -320,108 +336,108 @@ def _authenticate_username_password(client: hvac.Client, config: VaultConfig) ->
         response = client.auth.userpass.login(
             username=config.USERNAME,
             password=password,
-            mount_point=config.USERPASS_MOUNT_POINT,
+            mount_point=config.USERPASS.MOUNT_POINT,
         )
     elif config.AUTH_METHOD == "ldap":
         response = client.auth.ldap.login(
             username=config.USERNAME,
             password=password,
-            mount_point=config.LDAP_MOUNT_POINT,
+            mount_point=config.LDAP.MOUNT_POINT,
         )
     else:
         response = client.auth.okta.login(
             username=config.USERNAME,
             password=password,
-            mount_point=config.OKTA_MOUNT_POINT,
+            mount_point=config.OKTA.MOUNT_POINT,
         )
     _set_client_token_from_auth_response(client, response)
 
 
 def _authenticate_jwt(client: hvac.Client, config: VaultConfig) -> None:
     """Authenticate with the JWT auth method."""
-    if not config.JWT_ROLE:
+    if not config.JWT_AUTH.ROLE:
         raise ConfigurationError(operation="vault_auth", reason="JWT_ROLE is required for jwt auth")
-    jwt = _resolve_optional_file_or_value(config.JWT_FILE, config.JWT)
+    jwt = _resolve_optional_file_or_value(config.JWT_AUTH.JWT_FILE, config.JWT_AUTH.JWT)
     if not jwt:
         raise ConfigurationError(
             operation="vault_auth",
             reason="JWT or JWT_FILE is required for jwt auth",
         )
     response = client.auth.jwt.jwt_login(
-        role=config.JWT_ROLE,
+        role=config.JWT_AUTH.ROLE,
         jwt=jwt,
-        path=config.JWT_MOUNT_POINT,
+        path=config.JWT_AUTH.MOUNT_POINT,
     )
     _set_client_token_from_auth_response(client, response)
 
 
 def _authenticate_aws(client: hvac.Client, config: VaultConfig) -> None:
     """Authenticate with AWS IAM."""
-    if not config.AWS_ACCESS_KEY or not config.AWS_SECRET_KEY:
+    if not config.AWS.ACCESS_KEY or not config.AWS.SECRET_KEY:
         raise ConfigurationError(
             operation="vault_auth",
             reason="AWS_ACCESS_KEY and AWS_SECRET_KEY are required for aws auth",
         )
     response = client.auth.aws.iam_login(
-        access_key=config.AWS_ACCESS_KEY,
-        secret_key=_secret_value(config.AWS_SECRET_KEY),
-        session_token=_secret_value(config.AWS_SESSION_TOKEN),
-        role=config.AWS_ROLE,
-        region=config.AWS_REGION,
-        mount_point=config.AWS_MOUNT_POINT,
+        access_key=config.AWS.ACCESS_KEY,
+        secret_key=_secret_value(config.AWS.SECRET_KEY),
+        session_token=_secret_value(config.AWS.SESSION_TOKEN),
+        role=config.AWS.ROLE,
+        region=config.AWS.REGION,
+        mount_point=config.AWS.MOUNT_POINT,
     )
     _set_client_token_from_auth_response(client, response)
 
 
 def _authenticate_azure(client: hvac.Client, config: VaultConfig) -> None:
     """Authenticate with Azure."""
-    if not config.AZURE_ROLE:
+    if not config.AZURE.ROLE:
         raise ConfigurationError(operation="vault_auth", reason="AZURE_ROLE is required for azure auth")
-    jwt = _resolve_optional_file_or_value(config.AZURE_JWT_FILE, config.AZURE_JWT)
+    jwt = _resolve_optional_file_or_value(config.AZURE.JWT_FILE, config.AZURE.JWT)
     if not jwt:
         raise ConfigurationError(
             operation="vault_auth",
             reason="AZURE_JWT or AZURE_JWT_FILE is required for azure auth",
         )
     response = client.auth.azure.login(
-        role=config.AZURE_ROLE,
+        role=config.AZURE.ROLE,
         jwt=jwt,
-        subscription_id=config.AZURE_SUBSCRIPTION_ID,
-        resource_group_name=config.AZURE_RESOURCE_GROUP_NAME,
-        vm_name=config.AZURE_VM_NAME,
-        vmss_name=config.AZURE_VMSS_NAME,
-        mount_point=config.AZURE_MOUNT_POINT,
+        subscription_id=config.AZURE.SUBSCRIPTION_ID,
+        resource_group_name=config.AZURE.RESOURCE_GROUP_NAME,
+        vm_name=config.AZURE.VM_NAME,
+        vmss_name=config.AZURE.VMSS_NAME,
+        mount_point=config.AZURE.MOUNT_POINT,
     )
     _set_client_token_from_auth_response(client, response)
 
 
 def _authenticate_gcp(client: hvac.Client, config: VaultConfig) -> None:
     """Authenticate with GCP."""
-    if not config.GCP_ROLE:
+    if not config.GCP.ROLE:
         raise ConfigurationError(operation="vault_auth", reason="GCP_ROLE is required for gcp auth")
-    jwt = _resolve_optional_file_or_value(config.GCP_JWT_FILE, config.GCP_JWT)
+    jwt = _resolve_optional_file_or_value(config.GCP.JWT_FILE, config.GCP.JWT)
     if not jwt:
         raise ConfigurationError(
             operation="vault_auth",
             reason="GCP_JWT or GCP_JWT_FILE is required for gcp auth",
         )
     response = client.auth.gcp.login(
-        role=config.GCP_ROLE,
+        role=config.GCP.ROLE,
         jwt=jwt,
-        mount_point=config.GCP_MOUNT_POINT,
+        mount_point=config.GCP.MOUNT_POINT,
     )
     _set_client_token_from_auth_response(client, response)
 
 
 def _authenticate_github(client: hvac.Client, config: VaultConfig) -> None:
     """Authenticate with a GitHub personal access token."""
-    token = _resolve_optional_file_or_value(config.GITHUB_TOKEN_FILE, config.GITHUB_TOKEN)
+    token = _resolve_optional_file_or_value(config.GITHUB.TOKEN_FILE, config.GITHUB.TOKEN)
     if not token:
         raise ConfigurationError(
             operation="vault_auth",
             reason="GITHUB_TOKEN or GITHUB_TOKEN_FILE is required for github auth",
         )
-    response = client.auth.github.login(token=token, mount_point=config.GITHUB_MOUNT_POINT)
+    response = client.auth.github.login(token=token, mount_point=config.GITHUB.MOUNT_POINT)
     _set_client_token_from_auth_response(client, response)
 
 
@@ -429,15 +445,15 @@ def _authenticate_cert(client: hvac.Client, config: VaultConfig) -> None:
     """Authenticate with the TLS certificates auth method."""
     cert_pem = ""
     key_pem = ""
-    if config.CLIENT_CERT_PATH:
-        cert_pem = _read_file_secret(config.CLIENT_CERT_PATH)
-    if config.CLIENT_KEY_PATH:
-        key_pem = _read_file_secret(config.CLIENT_KEY_PATH)
+    if config.TLS.CLIENT_CERT_PATH:
+        cert_pem = _read_file_secret(config.TLS.CLIENT_CERT_PATH)
+    if config.TLS.CLIENT_KEY_PATH:
+        key_pem = _read_file_secret(config.TLS.CLIENT_KEY_PATH)
     response = client.auth.cert.login(
-        name=config.CERT_NAME,
+        name=config.CERT.NAME,
         cert_pem=cert_pem,
         key_pem=key_pem,
-        mount_point=config.CERT_MOUNT_POINT,
+        mount_point=config.CERT.MOUNT_POINT,
     )
     _set_client_token_from_auth_response(client, response)
 
@@ -554,6 +570,15 @@ def _parse_verify_ssl(raw: str | None) -> bool:
     )
 
 
+def _env_name(group: str, field: str, flat: str) -> str:
+    """Return the env var that holds a grouped Vault setting.
+
+    ``VAULT__<GROUP>__<FIELD>`` wins; the deprecated flat ``VAULT__<FLAT>`` is the fallback.
+    """
+    nested = f"VAULT__{group}__{field}"
+    return nested if nested in os.environ else f"VAULT__{flat}"
+
+
 def _vault_config_from_env() -> VaultConfig:
     """Build a ``VaultConfig`` from raw ``VAULT__*`` environment variables.
 
@@ -567,9 +592,6 @@ def _vault_config_from_env() -> VaultConfig:
             reason=f"Invalid VAULT__AUTH_METHOD: {auth_method}",
         )
 
-    verify_raw = os.environ.get("VAULT__VERIFY_SSL")
-    verify_ssl = _parse_verify_ssl(verify_raw)
-
     return VaultConfig(
         ENABLED=_env_truthy("VAULT__ENABLED"),
         ADDR=_env_opt("VAULT__ADDR"),
@@ -577,60 +599,90 @@ def _vault_config_from_env() -> VaultConfig:
         AUTH_METHOD=resolved_auth_method,
         TOKEN=_env_opt("VAULT__TOKEN"),
         TOKEN_FILE=_env_opt("VAULT__TOKEN_FILE"),
-        APPROLE_ROLE_ID=_env_opt("VAULT__APPROLE_ROLE_ID"),
-        APPROLE_SECRET_ID=_env_opt("VAULT__APPROLE_SECRET_ID"),
-        APPROLE_SECRET_ID_FILE=_env_opt("VAULT__APPROLE_SECRET_ID_FILE"),
-        APPROLE_MOUNT_POINT=_env_mount("VAULT__APPROLE_MOUNT_POINT", "approle"),
-        KUBERNETES_ROLE=_env_opt("VAULT__KUBERNETES_ROLE"),
-        KUBERNETES_JWT_PATH=(
-            os.environ.get("VAULT__KUBERNETES_JWT_PATH") or "/var/run/secrets/kubernetes.io/serviceaccount/token"
-        ),
-        KUBERNETES_MOUNT_POINT=_env_mount("VAULT__KUBERNETES_MOUNT_POINT", "kubernetes"),
         USERNAME=_env_opt("VAULT__USERNAME"),
         PASSWORD=_env_opt("VAULT__PASSWORD"),
         PASSWORD_FILE=_env_opt("VAULT__PASSWORD_FILE"),
-        USERPASS_MOUNT_POINT=_env_mount("VAULT__USERPASS_MOUNT_POINT", "userpass"),
-        LDAP_MOUNT_POINT=_env_mount("VAULT__LDAP_MOUNT_POINT", "ldap"),
-        OKTA_MOUNT_POINT=_env_mount("VAULT__OKTA_MOUNT_POINT", "okta"),
-        JWT_ROLE=_env_opt("VAULT__JWT_ROLE"),
-        JWT=_env_opt("VAULT__JWT"),
-        JWT_FILE=_env_opt("VAULT__JWT_FILE"),
-        JWT_MOUNT_POINT=_env_mount("VAULT__JWT_MOUNT_POINT", "jwt"),
-        AWS_ACCESS_KEY=_env_opt("VAULT__AWS_ACCESS_KEY"),
-        AWS_SECRET_KEY=_env_opt("VAULT__AWS_SECRET_KEY"),
-        AWS_SESSION_TOKEN=_env_opt("VAULT__AWS_SESSION_TOKEN"),
-        AWS_ROLE=_env_opt("VAULT__AWS_ROLE"),
-        AWS_REGION=_env_mount("VAULT__AWS_REGION", "us-east-1"),
-        AWS_MOUNT_POINT=_env_mount("VAULT__AWS_MOUNT_POINT", "aws"),
-        AZURE_ROLE=_env_opt("VAULT__AZURE_ROLE"),
-        AZURE_JWT=_env_opt("VAULT__AZURE_JWT"),
-        AZURE_JWT_FILE=_env_opt("VAULT__AZURE_JWT_FILE"),
-        AZURE_SUBSCRIPTION_ID=_env_opt("VAULT__AZURE_SUBSCRIPTION_ID"),
-        AZURE_RESOURCE_GROUP_NAME=_env_opt("VAULT__AZURE_RESOURCE_GROUP_NAME"),
-        AZURE_VM_NAME=_env_opt("VAULT__AZURE_VM_NAME"),
-        AZURE_VMSS_NAME=_env_opt("VAULT__AZURE_VMSS_NAME"),
-        AZURE_MOUNT_POINT=_env_mount("VAULT__AZURE_MOUNT_POINT", "azure"),
-        GCP_ROLE=_env_opt("VAULT__GCP_ROLE"),
-        GCP_JWT=_env_opt("VAULT__GCP_JWT"),
-        GCP_JWT_FILE=_env_opt("VAULT__GCP_JWT_FILE"),
-        GCP_MOUNT_POINT=_env_mount("VAULT__GCP_MOUNT_POINT", "gcp"),
-        GITHUB_TOKEN=_env_opt("VAULT__GITHUB_TOKEN"),
-        GITHUB_TOKEN_FILE=_env_opt("VAULT__GITHUB_TOKEN_FILE"),
-        GITHUB_MOUNT_POINT=_env_mount("VAULT__GITHUB_MOUNT_POINT", "github"),
-        CERT_NAME=os.environ.get("VAULT__CERT_NAME", "") or "",
-        CERT_MOUNT_POINT=_env_mount("VAULT__CERT_MOUNT_POINT", "cert"),
         MOUNT_POINT=_env_mount("VAULT__MOUNT_POINT", "secret"),
         SECRET_PATHS=_parse_secret_paths(os.environ.get("VAULT__SECRET_PATHS")),
-        VERIFY_SSL=verify_ssl,
-        CA_CERT_PATH=_env_opt("VAULT__CA_CERT_PATH"),
-        CLIENT_CERT_PATH=_env_opt("VAULT__CLIENT_CERT_PATH"),
-        CLIENT_KEY_PATH=_env_opt("VAULT__CLIENT_KEY_PATH"),
-        CONNECT_TIMEOUT=_env_float("VAULT__CONNECT_TIMEOUT", 5.0),
-        READ_TIMEOUT=_env_float("VAULT__READ_TIMEOUT", 10.0),
-        RETRIES_MAX_ATTEMPTS=_env_int("VAULT__RETRIES_MAX_ATTEMPTS", 3),
-        AUTO_RENEW_TOKEN=_env_truthy("VAULT__AUTO_RENEW_TOKEN"),
-        RENEW_THRESHOLD_SECONDS=_env_int("VAULT__RENEW_THRESHOLD_SECONDS", 60),
         SECRET_CACHE_TTL=_env_int("VAULT__SECRET_CACHE_TTL", 0),
+        APPROLE=VaultAppRoleConfig(
+            ROLE_ID=_env_opt(_env_name("APPROLE", "ROLE_ID", "APPROLE_ROLE_ID")),
+            SECRET_ID=_env_opt(_env_name("APPROLE", "SECRET_ID", "APPROLE_SECRET_ID")),
+            SECRET_ID_FILE=_env_opt(_env_name("APPROLE", "SECRET_ID_FILE", "APPROLE_SECRET_ID_FILE")),
+            MOUNT_POINT=_env_mount(_env_name("APPROLE", "MOUNT_POINT", "APPROLE_MOUNT_POINT"), "approle"),
+        ),
+        KUBERNETES=VaultKubernetesConfig(
+            ROLE=_env_opt(_env_name("KUBERNETES", "ROLE", "KUBERNETES_ROLE")),
+            JWT_PATH=os.environ.get(_env_name("KUBERNETES", "JWT_PATH", "KUBERNETES_JWT_PATH"))
+            or "/var/run/secrets/kubernetes.io/serviceaccount/token",
+            MOUNT_POINT=_env_mount(_env_name("KUBERNETES", "MOUNT_POINT", "KUBERNETES_MOUNT_POINT"), "kubernetes"),
+        ),
+        USERPASS=VaultUserpassConfig(
+            MOUNT_POINT=_env_mount(_env_name("USERPASS", "MOUNT_POINT", "USERPASS_MOUNT_POINT"), "userpass"),
+        ),
+        LDAP=VaultLdapConfig(
+            MOUNT_POINT=_env_mount(_env_name("LDAP", "MOUNT_POINT", "LDAP_MOUNT_POINT"), "ldap"),
+        ),
+        OKTA=VaultOktaConfig(
+            MOUNT_POINT=_env_mount(_env_name("OKTA", "MOUNT_POINT", "OKTA_MOUNT_POINT"), "okta"),
+        ),
+        JWT_AUTH=VaultJwtConfig(
+            ROLE=_env_opt(_env_name("JWT_AUTH", "ROLE", "JWT_ROLE")),
+            JWT=_env_opt(_env_name("JWT_AUTH", "JWT", "JWT")),
+            JWT_FILE=_env_opt(_env_name("JWT_AUTH", "JWT_FILE", "JWT_FILE")),
+            MOUNT_POINT=_env_mount(_env_name("JWT_AUTH", "MOUNT_POINT", "JWT_MOUNT_POINT"), "jwt"),
+        ),
+        AWS=VaultAwsConfig(
+            ACCESS_KEY=_env_opt(_env_name("AWS", "ACCESS_KEY", "AWS_ACCESS_KEY")),
+            SECRET_KEY=_env_opt(_env_name("AWS", "SECRET_KEY", "AWS_SECRET_KEY")),
+            SESSION_TOKEN=_env_opt(_env_name("AWS", "SESSION_TOKEN", "AWS_SESSION_TOKEN")),
+            ROLE=_env_opt(_env_name("AWS", "ROLE", "AWS_ROLE")),
+            REGION=_env_mount(_env_name("AWS", "REGION", "AWS_REGION"), "us-east-1"),
+            MOUNT_POINT=_env_mount(_env_name("AWS", "MOUNT_POINT", "AWS_MOUNT_POINT"), "aws"),
+        ),
+        AZURE=VaultAzureConfig(
+            ROLE=_env_opt(_env_name("AZURE", "ROLE", "AZURE_ROLE")),
+            JWT=_env_opt(_env_name("AZURE", "JWT", "AZURE_JWT")),
+            JWT_FILE=_env_opt(_env_name("AZURE", "JWT_FILE", "AZURE_JWT_FILE")),
+            SUBSCRIPTION_ID=_env_opt(_env_name("AZURE", "SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID")),
+            RESOURCE_GROUP_NAME=_env_opt(_env_name("AZURE", "RESOURCE_GROUP_NAME", "AZURE_RESOURCE_GROUP_NAME")),
+            VM_NAME=_env_opt(_env_name("AZURE", "VM_NAME", "AZURE_VM_NAME")),
+            VMSS_NAME=_env_opt(_env_name("AZURE", "VMSS_NAME", "AZURE_VMSS_NAME")),
+            MOUNT_POINT=_env_mount(_env_name("AZURE", "MOUNT_POINT", "AZURE_MOUNT_POINT"), "azure"),
+        ),
+        GCP=VaultGcpConfig(
+            ROLE=_env_opt(_env_name("GCP", "ROLE", "GCP_ROLE")),
+            JWT=_env_opt(_env_name("GCP", "JWT", "GCP_JWT")),
+            JWT_FILE=_env_opt(_env_name("GCP", "JWT_FILE", "GCP_JWT_FILE")),
+            MOUNT_POINT=_env_mount(_env_name("GCP", "MOUNT_POINT", "GCP_MOUNT_POINT"), "gcp"),
+        ),
+        GITHUB=VaultGithubConfig(
+            TOKEN=_env_opt(_env_name("GITHUB", "TOKEN", "GITHUB_TOKEN")),
+            TOKEN_FILE=_env_opt(_env_name("GITHUB", "TOKEN_FILE", "GITHUB_TOKEN_FILE")),
+            MOUNT_POINT=_env_mount(_env_name("GITHUB", "MOUNT_POINT", "GITHUB_MOUNT_POINT"), "github"),
+        ),
+        CERT=VaultCertConfig(
+            NAME=os.environ.get(_env_name("CERT", "NAME", "CERT_NAME"), "") or "",
+            MOUNT_POINT=_env_mount(_env_name("CERT", "MOUNT_POINT", "CERT_MOUNT_POINT"), "cert"),
+        ),
+        TLS=VaultTlsConfig(
+            VERIFY_SSL=_parse_verify_ssl(os.environ.get(_env_name("TLS", "VERIFY_SSL", "VERIFY_SSL"))),
+            CA_CERT_PATH=_env_opt(_env_name("TLS", "CA_CERT_PATH", "CA_CERT_PATH")),
+            CLIENT_CERT_PATH=_env_opt(_env_name("TLS", "CLIENT_CERT_PATH", "CLIENT_CERT_PATH")),
+            CLIENT_KEY_PATH=_env_opt(_env_name("TLS", "CLIENT_KEY_PATH", "CLIENT_KEY_PATH")),
+        ),
+        HTTP=VaultHttpConfig(
+            CONNECT_TIMEOUT=_env_float(_env_name("HTTP", "CONNECT_TIMEOUT", "CONNECT_TIMEOUT"), 5.0),
+            READ_TIMEOUT=_env_float(_env_name("HTTP", "READ_TIMEOUT", "READ_TIMEOUT"), 10.0),
+            RETRIES_MAX_ATTEMPTS=_env_int(_env_name("HTTP", "RETRIES_MAX_ATTEMPTS", "RETRIES_MAX_ATTEMPTS"), 3),
+        ),
+        TOKEN_RENEWAL=VaultTokenRenewalConfig(
+            AUTO_RENEW_TOKEN=_env_truthy(_env_name("TOKEN_RENEWAL", "AUTO_RENEW_TOKEN", "AUTO_RENEW_TOKEN")),
+            RENEW_THRESHOLD_SECONDS=_env_int(
+                _env_name("TOKEN_RENEWAL", "RENEW_THRESHOLD_SECONDS", "RENEW_THRESHOLD_SECONDS"),
+                60,
+            ),
+        ),
     )
 
 

@@ -1,10 +1,11 @@
 """Kafka configuration."""
 
 import logging
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
+from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.models.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,40 @@ logger = logging.getLogger(__name__)
 # SASL mechanisms that authenticate with a username and password.
 _SASL_MECHANISMS_WITH_CREDENTIALS = frozenset({"PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"})
 _SECURITY_PROTOCOLS = frozenset({"PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL"})
+
+
+class KafkaSaslConfig(BaseModel):
+    """SASL authentication settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    MECHANISM: str | None = Field(default=None, description="SASL mechanism for authentication")
+    USERNAME: str | None = Field(default=None, description="Username for SASL authentication")
+    PASSWORD: SecretStr | None = Field(default=None, description="Password for SASL authentication")
+
+    @field_validator("MECHANISM", mode="before")
+    @classmethod
+    def normalize_mechanism(cls, value: object) -> object:
+        """Accept SASL mechanism names in any case or with surrounding spaces."""
+        return value.strip().upper() if isinstance(value, str) else value
+
+
+class KafkaSslConfig(BaseModel):
+    """SSL and TLS file settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    CA_FILE: str | None = Field(default=None, description="Path to SSL CA certificate file")
+    CERT_FILE: str | None = Field(default=None, description="Path to SSL certificate file")
+    KEY_FILE: str | None = Field(default=None, description="Path to SSL key file")
+    ENDPOINT_IDENTIFICATION_ALGORITHM: Literal["https", "none"] = Field(
+        default="https",
+        description=(
+            "Broker hostname verification for SSL connections. 'https' checks the broker certificate against the "
+            "broker hostname; 'none' turns the check off and should only be used for brokers whose certificates "
+            "do not match their address"
+        ),
+    )
 
 
 class KafkaConfig(BaseModel):
@@ -23,20 +58,6 @@ class KafkaConfig(BaseModel):
 
     BROKERS_LIST: list[str] = Field(default=["localhost:9092"], description="List of Kafka broker addresses")
     SECURITY_PROTOCOL: str = Field(default="PLAINTEXT", description="Security protocol for Kafka connections")
-    SASL_MECHANISM: str | None = Field(default=None, description="SASL mechanism for authentication")
-    USERNAME: str | None = Field(default=None, description="Username for SASL authentication")
-    PASSWORD: SecretStr | None = Field(default=None, description="Password for SASL authentication")
-    SSL_CA_FILE: str | None = Field(default=None, description="Path to SSL CA certificate file")
-    SSL_CERT_FILE: str | None = Field(default=None, description="Path to SSL certificate file")
-    SSL_KEY_FILE: str | None = Field(default=None, description="Path to SSL key file")
-    SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: Literal["https", "none"] = Field(
-        default="https",
-        description=(
-            "Broker hostname verification for SSL connections. 'https' checks the broker certificate against the "
-            "broker hostname; 'none' turns the check off and should only be used for brokers whose certificates "
-            "do not match their address"
-        ),
-    )
     ACKS: Literal["0", "1", "all"] = Field(default="all", description="Acknowledgment mode for producers")
     AUTO_OFFSET_RESET: Literal["earliest", "latest", "none"] = Field(
         default="earliest",
@@ -142,8 +163,6 @@ class KafkaConfig(BaseModel):
         ge=0,
         description="Frequency in milliseconds to send statistics data",
     )
-
-    # Async adapter settings (AIOProducer / AIOConsumer)
     CONSUMER_MAX_WORKERS: int = Field(
         default=2,
         ge=1,
@@ -156,6 +175,76 @@ class KafkaConfig(BaseModel):
         description="Buffer flush timeout for AIOProducer (seconds)",
     )
     PRODUCER_MAX_WORKERS: int = Field(default=4, ge=1, description="Thread pool workers for AIOProducer")
+
+    SASL: KafkaSaslConfig = Field(default_factory=KafkaSaslConfig, description="SASL authentication settings")
+    SSL: KafkaSslConfig = Field(default_factory=KafkaSslConfig, description="SSL and TLS file settings")
+
+    SASL_MECHANISM: str | None = Field(
+        default=None,
+        description="SASL mechanism for authentication",
+        deprecated=deprecated_flat_message("KAFKA", "SASL_MECHANISM", "SASL", "MECHANISM"),
+    )
+    USERNAME: str | None = Field(
+        default=None,
+        description="Username for SASL authentication",
+        deprecated=deprecated_flat_message("KAFKA", "USERNAME", "SASL", "USERNAME"),
+    )
+    PASSWORD: SecretStr | None = Field(
+        default=None,
+        description="Password for SASL authentication",
+        deprecated=deprecated_flat_message("KAFKA", "PASSWORD", "SASL", "PASSWORD"),
+    )
+    SSL_CA_FILE: str | None = Field(
+        default=None,
+        description="Path to SSL CA certificate file",
+        deprecated=deprecated_flat_message("KAFKA", "SSL_CA_FILE", "SSL", "CA_FILE"),
+    )
+    SSL_CERT_FILE: str | None = Field(
+        default=None,
+        description="Path to SSL certificate file",
+        deprecated=deprecated_flat_message("KAFKA", "SSL_CERT_FILE", "SSL", "CERT_FILE"),
+    )
+    SSL_KEY_FILE: str | None = Field(
+        default=None,
+        description="Path to SSL key file",
+        deprecated=deprecated_flat_message("KAFKA", "SSL_KEY_FILE", "SSL", "KEY_FILE"),
+    )
+    SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: Literal["https", "none"] = Field(
+        default="https",
+        description=(
+            "Broker hostname verification for SSL connections. 'https' checks the broker certificate against the "
+            "broker hostname; 'none' turns the check off and should only be used for brokers whose certificates "
+            "do not match their address"
+        ),
+        deprecated=deprecated_flat_message(
+            "KAFKA",
+            "SSL_ENDPOINT_IDENTIFICATION_ALGORITHM",
+            "SSL",
+            "ENDPOINT_IDENTIFICATION_ALGORITHM",
+        ),
+    )
+
+    @model_validator(mode="after")
+    def fold_deprecated_flat_fields(self) -> Self:
+        """Copy deprecated flat settings into their groups."""
+        fold_flat_fields(
+            self,
+            "SASL",
+            KafkaSaslConfig,
+            {"SASL_MECHANISM": "MECHANISM", "USERNAME": "USERNAME", "PASSWORD": "PASSWORD"},
+        )
+        fold_flat_fields(
+            self,
+            "SSL",
+            KafkaSslConfig,
+            {
+                "SSL_CA_FILE": "CA_FILE",
+                "SSL_CERT_FILE": "CERT_FILE",
+                "SSL_KEY_FILE": "KEY_FILE",
+                "SSL_ENDPOINT_IDENTIFICATION_ALGORITHM": "ENDPOINT_IDENTIFICATION_ALGORITHM",
+            },
+        )
+        return self
 
     @field_validator("SECURITY_PROTOCOL", "SASL_MECHANISM", mode="before")
     @classmethod
@@ -204,24 +293,26 @@ class KafkaConfig(BaseModel):
             ValueError: If SASL authentication is incomplete.
         """
         if self.SECURITY_PROTOCOL in ["SASL_PLAINTEXT", "SASL_SSL"]:
-            if not self.SASL_MECHANISM:
+            if not self.SASL.MECHANISM:
                 raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
-            if self.SASL_MECHANISM in _SASL_MECHANISMS_WITH_CREDENTIALS and not (self.USERNAME and self.PASSWORD):
+            if self.SASL.MECHANISM in _SASL_MECHANISMS_WITH_CREDENTIALS and not (
+                self.SASL.USERNAME and self.SASL.PASSWORD
+            ):
                 raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
-        if self.SECURITY_PROTOCOL == "SASL_PLAINTEXT" and self.SASL_MECHANISM == "PLAIN":
+        if self.SECURITY_PROTOCOL == "SASL_PLAINTEXT" and self.SASL.MECHANISM == "PLAIN":
             logger.warning(
                 "SASL PLAIN over SASL_PLAINTEXT sends the username and password unencrypted; use SASL_SSL.",
             )
         if self.SECURITY_PROTOCOL not in ("SASL_PLAINTEXT", "SASL_SSL") and (
-            self.USERNAME or self.PASSWORD or self.SASL_MECHANISM
+            self.SASL.USERNAME or self.SASL.PASSWORD or self.SASL.MECHANISM
         ):
             logger.warning(
                 "SASL credentials or a SASL mechanism are set but SECURITY_PROTOCOL is %s; they are ignored.",
                 self.SECURITY_PROTOCOL,
             )
-        if self.SECURITY_PROTOCOL == "SSL" and not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
+        if self.SECURITY_PROTOCOL == "SSL" and not (self.SSL.CA_FILE or self.SSL.CERT_FILE or self.SSL.KEY_FILE):
             logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
-        if self.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM == "none":
+        if self.SSL.ENDPOINT_IDENTIFICATION_ALGORITHM == "none":
             logger.warning(
                 "Kafka broker hostname verification is disabled (SSL_ENDPOINT_IDENTIFICATION_ALGORITHM='none'); "
                 "SSL connections will not check that the broker certificate matches its hostname.",

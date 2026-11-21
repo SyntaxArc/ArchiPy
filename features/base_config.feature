@@ -55,7 +55,7 @@ Feature: Base Configuration System
     When the global configuration is set
     Then OTEL.SERVICE_NAME should be "my-service"
     And FASTAPI.PROJECT_NAME should be "my-service"
-    And AUTH.JWT_ISSUER should be "my-service"
+    And AUTH.JWT.ISSUER should be "my-service"
     And TEMPORAL.CLIENT_IDENTITY should be "my-service"
 
   Scenario: Explicit nested identity overrides win over APP_NAME
@@ -234,12 +234,19 @@ Feature: Base Configuration System
       | section       | problem                                            | outcome  |
       | Kafka         | SASL_SSL without credentials                       | rejected |
       | Kafka         | SASL_SSL with credentials                          | accepted |
+      | Kafka         | grouped SASL_SSL with credentials                  | accepted |
+      | Kafka         | grouped SASL_SSL without a password                | rejected |
       | Kafka         | auto commit and no offset reset                    | rejected |
       | Kafka         | a heartbeat longer than the session                | rejected |
       | Redis         | cluster mode without nodes                         | rejected |
       | Redis         | cluster mode with nodes                            | accepted |
       | Redis         | sentinel mode without a service name               | rejected |
       | Redis         | standalone mode without a host                     | rejected |
+      | Redis         | grouped cluster mode without nodes                 | rejected |
+      | Redis         | grouped cluster mode with nodes                    | accepted |
+      | Redis         | grouped sentinel mode without a service name       | rejected |
+      | Redis         | grouped client certificate without a key           | rejected |
+      | Redis         | grouped CA file with TLS disabled                  | rejected |
       | ScyllaDB      | no contact points                                  | rejected |
       | ScyllaDB      | a username without a password                      | rejected |
       | ScyllaDB      | a minimum pool above the maximum                   | rejected |
@@ -248,7 +255,15 @@ Feature: Base Configuration System
       | ScyllaDB      | TLS enabled with a CA file                         | accepted |
       | ScyllaDB      | an exponential reconnection base above the maximum | rejected |
       | ScyllaDB      | an exponential reconnection within bounds          | accepted |
+      | ScyllaDB      | a grouped client certificate without a key         | rejected |
+      | ScyllaDB      | a grouped CA file with TLS disabled                | rejected |
+      | ScyllaDB      | a grouped exponential reconnection above the max   | rejected |
+      | ScyllaDB      | a grouped replication without datacenters          | rejected |
+      | ScyllaDB      | grouped TLS enabled with a CA file                 | accepted |
       | Elasticsearch | only a username                                    | rejected |
+      | Elasticsearch | grouped username without a password                | rejected |
+      | Elasticsearch | grouped client cert without a key                  | rejected |
+      | Elasticsearch | grouped CA file with verification disabled         | rejected |
       | Elasticsearch | only a password                                    | rejected |
       | Elasticsearch | only an API key                                    | rejected |
       | Elasticsearch | only an API secret                                 | rejected |
@@ -258,6 +273,8 @@ Feature: Base Configuration System
       | Elasticsearch | an unknown node selector                           | rejected |
       | Elasticsearch | the random node selector                           | accepted |
       | Temporal      | only a client certificate                          | rejected |
+      | OpenTelemetry | a pushgateway exporter without a URL               | rejected |
+      | OpenTelemetry | a pushgateway exporter with a grouped URL          | accepted |
       | Temporal      | only a CA certificate                              | accepted |
       | Temporal      | a client key without a certificate                 | rejected |
       | Temporal      | a run timeout above the execution one              | rejected |
@@ -265,6 +282,10 @@ Feature: Base Configuration System
       | Temporal      | a task timeout above the run timeout               | accepted |
       | Temporal      | a verification name without a CA                   | rejected |
       | Temporal      | a verification name with a CA                      | accepted |
+      | Temporal      | a grouped client certificate without a key         | rejected |
+      | Temporal      | a grouped run timeout above the execution one      | rejected |
+      | Temporal      | a grouped keep alive timeout above the interval    | rejected |
+      | Temporal      | a grouped client certificate with a key            | accepted |
 
   Scenario Outline: A ScyllaDB configuration with <tls> builds <context>
     When a ScyllaDB TLS context is built with <tls>
@@ -398,3 +419,16 @@ Feature: Base Configuration System
       | async | sqlite  | TIMEOUT           | 2.5   | {"timeout": 2.5}             |
       | sync  | sqlite  | CHECK_SAME_THREAD | false | {"check_same_thread": false} |
       | async | sqlite  | CHECK_SAME_THREAD | false | {}                           |
+
+  Scenario Outline: Deprecated flat settings fold into a nested group
+    Given a test section with flat "<flat>" set to <flat_value> and group "<group>" set to <group_value>
+    When the test section is validated
+    Then the group value should be <expected>
+    And <warnings> deprecation warning should be raised
+
+    Examples:
+      | flat | flat_value | group | group_value | expected | warnings |
+      | NAME | "old"      | none  | none        | "old"    | 1        |
+      | NAME | "old"      | NAME  | "new"       | "new"    | 1        |
+      | none | none       | NAME  | "new"       | "new"    | 0        |
+      | none | none       | none  | none        | null     | 0        |

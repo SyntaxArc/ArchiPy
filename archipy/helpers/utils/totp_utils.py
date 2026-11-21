@@ -105,15 +105,15 @@ class TOTPUtils:
 
         # Get current timestamp and calculate time step
         current_time = DatetimeUtils.get_epoch_time_now()
-        time_step_counter = int(current_time / configs.TOTP_TIME_STEP)
+        time_step_counter = int(current_time / configs.TOTP.TIME_STEP)
 
         # Use the dedicated TOTP hash algorithm from config, with fallback to SHA1
         hash_algo = getattr(configs, "TOTP_HASH_ALGORITHM", "SHA1")
-        totp_code = _compute_totp(_secret_to_key(secret), time_step_counter, hash_algo, configs.TOTP_LENGTH)
+        totp_code = _compute_totp(_secret_to_key(secret), time_step_counter, hash_algo, configs.TOTP.LENGTH)
 
         # The code is accepted until the last step of the verification window ends, so never report a later expiry.
-        valid_until = (time_step_counter + configs.TOTP_VERIFICATION_WINDOW + 1) * configs.TOTP_TIME_STEP
-        lifetime = min(configs.TOTP_EXPIRES_IN, max(valid_until - current_time, 0))
+        valid_until = (time_step_counter + configs.TOTP.VERIFICATION_WINDOW + 1) * configs.TOTP.TIME_STEP
+        lifetime = min(configs.TOTP.EXPIRES_IN, max(valid_until - current_time, 0))
         expires_in = DatetimeUtils.get_datetime_after_given_datetime_or_now(seconds=lifetime)
 
         return totp_code, expires_in
@@ -165,7 +165,7 @@ class TOTPUtils:
         configs = auth_config or BaseConfig.global_config().AUTH
 
         # The expected length comes from the config, never from the caller's input.
-        if len(totp_code) != configs.TOTP_LENGTH:
+        if len(totp_code) != configs.TOTP.LENGTH:
             return False
 
         current_time = DatetimeUtils.get_epoch_time_now()
@@ -174,12 +174,12 @@ class TOTPUtils:
         hash_algo = getattr(configs, "TOTP_HASH_ALGORITHM", "SHA1")
 
         key = _secret_to_key(secret)
-        current_step = int(current_time / configs.TOTP_TIME_STEP)
+        current_step = int(current_time / configs.TOTP.TIME_STEP)
 
         # Check every step in the window without early exit so timing does not reveal which step matched
         matched_step: int | None = None
-        for i in range(-configs.TOTP_VERIFICATION_WINDOW, configs.TOTP_VERIFICATION_WINDOW + 1):
-            computed_totp = _compute_totp(key, current_step + i, hash_algo, configs.TOTP_LENGTH)
+        for i in range(-configs.TOTP.VERIFICATION_WINDOW, configs.TOTP.VERIFICATION_WINDOW + 1):
+            computed_totp = _compute_totp(key, current_step + i, hash_algo, configs.TOTP.LENGTH)
             if hmac.compare_digest(totp_code, computed_totp):
                 matched_step = current_step + i
 
@@ -205,13 +205,13 @@ class TOTPUtils:
             configs = auth_config or BaseConfig.global_config().AUTH
 
             # Use secrets module instead of random for better security
-            random_bytes = secrets.token_bytes(configs.SALT_LENGTH)
+            random_bytes = secrets.token_bytes(configs.PASSWORD_POLICY.SALT_LENGTH)
 
             # Check if TOTP secret key is configured
-            if not configs.TOTP_SECRET_KEY:
+            if not configs.TOTP.SECRET_KEY:
                 _raise_missing_totp_secret()
 
-            master_key = configs.TOTP_SECRET_KEY.get_secret_value().encode("utf-8")
+            master_key = configs.TOTP.SECRET_KEY.get_secret_value().encode("utf-8")
 
             # Use the dedicated TOTP hash algorithm from config, with fallback to SHA1
             hash_algo = getattr(configs, "TOTP_HASH_ALGORITHM", "SHA1")

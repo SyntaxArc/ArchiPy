@@ -279,7 +279,7 @@ _IN_MEMORY_COUNT_SQL = "SELECT COUNT(*) FROM recycled_items"
 
 def _in_memory_sqlite_config():
     # A recycle time of 0 makes every checkout older than the recycle time, so no waiting is needed.
-    return SQLiteSQLAlchemyConfig(DRIVER_NAME="sqlite", DATABASE=":memory:", POOL_RECYCLE_SECONDS=0)
+    return SQLiteSQLAlchemyConfig(DRIVER_NAME="sqlite", DATABASE=":memory:", POOL={"RECYCLE_SECONDS": 0})
 
 
 @when("a row is written to the sync in-memory SQLite database and read back after its pool recycle time")

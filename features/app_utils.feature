@@ -309,14 +309,21 @@ Feature: App Utilities
     Then the gRPC config should be <outcome>
 
     Examples:
-      | settings                               | outcome  |
-      | TLS_ENABLED                            | rejected |
-      | TLS_ENABLED,TLS_CERT_FILE              | rejected |
-      | TLS_ENABLED,TLS_CERT_FILE,TLS_KEY_FILE | accepted |
-      | TLS_REQUIRE_CLIENT_AUTH                | rejected |
-      | TLS_REQUIRE_CLIENT_AUTH,TLS_CA_FILE    | accepted |
-      | STUB_TLS_CERT_FILE                     | rejected |
-      | STUB_TLS_CERT_FILE,STUB_TLS_KEY_FILE   | accepted |
+      | settings                                  | outcome  |
+      | TLS_ENABLED                               | rejected |
+      | TLS_ENABLED,TLS_CERT_FILE                 | rejected |
+      | TLS_ENABLED,TLS_CERT_FILE,TLS_KEY_FILE    | accepted |
+      | TLS_REQUIRE_CLIENT_AUTH                   | rejected |
+      | TLS_REQUIRE_CLIENT_AUTH,TLS_CA_FILE       | accepted |
+      | STUB_TLS_CERT_FILE                        | rejected |
+      | STUB_TLS_CERT_FILE,STUB_TLS_KEY_FILE      | accepted |
+      | TLS.IS_ENABLED                            | rejected |
+      | TLS.IS_ENABLED,TLS.CERT_FILE              | rejected |
+      | TLS.IS_ENABLED,TLS.CERT_FILE,TLS.KEY_FILE | accepted |
+      | TLS.REQUIRE_CLIENT_AUTH                   | rejected |
+      | TLS.REQUIRE_CLIENT_AUTH,TLS.CA_FILE       | accepted |
+      | STUB_TLS.CERT_FILE                        | rejected |
+      | STUB_TLS.CERT_FILE,STUB_TLS.KEY_FILE      | accepted |
 
   Scenario Outline: A rate limiter that fails to start stops a fail-closed gRPC server
     Given gRPC rate limiting is enabled with fail closed set to <fail_closed> and a Redis client that cannot be created
@@ -393,6 +400,49 @@ Feature: App Utilities
     Then the uvicorn argument "timeout_keep_alive" is 9
     And the uvicorn argument "forwarded_allow_ips" is ["10.0.0.1"]
     And a deprecation warning mentions "UVICORN.TIMEOUT_KEEP_ALIVE"
+
+  Scenario: Grouped UVICORN settings reach the uvicorn arguments and win over the FASTAPI mirror
+    Given a configuration built from:
+      """
+      {
+        "UVICORN": {
+          "WEBSOCKET": {
+            "MAX_SIZE": 1024
+          },
+          "LIMITS": {
+            "BACKLOG": 10,
+            "CONCURRENCY": 5
+          }
+        },
+        "FASTAPI": {
+          "WS_MAX_SIZE": 2048
+        }
+      }
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "ws_max_size" is 1024
+    And the uvicorn argument "backlog" is 10
+    And the uvicorn argument "limit_concurrency" is 5
+    And no deprecation warning is raised
+
+  Scenario: A deprecated FASTAPI WebSocket setting applies when the UVICORN group leaves it unset
+    Given a configuration built from:
+      """
+      {
+        "UVICORN": {
+          "WEBSOCKET": {
+            "PING_INTERVAL": 5.0
+          }
+        },
+        "FASTAPI": {
+          "WS_MAX_SIZE": 2048
+        }
+      }
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "ws_max_size" is 2048
+    And the uvicorn argument "ws_ping_interval" is 5.0
+    And a deprecation warning mentions "UVICORN.WS_MAX_SIZE"
 
   Scenario: Reload leaves the worker count out
     Given a configuration built from:

@@ -273,7 +273,7 @@ def step_when_options_preflight_type(context, preflight_type):
     scenario_context = get_current_scenario_context(context)
     app = scenario_context.get("app")
     test_config = BaseConfig.global_config()
-    allowed_origin = test_config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS[0]
+    allowed_origin = test_config.FASTAPI.CORS.ALLOW_ORIGINS[0]
 
     client = TestClient(app)
 
@@ -402,10 +402,10 @@ def step_then_check_422_error(context):
 
 
 def _reset_optional_middleware_config(fastapi_config) -> None:
-    fastapi_config.GZIP_MIDDLEWARE_IS_ENABLED = False
-    fastapi_config.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = False
-    fastapi_config.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = []
-    fastapi_config.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED = False
+    fastapi_config.GZIP.IS_ENABLED = False
+    fastapi_config.TRUSTED_HOST.IS_ENABLED = False
+    fastapi_config.TRUSTED_HOST.ALLOWED_HOSTS = []
+    fastapi_config.HTTPS_REDIRECT.IS_ENABLED = False
 
 
 @given("a FastAPI app with GZip middleware enabled")
@@ -413,7 +413,7 @@ def step_given_fastapi_app_with_gzip(context):
     scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     _reset_optional_middleware_config(test_config.FASTAPI)
-    test_config.FASTAPI.GZIP_MIDDLEWARE_IS_ENABLED = True
+    test_config.FASTAPI.GZIP.IS_ENABLED = True
 
     app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
 
@@ -433,8 +433,8 @@ def step_given_fastapi_app_with_trusted_host(context, host):
     scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     _reset_optional_middleware_config(test_config.FASTAPI)
-    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
-    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = [host]
+    test_config.FASTAPI.TRUSTED_HOST.IS_ENABLED = True
+    test_config.FASTAPI.TRUSTED_HOST.ALLOWED_HOSTS = [host]
 
     app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
     _add_test_endpoint(app)
@@ -446,7 +446,7 @@ def step_given_fastapi_app_trusted_host_empty_hosts(context):
     scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     _reset_optional_middleware_config(test_config.FASTAPI)
-    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
+    test_config.FASTAPI.TRUSTED_HOST.IS_ENABLED = True
 
     app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
     scenario_context.store("app", app)
@@ -457,7 +457,7 @@ def step_given_fastapi_app_with_https_redirect(context):
     scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     _reset_optional_middleware_config(test_config.FASTAPI)
-    test_config.FASTAPI.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED = True
+    test_config.FASTAPI.HTTPS_REDIRECT.IS_ENABLED = True
 
     app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
     _add_test_endpoint(app)
@@ -704,15 +704,19 @@ def _tls_grpc_config(directory: Path, *, mtls: bool, client_cert: bool) -> BaseC
     cert_path, key_path = _write_self_signed_certificate(directory)
     return _config_with_grpc(
         GrpcConfig(
-            TLS_ENABLED=True,
-            TLS_CERT_FILE=str(cert_path),
-            TLS_KEY_FILE=str(key_path),
-            TLS_CA_FILE=str(cert_path) if mtls else None,
-            TLS_REQUIRE_CLIENT_AUTH=mtls,
-            STUB_TLS_ENABLED=True,
-            STUB_TLS_CA_FILE=str(cert_path),
-            STUB_TLS_CERT_FILE=str(cert_path) if client_cert else None,
-            STUB_TLS_KEY_FILE=str(key_path) if client_cert else None,
+            TLS={
+                "IS_ENABLED": True,
+                "CERT_FILE": str(cert_path),
+                "KEY_FILE": str(key_path),
+                "CA_FILE": str(cert_path) if mtls else None,
+                "REQUIRE_CLIENT_AUTH": mtls,
+            },
+            STUB_TLS={
+                "IS_ENABLED": True,
+                "CA_FILE": str(cert_path),
+                "CERT_FILE": str(cert_path) if client_cert else None,
+                "KEY_FILE": str(key_path) if client_cert else None,
+            },
         ),
     )
 
@@ -816,8 +820,14 @@ def step_when_grpc_plaintext_call(context, mode):
 def step_when_grpc_config_built(context, settings):
     scenario_context = get_current_scenario_context(context)
     keys = settings.split(",")
-    values: dict[str, bool | str] = {key: True for key in keys if key in {"TLS_ENABLED", "TLS_REQUIRE_CLIENT_AUTH"}}
-    values.update({key: "/nonexistent/x.pem" for key in keys if key.endswith("_FILE")})
+    values: dict = {}
+    for key in keys:
+        group, _, name = key.rpartition(".")
+        target = values.setdefault(group, {}) if group else values
+        if name in {"IS_ENABLED", "TLS_ENABLED", "REQUIRE_CLIENT_AUTH", "TLS_REQUIRE_CLIENT_AUTH"}:
+            target[name] = True
+        elif name.endswith("_FILE"):
+            target[name] = "/nonexistent/x.pem"
     try:
         GrpcConfig(**values)
         scenario_context.store("grpc_config_error", None)
@@ -845,7 +855,9 @@ def step_given_rate_limit_enabled_failing_redis(context, fail_closed):
     # A sentinel-mode Redis config without a service name makes the real RedisAdapter refuse to build its clients.
     global_config = BaseConfig.global_config()
     original_redis = global_config.REDIS
-    global_config.REDIS = original_redis.model_copy(update={"MODE": RedisMode.SENTINEL, "SENTINEL_SERVICE_NAME": None})
+    global_config.REDIS = original_redis.model_copy(
+        update={"MODE": RedisMode.SENTINEL, "SENTINEL": original_redis.SENTINEL.model_copy(update={"SERVICE_NAME": None})},
+    )
 
     def restore_redis() -> None:
         global_config.REDIS = original_redis
@@ -904,8 +916,8 @@ def _store_websocket_app(context, configure) -> None:
 @given('a FastAPI app with TrustedHost middleware enabled for "{host}" and an echo WebSocket')
 def step_given_trusted_host_websocket_app(context, host):
     def configure(fastapi_config):
-        fastapi_config.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
-        fastapi_config.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = [host]
+        fastapi_config.TRUSTED_HOST.IS_ENABLED = True
+        fastapi_config.TRUSTED_HOST.ALLOWED_HOSTS = [host]
 
     _store_websocket_app(context, configure)
 
@@ -914,7 +926,7 @@ def step_given_trusted_host_websocket_app(context, host):
 def step_given_https_redirect_websocket_app(context, state):
     _store_websocket_app(
         context,
-        lambda fastapi_config: setattr(fastapi_config, "HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED", state == "enabled"),
+        lambda fastapi_config: setattr(fastapi_config.HTTPS_REDIRECT, "IS_ENABLED", state == "enabled"),
     )
 
 

@@ -10,6 +10,12 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.scylladb.adapters import AsyncScyllaDBAdapter, ScyllaDBAdapter
 from archipy.configs.base_config import BaseConfig
+from archipy.configs.sections.scylladb import (
+    ScyllaHeartbeatConfig,
+    ScyllaReconnectionConfig,
+    ScyllaSpeculativeExecutionConfig,
+    ScyllaTlsConfig,
+)
 from archipy.models import errors
 from archipy.models.errors import NotFoundError
 
@@ -1355,7 +1361,8 @@ async def step_create_keyspace_capture_log(context: Context, keyspace: str, fact
         factor (int): Replication factor.
     """
     adapter = get_scylladb_adapter(context)
-    adapter.config = adapter.config.model_copy(update={"REPLICATION_CONFIG": {"datacenter1": factor}})
+    replication = adapter.config.REPLICATION.model_copy(update={"CONFIG": {"datacenter1": factor}})
+    adapter.config = adapter.config.model_copy(update={"REPLICATION": replication})
     records: list[logging.LogRecord] = []
 
     class _Capture(logging.Handler):
@@ -1422,8 +1429,7 @@ def step_build_cluster_capture_security_log(context: Context, credentials: str, 
     updates: dict[str, Any] = {
         "USERNAME": "user" if credentials == "set" else None,
         "PASSWORD": SecretStr("secret") if credentials == "set" else None,
-        "TLS_ENABLED": tls == "on",
-        "TLS_VERIFY_MODE": verify,
+        "TLS": ScyllaTlsConfig(IS_ENABLED=tls == "on", VERIFY_MODE=verify),
     }
     config = get_scylladb_adapter(context).config.model_copy(update=updates)
     adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
@@ -1798,9 +1804,11 @@ def step_build_scylladb_tls_cluster(context: Context, enabled: str, server_name:
     from archipy.adapters.scylladb.adapters import ScyllaDBAdapter
 
     updates = {
-        "TLS_ENABLED": enabled == "yes",
-        "TLS_SERVER_NAME": None if server_name == "-" else server_name,
-        "TLS_SESSION_CACHE_ENABLED": cache == "yes",
+        "TLS": ScyllaTlsConfig(
+            IS_ENABLED=enabled == "yes",
+            SERVER_NAME=None if server_name == "-" else server_name,
+            SESSION_CACHE_ENABLED=cache == "yes",
+        ),
     }
     config = get_scylladb_adapter(context).config.model_copy(update=updates)
     adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
@@ -1893,22 +1901,19 @@ def step_no_deprecation(context: Context) -> None:
 _RESILIENCE_PROFILES: dict[str, dict[str, Any]] = {
     "driver defaults": {},
     "constant reconnect": {
-        "RECONNECTION_POLICY": "CONSTANT",
-        "RECONNECTION_BASE_DELAY": 2.0,
-        "RECONNECTION_MAX_ATTEMPTS": 5,
+        "RECONNECTION": ScyllaReconnectionConfig(POLICY="CONSTANT", BASE_DELAY=2.0, MAX_ATTEMPTS=5),
     },
     "exponential reconnect": {
-        "RECONNECTION_POLICY": "EXPONENTIAL",
-        "RECONNECTION_BASE_DELAY": 0.5,
-        "RECONNECTION_MAX_DELAY": 30.0,
+        "RECONNECTION": ScyllaReconnectionConfig(POLICY="EXPONENTIAL", BASE_DELAY=0.5, MAX_DELAY=30.0),
     },
     "heartbeat and timeouts": {
-        "IDLE_HEARTBEAT_INTERVAL": 7.0,
-        "IDLE_HEARTBEAT_TIMEOUT": 11.0,
+        "HEARTBEAT": ScyllaHeartbeatConfig(IDLE_INTERVAL=7.0, IDLE_TIMEOUT=11.0),
         "CONTROL_CONNECTION_TIMEOUT": 4.0,
     },
     "serial consistency": {"SERIAL_CONSISTENCY_LEVEL": "LOCAL_SERIAL"},
-    "speculative execution": {"SPECULATIVE_EXECUTION_DELAY": 0.25, "SPECULATIVE_EXECUTION_MAX_ATTEMPTS": 3},
+    "speculative execution": {
+        "SPECULATIVE_EXECUTION": ScyllaSpeculativeExecutionConfig(DELAY=0.25, MAX_ATTEMPTS=3),
+    },
 }
 
 
@@ -1948,30 +1953,33 @@ def step_cluster_reflects_resilience(context: Context, profile: str) -> None:
     cluster = context.cluster
     default_profile = cluster.profile_manager.default
     settings = _RESILIENCE_PROFILES[profile]
+    reconnection_settings = settings.get("RECONNECTION")
+    heartbeat_settings = settings.get("HEARTBEAT")
+    speculative_settings = settings.get("SPECULATIVE_EXECUTION")
     reconnection = cluster.reconnection_policy
-    if settings.get("RECONNECTION_POLICY") == "CONSTANT":
+    if reconnection_settings is not None and reconnection_settings.POLICY == "CONSTANT":
         assert isinstance(reconnection, ConstantReconnectionPolicy), reconnection
-        assert reconnection.delay == settings["RECONNECTION_BASE_DELAY"]
-        assert reconnection.max_attempts == settings["RECONNECTION_MAX_ATTEMPTS"]
-    elif settings.get("RECONNECTION_POLICY") == "EXPONENTIAL":
+        assert reconnection.delay == reconnection_settings.BASE_DELAY
+        assert reconnection.max_attempts == reconnection_settings.MAX_ATTEMPTS
+    elif reconnection_settings is not None and reconnection_settings.POLICY == "EXPONENTIAL":
         assert isinstance(reconnection, ExponentialReconnectionPolicy), reconnection
-        assert reconnection.base_delay == settings["RECONNECTION_BASE_DELAY"]
-        assert reconnection.max_delay == settings["RECONNECTION_MAX_DELAY"]
+        assert reconnection.base_delay == reconnection_settings.BASE_DELAY
+        assert reconnection.max_delay == reconnection_settings.MAX_DELAY
     else:
         assert type(reconnection) is ExponentialReconnectionPolicy, reconnection
         assert reconnection.base_delay == 1.0
         assert reconnection.max_delay == 600.0
-    assert cluster.idle_heartbeat_interval == settings.get("IDLE_HEARTBEAT_INTERVAL", 30)
-    assert cluster.idle_heartbeat_timeout == settings.get("IDLE_HEARTBEAT_TIMEOUT", 30)
+    assert cluster.idle_heartbeat_interval == (heartbeat_settings.IDLE_INTERVAL if heartbeat_settings else 30)
+    assert cluster.idle_heartbeat_timeout == (heartbeat_settings.IDLE_TIMEOUT if heartbeat_settings else 30)
     assert cluster.control_connection_timeout == settings.get("CONTROL_CONNECTION_TIMEOUT", 2.0)
     expected_serial = None
     if "SERIAL_CONSISTENCY_LEVEL" in settings:
         expected_serial = getattr(ConsistencyLevel, settings["SERIAL_CONSISTENCY_LEVEL"])
     assert default_profile.serial_consistency_level == expected_serial, default_profile.serial_consistency_level
     speculative = default_profile.speculative_execution_policy
-    if "SPECULATIVE_EXECUTION_DELAY" in settings:
+    if speculative_settings is not None:
         assert isinstance(speculative, ConstantSpeculativeExecutionPolicy), speculative
-        assert speculative.delay == settings["SPECULATIVE_EXECUTION_DELAY"]
-        assert speculative.max_attempts == settings["SPECULATIVE_EXECUTION_MAX_ATTEMPTS"]
+        assert speculative.delay == speculative_settings.DELAY
+        assert speculative.max_attempts == speculative_settings.MAX_ATTEMPTS
     else:
         assert isinstance(speculative, NoSpeculativeExecutionPolicy), speculative

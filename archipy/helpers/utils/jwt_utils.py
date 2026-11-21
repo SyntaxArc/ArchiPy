@@ -25,7 +25,7 @@ _PROTECTED_CLAIMS = frozenset({"iss", "aud", "jti"})
 
 def _validated_algorithm(configs: AuthConfig) -> str:
     """Return the configured signing algorithm, refusing the unsigned ``none`` algorithm."""
-    algorithm = configs.HASH_ALGORITHM
+    algorithm = configs.JWT.ALGORITHM
     if not algorithm or algorithm.lower() == "none":
         raise InvalidArgumentError("HASH_ALGORITHM")
     return algorithm
@@ -41,7 +41,7 @@ def _validated_secret(configs: AuthConfig) -> str:
     if secret_key is None:
         raise InvalidArgumentError("SECRET_KEY")
     value = secret_key.get_secret_value()
-    minimum = _MIN_HMAC_KEY_BYTES.get(configs.HASH_ALGORITHM.upper(), 0)
+    minimum = _MIN_HMAC_KEY_BYTES.get(configs.JWT.ALGORITHM.upper(), 0)
     if len(value.encode("utf-8")) < minimum:
         raise InvalidArgumentError("SECRET_KEY", additional_data={"detail": f"at least {minimum} bytes required"})
     return value
@@ -100,8 +100,8 @@ class JWTUtils:
         to_encode.update(
             {
                 # Registered claims (RFC 7519)
-                "iss": configs.JWT_ISSUER,
-                "aud": configs.JWT_AUDIENCE,
+                "iss": configs.JWT.ISSUER,
+                "aud": configs.JWT.AUDIENCE,
                 "exp": expire,
                 "iat": current_time,
                 "nbf": current_time,
@@ -109,7 +109,7 @@ class JWTUtils:
         )
 
         # Add JWT ID if enabled
-        if configs.ENABLE_JTI_CLAIM:
+        if configs.JWT.ENABLE_JTI_CLAIM:
             to_encode["jti"] = str(uuid4())
 
         # Add additional claims
@@ -144,9 +144,9 @@ class JWTUtils:
             data={
                 "sub": str(user_uuid),
                 "type": "access",
-                "token_version": configs.TOKEN_VERSION,
+                "token_version": configs.JWT.TOKEN_VERSION,
             },
-            expires_in=configs.ACCESS_TOKEN_EXPIRES_IN,
+            expires_in=configs.JWT.ACCESS_TOKEN_EXPIRES_IN,
             additional_claims=additional_claims,
             auth_config=configs,
         )
@@ -175,9 +175,9 @@ class JWTUtils:
             data={
                 "sub": str(user_uuid),
                 "type": "refresh",
-                "token_version": configs.TOKEN_VERSION,
+                "token_version": configs.JWT.TOKEN_VERSION,
             },
-            expires_in=configs.REFRESH_TOKEN_EXPIRES_IN,
+            expires_in=configs.JWT.REFRESH_TOKEN_EXPIRES_IN,
             additional_claims=additional_claims,
             auth_config=configs,
         )
@@ -209,7 +209,7 @@ class JWTUtils:
 
         configs = auth_config or BaseConfig.global_config().AUTH
         required_claims = ["exp", "iat", "nbf", "aud", "iss", "sub", "type", "token_version"]
-        if configs.ENABLE_JTI_CLAIM:
+        if configs.JWT.ENABLE_JTI_CLAIM:
             required_claims.append("jti")
 
         try:
@@ -228,9 +228,9 @@ class JWTUtils:
                     "verify_iss": True,
                     "require": required_claims,
                 },
-                audience=configs.JWT_AUDIENCE,
-                issuer=configs.JWT_ISSUER,
-                leeway=configs.JWT_LEEWAY,
+                audience=configs.JWT.AUDIENCE,
+                issuer=configs.JWT.ISSUER,
+                leeway=configs.JWT.LEEWAY,
             )
 
             # Verify token type
@@ -238,7 +238,7 @@ class JWTUtils:
                 raise InvalidTokenError
 
             # Verify token version
-            if payload.get("token_version") != configs.TOKEN_VERSION:
+            if payload.get("token_version") != configs.JWT.TOKEN_VERSION:
                 raise InvalidTokenError
 
             # Ensure the return type is dict[str, object] as declared

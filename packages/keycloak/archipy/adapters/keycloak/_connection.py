@@ -84,8 +84,8 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
         self._uma_adapter: KeycloakUMA | None = None
 
         # Initialize admin client if admin mode is enabled and credentials are provided
-        if self.configs.IS_ADMIN_MODE_ENABLED and (
-            self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD)
+        if self.configs.ADMIN.IS_ENABLED and (
+            self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN.USERNAME and self.configs.ADMIN.PASSWORD)
         ):
             self._initialize_admin_client()
 
@@ -122,15 +122,15 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
         """Initialize or refresh the admin client."""
         try:
             # Check if admin credentials are available
-            if self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD:
+            if self.configs.ADMIN.USERNAME and self.configs.ADMIN.PASSWORD:
                 # Create admin client using admin credentials
                 self._admin_adapter = with_sync_proxies(
                     KeycloakAdmin(
                         server_url=self.configs.SERVER_URL,
-                        username=self.configs.ADMIN_USERNAME,
-                        password=_secret_value(self.configs.ADMIN_PASSWORD),
+                        username=self.configs.ADMIN.USERNAME,
+                        password=_secret_value(self.configs.ADMIN.PASSWORD),
                         realm_name=self.configs.REALM_NAME,
-                        user_realm_name=self.configs.ADMIN_REALM_NAME,
+                        user_realm_name=self.configs.ADMIN.REALM_NAME,
                         **client_options(self.configs, with_proxies=False),
                     ),
                     self.configs,
@@ -189,8 +189,8 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
             UnauthenticatedError: If admin client is not available due to authentication issues
             UnavailableError: If Keycloak service is unavailable
         """
-        if not self.configs.IS_ADMIN_MODE_ENABLED or not (
-            self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD)
+        if not self.configs.ADMIN.IS_ENABLED or not (
+            self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN.USERNAME and self.configs.ADMIN.PASSWORD)
         ):
             raise UnauthenticatedError(
                 additional_data={
@@ -268,8 +268,8 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         self._admin_lock = asyncio.Lock()
 
         # Initialize admin client if admin mode is enabled and credentials are provided
-        if self.configs.IS_ADMIN_MODE_ENABLED and (
-            self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD)
+        if self.configs.ADMIN.IS_ENABLED and (
+            self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN.USERNAME and self.configs.ADMIN.PASSWORD)
         ):
             self._initialize_admin_client()
 
@@ -306,15 +306,15 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         """Initialize or refresh the admin client."""
         try:
             # Check if admin credentials are available
-            if self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD:
+            if self.configs.ADMIN.USERNAME and self.configs.ADMIN.PASSWORD:
                 # Create admin client using admin credentials
                 self._admin_adapter = with_sync_proxies(
                     KeycloakAdmin(
                         server_url=self.configs.SERVER_URL,
-                        username=self.configs.ADMIN_USERNAME,
-                        password=_secret_value(self.configs.ADMIN_PASSWORD),
+                        username=self.configs.ADMIN.USERNAME,
+                        password=_secret_value(self.configs.ADMIN.PASSWORD),
                         realm_name=self.configs.REALM_NAME,
-                        user_realm_name=self.configs.ADMIN_REALM_NAME,
+                        user_realm_name=self.configs.ADMIN.REALM_NAME,
                         **client_options(self.configs, with_proxies=False),
                     ),
                     self.configs,
@@ -364,8 +364,8 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
     def _admin_credentials_configured(self) -> bool:
         """Tell whether admin mode is on and credentials exist for an admin client."""
         return bool(
-            self.configs.IS_ADMIN_MODE_ENABLED
-            and (self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD)),
+            self.configs.ADMIN.IS_ENABLED
+            and (self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN.USERNAME and self.configs.ADMIN.PASSWORD)),
         )
 
     def _admin_is_fresh(self) -> bool:
@@ -390,7 +390,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
 
     async def _a_initialize_admin_client(self) -> None:
         """Async variant of ``_initialize_admin_client``."""
-        if self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD:
+        if self.configs.ADMIN.USERNAME and self.configs.ADMIN.PASSWORD:
             # KeycloakAdmin logs in while it is built, so build it in a worker thread.
             await asyncio.to_thread(self._initialize_admin_client)
             return
@@ -433,8 +433,8 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
             UnauthenticatedError: If admin client is not available due to authentication issues
             UnavailableError: If Keycloak service is unavailable
         """
-        if not self.configs.IS_ADMIN_MODE_ENABLED or not (
-            self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD)
+        if not self.configs.ADMIN.IS_ENABLED or not (
+            self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN.USERNAME and self.configs.ADMIN.PASSWORD)
         ):
             raise UnauthenticatedError(
                 additional_data={

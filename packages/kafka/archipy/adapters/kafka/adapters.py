@@ -96,20 +96,20 @@ def _apply_security_config(config: dict[str, str | int | float], configs: KafkaC
     protocol = configs.SECURITY_PROTOCOL
     config["security.protocol"] = protocol
     if protocol in ("SASL_PLAINTEXT", "SASL_SSL"):
-        if configs.SASL_MECHANISM:
-            config["sasl.mechanism"] = configs.SASL_MECHANISM
-        if configs.USERNAME:
-            config["sasl.username"] = configs.USERNAME
-        if configs.PASSWORD:
-            config["sasl.password"] = configs.PASSWORD.get_secret_value()
+        if configs.SASL.MECHANISM:
+            config["sasl.mechanism"] = configs.SASL.MECHANISM
+        if configs.SASL.USERNAME:
+            config["sasl.username"] = configs.SASL.USERNAME
+        if configs.SASL.PASSWORD:
+            config["sasl.password"] = configs.SASL.PASSWORD.get_secret_value()
     if protocol in ("SSL", "SASL_SSL"):
-        if configs.SSL_CA_FILE:
-            config["ssl.ca.location"] = configs.SSL_CA_FILE
-        if configs.SSL_CERT_FILE:
-            config["ssl.certificate.location"] = configs.SSL_CERT_FILE
-        if configs.SSL_KEY_FILE:
-            config["ssl.key.location"] = configs.SSL_KEY_FILE
-        config["ssl.endpoint.identification.algorithm"] = configs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
+        if configs.SSL.CA_FILE:
+            config["ssl.ca.location"] = configs.SSL.CA_FILE
+        if configs.SSL.CERT_FILE:
+            config["ssl.certificate.location"] = configs.SSL.CERT_FILE
+        if configs.SSL.KEY_FILE:
+            config["ssl.key.location"] = configs.SSL.KEY_FILE
+        config["ssl.endpoint.identification.algorithm"] = configs.SSL.ENDPOINT_IDENTIFICATION_ALGORITHM
 
 
 def _apply_client_config(config: dict[str, str | int | float], configs: KafkaConfig, *, role: str) -> None:

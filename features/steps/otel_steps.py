@@ -29,6 +29,7 @@ from archipy.helpers.decorators import (
     trace_root,
     trace_span,
 )
+from archipy.configs.sections.otel import OtelPushgatewayConfig
 from archipy.helpers.errors import capture_exception
 from archipy.helpers.utils.otel_utils import OtelUtils
 from archipy.models.errors import ConfigurationError, NotFoundError
@@ -42,12 +43,7 @@ def _reset_otel_config_defaults() -> None:
     config.OTEL.SYSTEM_METRICS_ENABLED = True
     config.OTEL.METRICS_PULL_HOST = "127.0.0.1"
     config.OTEL.METRICS_PULL_PORT = 8200
-    config.OTEL.METRICS_PUSHGATEWAY_URL = None
-    config.OTEL.METRICS_PUSHGATEWAY_JOB = None
-    config.OTEL.METRICS_PUSHGATEWAY_INTERVAL_SECONDS = 60
-    config.OTEL.METRICS_PUSHGATEWAY_TIMEOUT_SECONDS = 10.0
-    config.OTEL.METRICS_PUSHGATEWAY_GROUPING_KEY = {}
-    config.OTEL.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN = True
+    config.OTEL.PUSHGATEWAY = OtelPushgatewayConfig()
     config.OTEL.LOGS_ENABLED = False
     config.OTEL.LOGS_LEVEL = "INFO"
     config.OTEL.FASTAPI_LOGS_ENABLED = False
@@ -73,12 +69,7 @@ _OTEL_FIELDS_TO_RESTORE = (
     "METRICS_EXPORTER",
     "METRICS_PULL_HOST",
     "METRICS_PULL_PORT",
-    "METRICS_PUSHGATEWAY_URL",
-    "METRICS_PUSHGATEWAY_JOB",
-    "METRICS_PUSHGATEWAY_INTERVAL_SECONDS",
-    "METRICS_PUSHGATEWAY_TIMEOUT_SECONDS",
-    "METRICS_PUSHGATEWAY_GROUPING_KEY",
-    "METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN",
+    "PUSHGATEWAY",
     "INSTRUMENTATION_SKIP_DEP_CHECK",
 )
 
@@ -2399,12 +2390,14 @@ def _configure_pushgateway(context, *, url: str | None = None, delete_on_shutdow
     config.OTEL.METRICS_ENABLED = True
     config.OTEL.LOGS_ENABLED = False
     config.OTEL.METRICS_EXPORTER = OtelMetricsExporter.PUSHGATEWAY
-    config.OTEL.METRICS_PUSHGATEWAY_URL = url or pushgateway.url
-    config.OTEL.METRICS_PUSHGATEWAY_JOB = _PUSHGATEWAY_JOB
-    config.OTEL.METRICS_PUSHGATEWAY_INTERVAL_SECONDS = 1
-    config.OTEL.METRICS_PUSHGATEWAY_TIMEOUT_SECONDS = 1.0
-    config.OTEL.METRICS_PUSHGATEWAY_GROUPING_KEY = {"instance": "bdd"}
-    config.OTEL.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN = delete_on_shutdown
+    config.OTEL.PUSHGATEWAY = OtelPushgatewayConfig(
+        URL=url or pushgateway.url,
+        JOB=_PUSHGATEWAY_JOB,
+        INTERVAL_SECONDS=1,
+        TIMEOUT_SECONDS=1.0,
+        GROUPING_KEY={"instance": "bdd"},
+        DELETE_ON_SHUTDOWN=delete_on_shutdown,
+    )
     config.OTEL.METRICS_PULL_HOST = "127.0.0.1"
     config.OTEL.METRICS_PULL_PORT = port
     config.OTEL.SYSTEM_METRICS_ENABLED = False

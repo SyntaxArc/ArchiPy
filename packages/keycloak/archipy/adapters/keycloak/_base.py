@@ -91,12 +91,14 @@ def client_options(
         when asked, proxies and headers).
     """
     cert: str | tuple[str, str] | None = None
-    if configs.CLIENT_CERT_FILE:
+    if configs.TLS.CLIENT_CERT_FILE:
         cert = (
-            (configs.CLIENT_CERT_FILE, configs.CLIENT_KEY_FILE) if configs.CLIENT_KEY_FILE else configs.CLIENT_CERT_FILE
+            (configs.TLS.CLIENT_CERT_FILE, configs.TLS.CLIENT_KEY_FILE)
+            if configs.TLS.CLIENT_KEY_FILE
+            else configs.TLS.CLIENT_CERT_FILE
         )
     options: dict[str, Any] = {
-        "verify": configs.VERIFY_SSL,
+        "verify": configs.TLS.VERIFY_SSL,
         "timeout": configs.TIMEOUT,
         "cert": cert,
         "max_retries": configs.MAX_RETRIES,

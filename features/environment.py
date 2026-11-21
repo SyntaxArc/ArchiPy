@@ -231,7 +231,7 @@ def after_scenario(context: Context, scenario: Scenario) -> None:
             global_config.VAULT.ADDR = instance.addr
             global_config.VAULT.TOKEN = SecretStr(instance.root_token)
             global_config.VAULT.AUTH_METHOD = "token"
-            global_config.VAULT.VERIFY_SSL = False
+            global_config.VAULT.TLS.VERIFY_SSL = False
             global_config.VAULT.MOUNT_POINT = "secret"
     except Exception:
         pass

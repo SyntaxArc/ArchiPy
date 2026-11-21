@@ -23,6 +23,32 @@ class AppConfig(BaseConfig):
     DB_PORT: int = 5432
 ```
 
+## Nested Settings
+
+Related settings live in nested groups of a section, for example `REDIS.TLS`, `VAULT.APPROLE`, or `AUTH.JWT`. Groups
+reject unknown keys, and every switch is named `IS_ENABLED`. Set them in code, or with the `__` delimiter in the
+environment:
+
+```bash
+REDIS__TLS__IS_ENABLED=true
+REDIS__TLS__CA_CERTS=/certs/ca.pem
+VAULT__APPROLE__ROLE_ID=my-role
+AUTH__JWT__ISSUER=my-service
+```
+
+```python
+from archipy.configs.config_template import RedisConfig
+
+RedisConfig(TLS={"IS_ENABLED": True, "CA_CERTS": "/certs/ca.pem"})
+```
+
+The flat names they replace (`REDIS__SSL`, `VAULT__APPROLE_ROLE_ID`, `AUTH__JWT_ISSUER`) still work, emit a
+`DeprecationWarning`, and are removed in 6.0.0. A value set on a group wins over the flat one.
+
+Grouped sections: `VAULT`, `SCYLLADB`, `TEMPORAL`, `REDIS`, `ELASTIC`, `SQLALCHEMY` (`POOL`, `COUNT_CACHE`), `AUTH`,
+`KEYCLOAK`, `EMAIL`, `GRPC` (`TLS`, `STUB_TLS`), `KAFKA` (`SASL`, `SSL`), and `FASTAPI` (`CORS`, `GZIP`,
+`TRUSTED_HOST`, `HTTPS_REDIRECT`).
+
 ## API Stability
 
 | Component         | Status    | Notes            |

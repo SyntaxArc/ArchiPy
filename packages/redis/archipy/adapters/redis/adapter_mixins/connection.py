@@ -101,7 +101,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             configs (RedisConfig): Configuration settings for Redis cluster.
         """
         startup_nodes = []
-        for node in configs.CLUSTER_NODES:
+        for node in configs.CLUSTER.NODES:
             if ":" in node:
                 host, port = node.split(":", 1)
                 startup_nodes.append(ClusterNode(host, int(port)))
@@ -109,7 +109,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
                 startup_nodes.append(ClusterNode(node, configs.PORT))
 
         cluster_kwargs: dict[str, Any] = {}
-        if configs.CLUSTER_READ_FROM_REPLICAS:
+        if configs.CLUSTER.READ_FROM_REPLICAS:
             cluster_kwargs["load_balancing_strategy"] = LoadBalancingStrategy.ROUND_ROBIN
 
         cluster_client = RedisCluster(
@@ -120,7 +120,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
             socket_timeout=configs.SOCKET_TIMEOUT,
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
-            require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
+            require_full_coverage=configs.CLUSTER.REQUIRE_FULL_COVERAGE,
             protocol=configs.PROTOCOL,
             **_tls_acl_kwargs(configs),
             **_resilience_kwargs(configs, is_async=False),
@@ -137,14 +137,14 @@ class RedisConnectionMixin(SyncRedisMixinBase):
         Args:
             configs (RedisConfig): Configuration settings for Redis sentinel.
         """
-        sentinel_service_name = configs.SENTINEL_SERVICE_NAME
+        sentinel_service_name = configs.SENTINEL.SERVICE_NAME
         if not sentinel_service_name:
             raise InvalidArgumentError(argument_name="SENTINEL_SERVICE_NAME")
-        sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL_NODES]
+        sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL.NODES]
 
         sentinel_connection = Sentinel(
             sentinel_nodes,
-            socket_timeout=configs.SENTINEL_SOCKET_TIMEOUT,
+            socket_timeout=configs.SENTINEL.SOCKET_TIMEOUT,
             password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
@@ -187,7 +187,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             )
         if configs.MODE == RedisMode.CLUSTER:
             startup_nodes = []
-            for node in configs.CLUSTER_NODES:
+            for node in configs.CLUSTER.NODES:
                 if ":" in node:
                     host, port = node.split(":", 1)
                     startup_nodes.append(ClusterNode(host, int(port)))
@@ -195,7 +195,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
                     startup_nodes.append(ClusterNode(node, configs.PORT))
 
             cluster_kwargs: dict[str, Any] = {}
-            if configs.CLUSTER_READ_FROM_REPLICAS:
+            if configs.CLUSTER.READ_FROM_REPLICAS:
                 cluster_kwargs["load_balancing_strategy"] = LoadBalancingStrategy.ROUND_ROBIN
 
             return RedisCluster(
@@ -206,7 +206,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
                 socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
                 socket_timeout=configs.SOCKET_TIMEOUT,
                 health_check_interval=configs.HEALTH_CHECK_INTERVAL,
-                require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
+                require_full_coverage=configs.CLUSTER.REQUIRE_FULL_COVERAGE,
                 protocol=configs.PROTOCOL,
                 **_tls_acl_kwargs(configs),
                 **_resilience_kwargs(configs, is_async=False),
@@ -379,7 +379,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             configs (RedisConfig): Configuration settings for Redis cluster.
         """
         startup_nodes = []
-        for node in configs.CLUSTER_NODES:
+        for node in configs.CLUSTER.NODES:
             if ":" in node:
                 host, port = node.split(":", 1)
                 startup_nodes.append(AsyncClusterNode(host, int(port)))
@@ -387,7 +387,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 startup_nodes.append(AsyncClusterNode(node, configs.PORT))
 
         cluster_kwargs: dict[str, Any] = {}
-        if configs.CLUSTER_READ_FROM_REPLICAS:
+        if configs.CLUSTER.READ_FROM_REPLICAS:
             cluster_kwargs["load_balancing_strategy"] = AsyncLoadBalancingStrategy.ROUND_ROBIN
 
         cluster_client = AsyncRedisCluster(
@@ -398,7 +398,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
             socket_timeout=configs.SOCKET_TIMEOUT,
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
-            require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
+            require_full_coverage=configs.CLUSTER.REQUIRE_FULL_COVERAGE,
             protocol=configs.PROTOCOL,
             **_tls_acl_kwargs(configs),
             **_resilience_kwargs(configs, is_async=True),
@@ -415,14 +415,14 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         Args:
             configs (RedisConfig): Configuration settings for Redis sentinel.
         """
-        sentinel_service_name = configs.SENTINEL_SERVICE_NAME
+        sentinel_service_name = configs.SENTINEL.SERVICE_NAME
         if not sentinel_service_name:
             raise InvalidArgumentError(argument_name="SENTINEL_SERVICE_NAME")
-        sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL_NODES]
+        sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL.NODES]
 
         sentinel_connection = AsyncSentinel(
             sentinel_nodes,
-            socket_timeout=configs.SENTINEL_SOCKET_TIMEOUT,
+            socket_timeout=configs.SENTINEL.SOCKET_TIMEOUT,
             password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
@@ -465,7 +465,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             )
         if configs.MODE == RedisMode.CLUSTER:
             startup_nodes = []
-            for node in configs.CLUSTER_NODES:
+            for node in configs.CLUSTER.NODES:
                 if ":" in node:
                     host, port = node.split(":", 1)
                     startup_nodes.append(AsyncClusterNode(host, int(port)))
@@ -473,7 +473,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                     startup_nodes.append(AsyncClusterNode(node, configs.PORT))
 
             cluster_kwargs: dict[str, Any] = {}
-            if configs.CLUSTER_READ_FROM_REPLICAS:
+            if configs.CLUSTER.READ_FROM_REPLICAS:
                 cluster_kwargs["load_balancing_strategy"] = AsyncLoadBalancingStrategy.ROUND_ROBIN
 
             return AsyncRedisCluster(
@@ -484,7 +484,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
                 socket_timeout=configs.SOCKET_TIMEOUT,
                 health_check_interval=configs.HEALTH_CHECK_INTERVAL,
-                require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
+                require_full_coverage=configs.CLUSTER.REQUIRE_FULL_COVERAGE,
                 protocol=configs.PROTOCOL,
                 **_tls_acl_kwargs(configs),
                 **_resilience_kwargs(configs, is_async=True),

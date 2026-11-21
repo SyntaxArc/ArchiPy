@@ -121,11 +121,11 @@ def step_then_secure_password_meets_requirements(context):
     generated_password = scenario_context.get("generated_password")
     test_config = BaseConfig.global_config()
 
-    assert len(generated_password) >= test_config.AUTH.MIN_LENGTH
+    assert len(generated_password) >= test_config.AUTH.PASSWORD_POLICY.MIN_LENGTH
     assert any(char.isdigit() for char in generated_password)
     assert any(char.islower() for char in generated_password)
     assert any(char.isupper() for char in generated_password)
-    assert any(char in test_config.AUTH.SPECIAL_CHARACTERS for char in generated_password)
+    assert any(char in test_config.AUTH.PASSWORD_POLICY.SPECIAL_CHARACTERS for char in generated_password)
 
 
 @given('a password history containing "{old_password}"')
@@ -145,7 +145,9 @@ def step_when_reuse_old_password(context, new_password):
     auth = test_config.AUTH
     history_size = scenario_context.get("history_size")
     if history_size is not None:
-        auth = auth.model_copy(update={"PASSWORD_HISTORY_SIZE": history_size})
+        auth = auth.model_copy(
+            update={"PASSWORD_POLICY": auth.PASSWORD_POLICY.model_copy(update={"HISTORY_SIZE": history_size})},
+        )
 
     try:
         PasswordUtils.validate_password_history(new_password, password_history, auth)
@@ -177,13 +179,15 @@ def step_then_hash_is_versioned(context, scheme):
     parts = hashed_password.split("$")
     assert len(parts) == 4, hashed_password
     assert parts[0] == scheme
-    assert int(parts[1]) == BaseConfig.global_config().AUTH.HASH_ITERATIONS
+    assert int(parts[1]) == BaseConfig.global_config().AUTH.PASSWORD_POLICY.HASH_ITERATIONS
 
 
 @when("the password is verified with the iteration setting changed to {iterations:d}")
 def step_when_verified_with_changed_iterations(context, iterations):
     scenario_context = get_current_scenario_context(context)
-    auth = BaseConfig.global_config().AUTH.model_copy(update={"HASH_ITERATIONS": iterations})
+    auth = BaseConfig.global_config().AUTH.model_copy(
+        update={"PASSWORD_POLICY": BaseConfig.global_config().AUTH.PASSWORD_POLICY.model_copy(update={"HASH_ITERATIONS": iterations})},
+    )
     scenario_context.store(
         "is_verified",
         PasswordUtils.verify_password(scenario_context.get("password"), scenario_context.get("hashed_password"), auth),
@@ -199,7 +203,7 @@ def _legacy_hash(password, iterations):
 @given("the password is hashed in the legacy format with the configured iteration count")
 def step_given_legacy_hash_configured(context):
     scenario_context = get_current_scenario_context(context)
-    iterations = BaseConfig.global_config().AUTH.HASH_ITERATIONS
+    iterations = BaseConfig.global_config().AUTH.PASSWORD_POLICY.HASH_ITERATIONS
     scenario_context.store("hashed_password", _legacy_hash(scenario_context.get("password"), iterations))
 
 
