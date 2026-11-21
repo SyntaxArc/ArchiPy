@@ -128,7 +128,6 @@ dev = [
     "types-grpcio>=1.85.0.20261028",
     "types-protobuf>=7.35.1.20260906",
     "types-pymysql>=1.2.4.20261116",
-    "types-regex>=2026.11.19.20261119",
     "validate-pyproject>=0.27",
 ]
 
