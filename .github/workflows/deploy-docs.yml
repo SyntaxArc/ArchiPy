@@ -13,19 +13,25 @@ on:
       - 'uv.lock'
       - '.python-version'
       - '.github/workflows/deploy-docs.yml'
+  pull_request:
+    paths:
+      - '.python-version'
+      - '.github/workflows/deploy-docs.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  deploy:
+  deployment-smoke-test:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    container: ghcr.io/astral-sh/uv:0.13.9-trixie
-    steps:
+    container: &uv-image ghcr.io/astral-sh/uv:0.13.9-trixie
+    steps: &deployment-steps
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Fetch all history for proper versioning
+          persist-credentials: ${{ github.event_name == 'push' }}
 
       - name: Cache uv dependencies
         uses: actions/cache@v5
@@ -38,8 +44,24 @@ jobs:
 
       - name: Configure Git user
         run: |
+          # Checkout only trusts the runner-owned workspace in its temporary Git config.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
       - name: Deploy documentation
-        run: uv run --no-sync mkdocs gh-deploy --force -f docs/mkdocs-full.yml
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            git init --bare "$RUNNER_TEMP/docs-deploy.git"
+            git remote add deployment-test "$RUNNER_TEMP/docs-deploy.git"
+            set -- --remote-name deployment-test
+          fi
+          uv run --no-sync mkdocs gh-deploy --force -f docs/mkdocs-full.yml "$@"
+
+  deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    container: *uv-image
+    permissions:
+      contents: write
+    steps: *deployment-steps
