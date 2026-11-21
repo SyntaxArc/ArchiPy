@@ -444,14 +444,23 @@ class AppUtils:
         Returns:
             dict[str, Any]: Keyword arguments for uvicorn. Pass the application separately.
         """
-        from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI
+        from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI, UVICORN_GROUPED_FIELDS
 
         config = config or BaseConfig.global_config()
         uvicorn_section, fastapi_section = config.UVICORN, config.FASTAPI
 
+        def uvicorn_value(name: str) -> tuple[Any, bool]:
+            """Return the ``UVICORN`` value of a setting and whether it was set explicitly."""
+            if name in UVICORN_GROUPED_FIELDS:
+                group_name, field = UVICORN_GROUPED_FIELDS[name]
+                group = getattr(uvicorn_section, group_name)
+                return getattr(group, field), field in group.model_fields_set
+            return getattr(uvicorn_section, name), name in uvicorn_section.model_fields_set
+
         def resolve(name: str) -> Any:  # noqa: ANN401
-            if name in uvicorn_section.model_fields_set or name not in UVICORN_FIELDS_ON_FASTAPI:
-                return getattr(uvicorn_section, name)
+            value, is_set = uvicorn_value(name)
+            if is_set or name not in UVICORN_FIELDS_ON_FASTAPI:
+                return value
             if name in fastapi_section.model_fields_set:
                 warnings.warn(
                     f"FASTAPI.{name} is deprecated and will be removed in 6.0.0; set UVICORN.{name} instead",
@@ -459,7 +468,7 @@ class AppUtils:
                     stacklevel=3,
                 )
                 return vars(fastapi_section)[name]  # read without the pydantic deprecation warning
-            return getattr(uvicorn_section, name)
+            return value
 
         values = {
             "host": fastapi_section.SERVE_HOST,
@@ -479,9 +488,9 @@ class AppUtils:
             "ws_per_message_deflate": resolve("WS_PER_MESSAGE_DEFLATE"),
             "ws_ping_interval": resolve("WS_PING_INTERVAL"),
             "ws_ping_timeout": resolve("WS_PING_TIMEOUT"),
-            "ssl_keyfile": uvicorn_section.SSL_KEYFILE,
-            "ssl_certfile": uvicorn_section.SSL_CERTFILE,
-            "ssl_ca_certs": uvicorn_section.SSL_CA_CERTS,
+            "ssl_keyfile": uvicorn_section.TLS.KEYFILE,
+            "ssl_certfile": uvicorn_section.TLS.CERTFILE,
+            "ssl_ca_certs": uvicorn_section.TLS.CA_CERTS,
         }
         if not values["reload"]:
             values["workers"] = resolve("WORKERS_COUNT")

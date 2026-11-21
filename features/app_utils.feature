@@ -401,6 +401,49 @@ Feature: App Utilities
     And the uvicorn argument "forwarded_allow_ips" is ["10.0.0.1"]
     And a deprecation warning mentions "UVICORN.TIMEOUT_KEEP_ALIVE"
 
+  Scenario: Grouped UVICORN settings reach the uvicorn arguments and win over the FASTAPI mirror
+    Given a configuration built from:
+      """
+      {
+        "UVICORN": {
+          "WEBSOCKET": {
+            "MAX_SIZE": 1024
+          },
+          "LIMITS": {
+            "BACKLOG": 10,
+            "CONCURRENCY": 5
+          }
+        },
+        "FASTAPI": {
+          "WS_MAX_SIZE": 2048
+        }
+      }
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "ws_max_size" is 1024
+    And the uvicorn argument "backlog" is 10
+    And the uvicorn argument "limit_concurrency" is 5
+    And no deprecation warning is raised
+
+  Scenario: A deprecated FASTAPI WebSocket setting applies when the UVICORN group leaves it unset
+    Given a configuration built from:
+      """
+      {
+        "UVICORN": {
+          "WEBSOCKET": {
+            "PING_INTERVAL": 5.0
+          }
+        },
+        "FASTAPI": {
+          "WS_MAX_SIZE": 2048
+        }
+      }
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "ws_max_size" is 2048
+    And the uvicorn argument "ws_ping_interval" is 5.0
+    And a deprecation warning mentions "UVICORN.WS_MAX_SIZE"
+
   Scenario: Reload leaves the worker count out
     Given a configuration built from:
       """
