@@ -20,7 +20,7 @@ jobs:
         python-version: ["3.14", "3.15"]
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Update version in pyproject.toml
       run: |

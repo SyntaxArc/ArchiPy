@@ -24,7 +24,7 @@ jobs:
       groups: ${{ steps.groups.outputs.changes }}
       shared: ${{ steps.shared.outputs.shared }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     # Files owned by one group: the package it tests and its feature files.
     - name: Changed groups
@@ -281,7 +281,7 @@ jobs:
       matrix:
         python-version: ["3.14", "3.15"]
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: ./.github/actions/cache-uv
       with:
         suffix: adapters-${{ matrix.python-version }}
@@ -475,7 +475,7 @@ jobs:
         python-version: ["3.14", "3.15"]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       if: env.RUN == 'true'
 
     - name: Restore uv dependency cache
