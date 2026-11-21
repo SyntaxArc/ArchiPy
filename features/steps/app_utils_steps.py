@@ -704,15 +704,19 @@ def _tls_grpc_config(directory: Path, *, mtls: bool, client_cert: bool) -> BaseC
     cert_path, key_path = _write_self_signed_certificate(directory)
     return _config_with_grpc(
         GrpcConfig(
-            TLS_ENABLED=True,
-            TLS_CERT_FILE=str(cert_path),
-            TLS_KEY_FILE=str(key_path),
-            TLS_CA_FILE=str(cert_path) if mtls else None,
-            TLS_REQUIRE_CLIENT_AUTH=mtls,
-            STUB_TLS_ENABLED=True,
-            STUB_TLS_CA_FILE=str(cert_path),
-            STUB_TLS_CERT_FILE=str(cert_path) if client_cert else None,
-            STUB_TLS_KEY_FILE=str(key_path) if client_cert else None,
+            TLS={
+                "ENABLED": True,
+                "CERT_FILE": str(cert_path),
+                "KEY_FILE": str(key_path),
+                "CA_FILE": str(cert_path) if mtls else None,
+                "REQUIRE_CLIENT_AUTH": mtls,
+            },
+            STUB_TLS={
+                "ENABLED": True,
+                "CA_FILE": str(cert_path),
+                "CERT_FILE": str(cert_path) if client_cert else None,
+                "KEY_FILE": str(key_path) if client_cert else None,
+            },
         ),
     )
 
@@ -816,8 +820,14 @@ def step_when_grpc_plaintext_call(context, mode):
 def step_when_grpc_config_built(context, settings):
     scenario_context = get_current_scenario_context(context)
     keys = settings.split(",")
-    values: dict[str, bool | str] = {key: True for key in keys if key in {"TLS_ENABLED", "TLS_REQUIRE_CLIENT_AUTH"}}
-    values.update({key: "/nonexistent/x.pem" for key in keys if key.endswith("_FILE")})
+    values: dict = {}
+    for key in keys:
+        group, _, name = key.rpartition(".")
+        target = values.setdefault(group, {}) if group else values
+        if name in {"ENABLED", "TLS_ENABLED", "REQUIRE_CLIENT_AUTH", "TLS_REQUIRE_CLIENT_AUTH"}:
+            target[name] = True
+        elif name.endswith("_FILE"):
+            target[name] = "/nonexistent/x.pem"
     try:
         GrpcConfig(**values)
         scenario_context.store("grpc_config_error", None)

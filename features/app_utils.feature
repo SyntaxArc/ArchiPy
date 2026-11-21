@@ -317,6 +317,13 @@ Feature: App Utilities
       | TLS_REQUIRE_CLIENT_AUTH,TLS_CA_FILE    | accepted |
       | STUB_TLS_CERT_FILE                     | rejected |
       | STUB_TLS_CERT_FILE,STUB_TLS_KEY_FILE   | accepted |
+      | TLS.ENABLED                            | rejected |
+      | TLS.ENABLED,TLS.CERT_FILE              | rejected |
+      | TLS.ENABLED,TLS.CERT_FILE,TLS.KEY_FILE | accepted |
+      | TLS.REQUIRE_CLIENT_AUTH                | rejected |
+      | TLS.REQUIRE_CLIENT_AUTH,TLS.CA_FILE    | accepted |
+      | STUB_TLS.CERT_FILE                     | rejected |
+      | STUB_TLS.CERT_FILE,STUB_TLS.KEY_FILE   | accepted |
 
   Scenario Outline: A rate limiter that fails to start stops a fail-closed gRPC server
     Given gRPC rate limiting is enabled with fail closed set to <fail_closed> and a Redis client that cannot be created

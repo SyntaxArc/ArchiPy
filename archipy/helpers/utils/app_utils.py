@@ -697,7 +697,7 @@ class AppUtils:
 
     @classmethod
     def add_grpc_port(cls, server: grpc.Server | GrpcAioServer, config: BaseConfig, address: str | None = None) -> int:
-        """Bind a port on a gRPC server, using TLS when ``GRPC.TLS_ENABLED`` is set.
+        """Bind a port on a gRPC server, using TLS when ``GRPC.TLS.ENABLED`` is set.
 
         Without TLS this calls ``add_insecure_port``, so existing setups keep working.
 
@@ -711,22 +711,22 @@ class AppUtils:
         """
         grpc_config = config.GRPC
         bind_address = address or f"{grpc_config.SERVE_HOST}:{grpc_config.SERVE_PORT}"
-        if not grpc_config.TLS_ENABLED:
+        if not grpc_config.TLS.ENABLED:
             return server.add_insecure_port(bind_address)
-        private_key = cls._read_pem(grpc_config.TLS_KEY_FILE)
-        certificate_chain = cls._read_pem(grpc_config.TLS_CERT_FILE)
+        private_key = cls._read_pem(grpc_config.TLS.KEY_FILE)
+        certificate_chain = cls._read_pem(grpc_config.TLS.CERT_FILE)
         if private_key is None or certificate_chain is None:
             raise ConfigurationError(operation="grpc_tls", reason="missing_server_certificate_or_key")
         credentials = grpc.ssl_server_credentials(
             [(private_key, certificate_chain)],
-            root_certificates=cls._read_pem(grpc_config.TLS_CA_FILE),
-            require_client_auth=grpc_config.TLS_REQUIRE_CLIENT_AUTH,
+            root_certificates=cls._read_pem(grpc_config.TLS.CA_FILE),
+            require_client_auth=grpc_config.TLS.REQUIRE_CLIENT_AUTH,
         )
         return server.add_secure_port(bind_address, credentials)
 
     @classmethod
     def create_grpc_channel(cls, config: BaseConfig, target: str, *, aio: bool = False) -> grpc.Channel:
-        """Create a client channel, using TLS when ``GRPC.STUB_TLS_ENABLED`` is set.
+        """Create a client channel, using TLS when ``GRPC.STUB_TLS.ENABLED`` is set.
 
         Channel options come from ``GRPC.STUB_OPTIONS_CONFIG_LIST`` and compression from
         ``GRPC.STUB_COMPRESSION``. Without TLS the channel is plaintext.
@@ -743,12 +743,12 @@ class AppUtils:
         options = grpc_config.STUB_OPTIONS_CONFIG_LIST
         compression = cls._grpc_compression(grpc_config.STUB_COMPRESSION)
         module: Any = grpc_aio if aio else grpc
-        if not grpc_config.STUB_TLS_ENABLED:
+        if not grpc_config.STUB_TLS.ENABLED:
             return module.insecure_channel(target, options=options, compression=compression)
         credentials = grpc.ssl_channel_credentials(
-            root_certificates=cls._read_pem(grpc_config.STUB_TLS_CA_FILE),
-            private_key=cls._read_pem(grpc_config.STUB_TLS_KEY_FILE),
-            certificate_chain=cls._read_pem(grpc_config.STUB_TLS_CERT_FILE),
+            root_certificates=cls._read_pem(grpc_config.STUB_TLS.CA_FILE),
+            private_key=cls._read_pem(grpc_config.STUB_TLS.KEY_FILE),
+            certificate_chain=cls._read_pem(grpc_config.STUB_TLS.CERT_FILE),
         )
         return module.secure_channel(target, credentials, options=options, compression=compression)
 
