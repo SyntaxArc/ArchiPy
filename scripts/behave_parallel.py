@@ -314,10 +314,14 @@ def _write_github_summary(runs: list[FeatureRun], wall_seconds: float) -> None:
         summary.write("\n".join(lines) + "\n")
 
 
-def _combine_coverage() -> None:
-    """Merge the per-process coverage data files and print the report."""
+def _combine_coverage() -> bool:
+    """Merge the per-process files and return whether all coverage commands succeeded."""
     for command in (["combine", "-q"], ["report"], ["xml", "-q"]):
-        subprocess.run([sys.executable, "-m", "coverage", *command], cwd=ROOT, check=False)  # noqa: S603
+        result = subprocess.run([sys.executable, "-m", "coverage", *command], cwd=ROOT, check=False)  # noqa: S603
+        if result.returncode:
+            print(f"coverage {command[0]} failed with exit code {result.returncode}", file=sys.stderr)
+            return False
+    return True
 
 
 def _parse_arguments(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
@@ -435,8 +439,8 @@ def main(argv: list[str]) -> int:
     _save_durations(runs, _load_durations())
     print(_summary(runs, wall_seconds))
     _write_github_summary(runs, wall_seconds)
-    if arguments.coverage:
-        _combine_coverage()
+    if arguments.coverage and not _combine_coverage():
+        return 1
     return 0 if all(run.ok for run in runs) else 1
 
 
