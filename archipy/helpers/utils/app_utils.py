@@ -580,7 +580,9 @@ class AppUtils:
             lifespan=resolved_lifespan,
             telemetry=FastAPIUtils.build_otel_telemetry_config(config),
             max_body_size=config.FASTAPI.MAX_BODY_SIZE,
-            form_limits=cast("_FormLimits", form_limits.model_dump(exclude_none=True)) if form_limits else None,
+            form_limits=cast("_FormLimits", form_limits.model_dump(by_alias=True, exclude_none=True))
+            if form_limits
+            else None,
         )
 
         FastAPIUtils.setup_cors(app, config)

@@ -88,7 +88,7 @@ def step_then_check_exception_handlers(context):
 def step_given_fastapi_form_limits(context, body_limit, field_limit):
     scenario_context = get_current_scenario_context(context)
     config = BaseConfig.global_config().model_copy()
-    config.FASTAPI = FastAPIConfig(MAX_BODY_SIZE=body_limit, FORM_LIMITS=FastAPIFormLimits(max_fields=field_limit))
+    config.FASTAPI = FastAPIConfig(MAX_BODY_SIZE=body_limit, FORM_LIMITS=FastAPIFormLimits(MAX_FIELDS=field_limit))
     app = AppUtils.create_fastapi_app(config)
 
     @app.post("/form")
