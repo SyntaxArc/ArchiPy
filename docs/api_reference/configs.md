@@ -133,6 +133,16 @@ heading_level: 3
 
 ### Web Framework Configs
 
+Set `FASTAPI__MAX_BODY_SIZE` to cap the total request in bytes, including files and multipart overhead.
+Set `FASTAPI__FORM_LIMITS` to a JSON object with any of `max_fields`, `max_files`, and `max_part_size`.
+`max_part_size` limits individual text fields. FastAPI supplies its defaults for omitted settings.
+FastAPI returns HTTP 413 for an oversized body and HTTP 400 for a form parsing limit.
+
+```bash
+FASTAPI__MAX_BODY_SIZE=10485760
+FASTAPI__FORM_LIMITS='{"max_fields": 20, "max_files": 4, "max_part_size": 65536}'
+```
+
 ::: archipy.configs.config_template.FastAPIConfig
 options:
 show_root_toc_entry: false

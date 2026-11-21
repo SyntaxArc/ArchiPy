@@ -12,13 +12,14 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
-from fastapi import Depends, FastAPI, WebSocket
+from fastapi import Depends, FastAPI, Form, WebSocket
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, ValidationError
 from starlette.testclient import TestClient
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import FastAPIConfig, RedisMode
+from archipy.configs.sections.fastapi import FastAPIFormLimits
 from archipy.configs.sections.grpc import GrpcConfig
 from archipy.helpers.utils.app_utils import (
     AppUtils,
@@ -81,6 +82,38 @@ def step_then_check_exception_handlers(context):
     app = scenario_context.get("app")
     assert BaseError in app.exception_handlers
     assert ValidationError in app.exception_handlers
+
+
+@given("a FastAPI form endpoint with request body limit {body_limit:d} and form field limit {field_limit:d}")
+def step_given_fastapi_form_limits(context, body_limit, field_limit):
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config().model_copy()
+    config.FASTAPI = FastAPIConfig(MAX_BODY_SIZE=body_limit, FORM_LIMITS=FastAPIFormLimits(max_fields=field_limit))
+    app = AppUtils.create_fastapi_app(config)
+
+    @app.post("/form")
+    def accept_form(name: str = Form()):
+        return {"name": name}
+
+    scenario_context.store("app", app)
+
+
+@when('I submit the URL-encoded form "{body}"')
+def step_when_submit_fastapi_form(context, body):
+    scenario_context = get_current_scenario_context(context)
+    with TestClient(scenario_context.get("app")) as client:
+        response = client.post(
+            "/form",
+            content=body.encode(),
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+    scenario_context.store("response", response)
+
+
+@then('the response media type should be "{media_type}"')
+def step_then_response_media_type(context, media_type):
+    response = get_current_scenario_context(context).get("response")
+    assert response.headers["Content-Type"].split(";", 1)[0] == media_type
 
 
 @given('a FastAPI route with tag "{tag}" and name "{route_name}"')
