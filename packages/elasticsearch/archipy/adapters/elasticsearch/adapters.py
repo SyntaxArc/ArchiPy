@@ -204,12 +204,12 @@ def _apply_optional_client_kwargs(kwargs: dict[str, Any], configs: Elasticsearch
         kwargs (dict[str, Any]): Client keyword arguments, updated in place.
         configs (ElasticsearchConfig): Configuration settings for Elasticsearch.
     """
-    if configs.BEARER_AUTH:
-        kwargs["bearer_auth"] = configs.BEARER_AUTH.get_secret_value()
-    if configs.SSL_VERSION is not None:
-        kwargs["ssl_version"] = configs.SSL_VERSION
-    if configs.SSL_CONTEXT is not None:
-        kwargs["ssl_context"] = configs.SSL_CONTEXT
+    if configs.AUTH.BEARER:
+        kwargs["bearer_auth"] = configs.AUTH.BEARER.get_secret_value()
+    if configs.TLS.VERSION is not None:
+        kwargs["ssl_version"] = configs.TLS.VERSION
+    if configs.TLS.CONTEXT is not None:
+        kwargs["ssl_context"] = configs.TLS.CONTEXT
     if configs.OPAQUE_ID:
         kwargs["opaque_id"] = configs.OPAQUE_ID
     if configs.HEADERS:
@@ -304,10 +304,10 @@ class ElasticsearchAdapter(ElasticsearchPort):
         """
         api_key: tuple[str, str] | None = None
         basic_auth: tuple[str, str] | None = None
-        if configs.API_KEY and configs.API_SECRET:
-            api_key = (configs.API_KEY, configs.API_SECRET.get_secret_value())
-        elif configs.HTTP_USER_NAME and configs.HTTP_PASSWORD:
-            basic_auth = (configs.HTTP_USER_NAME, configs.HTTP_PASSWORD.get_secret_value())
+        if configs.AUTH.API_KEY and configs.AUTH.API_SECRET:
+            api_key = (configs.AUTH.API_KEY, configs.AUTH.API_SECRET.get_secret_value())
+        elif configs.AUTH.USER_NAME and configs.AUTH.PASSWORD:
+            basic_auth = (configs.AUTH.USER_NAME, configs.AUTH.PASSWORD.get_secret_value())
 
         # Build kwargs, only including SSL parameters if they have values
         kwargs: dict[str, Any] = {
@@ -315,20 +315,20 @@ class ElasticsearchAdapter(ElasticsearchPort):
             "api_key": api_key,
             "basic_auth": basic_auth,
             "request_timeout": configs.REQUEST_TIMEOUT,
-            "retry_on_status": configs.RETRY_ON_STATUS,
-            "retry_on_timeout": configs.RETRY_ON_TIMEOUT,
-            "max_retries": configs.MAX_RETRIES,
+            "retry_on_status": configs.RETRY.ON_STATUS,
+            "retry_on_timeout": configs.RETRY.ON_TIMEOUT,
+            "max_retries": configs.RETRY.MAX_RETRIES,
             "http_compress": configs.HTTP_COMPRESS,
             "connections_per_node": configs.CONNECTIONS_PER_NODE,
-            "verify_certs": configs.VERIFY_CERTS,
-            "sniff_on_start": configs.SNIFF_ON_START,
-            "sniff_before_requests": configs.SNIFF_BEFORE_REQUESTS,
-            "sniff_on_node_failure": configs.SNIFF_ON_NODE_FAILURE,
+            "verify_certs": configs.TLS.VERIFY_CERTS,
+            "sniff_on_start": configs.SNIFFING.ON_START,
+            "sniff_before_requests": configs.SNIFFING.BEFORE_REQUESTS,
+            "sniff_on_node_failure": configs.SNIFFING.ON_NODE_FAILURE,
             "max_dead_node_backoff": configs.MAX_DEAD_NODE_BACKOFF,
             "dead_node_backoff_factor": configs.DEAD_NODE_BACKOFF_FACTOR,
             "node_selector_class": configs.NODE_SELECTOR_CLASS,
-            "retry_backoff_base": configs.RETRY_BACKOFF_BASE,
-            "retry_backoff_cap": configs.RETRY_BACKOFF_CAP,
+            "retry_backoff_base": configs.RETRY.BACKOFF_BASE,
+            "retry_backoff_cap": configs.RETRY.BACKOFF_CAP,
         }
         # Leave the backoff options out when unset so the client keeps its own defaults
         kwargs = {
@@ -336,17 +336,17 @@ class ElasticsearchAdapter(ElasticsearchPort):
         }
 
         # Only add SSL parameters if they have values (to avoid passing None)
-        if configs.CA_CERTS:
-            kwargs["ca_certs"] = configs.CA_CERTS
-        if configs.CLIENT_KEY:
-            kwargs["client_key"] = configs.CLIENT_KEY
-        if configs.CLIENT_CERT:
-            kwargs["client_cert"] = configs.CLIENT_CERT
-        if configs.SSL_ASSERT_FINGERPRINT:
-            kwargs["ssl_assert_fingerprint"] = configs.SSL_ASSERT_FINGERPRINT
+        if configs.TLS.CA_CERTS:
+            kwargs["ca_certs"] = configs.TLS.CA_CERTS
+        if configs.TLS.CLIENT_KEY:
+            kwargs["client_key"] = configs.TLS.CLIENT_KEY
+        if configs.TLS.CLIENT_CERT:
+            kwargs["client_cert"] = configs.TLS.CLIENT_CERT
+        if configs.TLS.ASSERT_FINGERPRINT:
+            kwargs["ssl_assert_fingerprint"] = configs.TLS.ASSERT_FINGERPRINT
         # The client forces sniff_before_requests when a sniffing delay is passed, so only pass it when enabled
-        if configs.SNIFF_BEFORE_REQUESTS:
-            kwargs["min_delay_between_sniffing"] = configs.MIN_DELAY_BETWEEN_SNIFFING
+        if configs.SNIFFING.BEFORE_REQUESTS:
+            kwargs["min_delay_between_sniffing"] = configs.SNIFFING.MIN_DELAY
 
         _apply_optional_client_kwargs(kwargs, configs)
         client = Elasticsearch(**kwargs)
@@ -627,10 +627,10 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         """
         api_key: tuple[str, str] | None = None
         basic_auth: tuple[str, str] | None = None
-        if configs.API_KEY and configs.API_SECRET:
-            api_key = (configs.API_KEY, configs.API_SECRET.get_secret_value())
-        elif configs.HTTP_USER_NAME and configs.HTTP_PASSWORD:
-            basic_auth = (configs.HTTP_USER_NAME, configs.HTTP_PASSWORD.get_secret_value())
+        if configs.AUTH.API_KEY and configs.AUTH.API_SECRET:
+            api_key = (configs.AUTH.API_KEY, configs.AUTH.API_SECRET.get_secret_value())
+        elif configs.AUTH.USER_NAME and configs.AUTH.PASSWORD:
+            basic_auth = (configs.AUTH.USER_NAME, configs.AUTH.PASSWORD.get_secret_value())
 
         # Build kwargs, only including SSL parameters if they have values
         kwargs: dict[str, Any] = {
@@ -638,20 +638,20 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
             "api_key": api_key,
             "basic_auth": basic_auth,
             "request_timeout": configs.REQUEST_TIMEOUT,
-            "retry_on_status": configs.RETRY_ON_STATUS,
-            "retry_on_timeout": configs.RETRY_ON_TIMEOUT,
-            "max_retries": configs.MAX_RETRIES,
+            "retry_on_status": configs.RETRY.ON_STATUS,
+            "retry_on_timeout": configs.RETRY.ON_TIMEOUT,
+            "max_retries": configs.RETRY.MAX_RETRIES,
             "http_compress": configs.HTTP_COMPRESS,
             "connections_per_node": configs.CONNECTIONS_PER_NODE,
-            "verify_certs": configs.VERIFY_CERTS,
-            "sniff_on_start": configs.SNIFF_ON_START,
-            "sniff_before_requests": configs.SNIFF_BEFORE_REQUESTS,
-            "sniff_on_node_failure": configs.SNIFF_ON_NODE_FAILURE,
+            "verify_certs": configs.TLS.VERIFY_CERTS,
+            "sniff_on_start": configs.SNIFFING.ON_START,
+            "sniff_before_requests": configs.SNIFFING.BEFORE_REQUESTS,
+            "sniff_on_node_failure": configs.SNIFFING.ON_NODE_FAILURE,
             "max_dead_node_backoff": configs.MAX_DEAD_NODE_BACKOFF,
             "dead_node_backoff_factor": configs.DEAD_NODE_BACKOFF_FACTOR,
             "node_selector_class": configs.NODE_SELECTOR_CLASS,
-            "retry_backoff_base": configs.RETRY_BACKOFF_BASE,
-            "retry_backoff_cap": configs.RETRY_BACKOFF_CAP,
+            "retry_backoff_base": configs.RETRY.BACKOFF_BASE,
+            "retry_backoff_cap": configs.RETRY.BACKOFF_CAP,
         }
         # Leave the backoff options out when unset so the client keeps its own defaults
         kwargs = {
@@ -659,17 +659,17 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         }
 
         # Only add SSL parameters if they have values (to avoid passing None)
-        if configs.CA_CERTS:
-            kwargs["ca_certs"] = configs.CA_CERTS
-        if configs.CLIENT_KEY:
-            kwargs["client_key"] = configs.CLIENT_KEY
-        if configs.CLIENT_CERT:
-            kwargs["client_cert"] = configs.CLIENT_CERT
-        if configs.SSL_ASSERT_FINGERPRINT:
-            kwargs["ssl_assert_fingerprint"] = configs.SSL_ASSERT_FINGERPRINT
+        if configs.TLS.CA_CERTS:
+            kwargs["ca_certs"] = configs.TLS.CA_CERTS
+        if configs.TLS.CLIENT_KEY:
+            kwargs["client_key"] = configs.TLS.CLIENT_KEY
+        if configs.TLS.CLIENT_CERT:
+            kwargs["client_cert"] = configs.TLS.CLIENT_CERT
+        if configs.TLS.ASSERT_FINGERPRINT:
+            kwargs["ssl_assert_fingerprint"] = configs.TLS.ASSERT_FINGERPRINT
         # The client forces sniff_before_requests when a sniffing delay is passed, so only pass it when enabled
-        if configs.SNIFF_BEFORE_REQUESTS:
-            kwargs["min_delay_between_sniffing"] = configs.MIN_DELAY_BETWEEN_SNIFFING
+        if configs.SNIFFING.BEFORE_REQUESTS:
+            kwargs["min_delay_between_sniffing"] = configs.SNIFFING.MIN_DELAY
 
         _apply_optional_client_kwargs(kwargs, configs)
         client = AsyncElasticsearch(**kwargs)

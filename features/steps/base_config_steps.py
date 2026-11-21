@@ -676,6 +676,15 @@ _SECTION_SETTINGS = {
         ScyllaDBConfig,
         {"TLS": {"ENABLED": True, "CA_FILE": "/tmp/ca.pem"}},
     ),
+    ("Elasticsearch", "grouped username without a password"): (ElasticsearchConfig, {"AUTH": {"USER_NAME": "user"}}),
+    ("Elasticsearch", "grouped client cert without a key"): (
+        ElasticsearchConfig,
+        {"TLS": {"CLIENT_CERT": "/tmp/c.pem"}},
+    ),
+    ("Elasticsearch", "grouped CA file with verification disabled"): (
+        ElasticsearchConfig,
+        {"TLS": {"VERIFY_CERTS": False, "CA_CERTS": "/tmp/ca.pem"}},
+    ),
     ("Elasticsearch", "only a username"): (ElasticsearchConfig, {"HTTP_USER_NAME": "user"}),
     ("Elasticsearch", "only a password"): (ElasticsearchConfig, {"HTTP_PASSWORD": "secret"}),
     ("Elasticsearch", "only an API key"): (ElasticsearchConfig, {"API_KEY": "id"}),
@@ -784,12 +793,12 @@ def step_when_elasticsearch_client_backoff(context, base, cap):
     from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
     from archipy.configs.config_template import ElasticsearchConfig
 
-    updates = {}
+    retry = {}
     if base != "none":
-        updates["RETRY_BACKOFF_BASE"] = float(base)
+        retry["BACKOFF_BASE"] = float(base)
     if cap != "none":
-        updates["RETRY_BACKOFF_CAP"] = float(cap)
-    client = ElasticsearchAdapter._get_client(ElasticsearchConfig(**updates))
+        retry["BACKOFF_CAP"] = float(cap)
+    client = ElasticsearchAdapter._get_client(ElasticsearchConfig(RETRY=retry))
     get_current_scenario_context(context).store("es_backoff", (client._retry_backoff_base, client._retry_backoff_cap))
 
 

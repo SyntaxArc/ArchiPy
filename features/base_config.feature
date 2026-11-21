@@ -259,6 +259,9 @@ Feature: Base Configuration System
       | ScyllaDB      | a grouped replication without datacenters          | rejected |
       | ScyllaDB      | grouped TLS enabled with a CA file                 | accepted |
       | Elasticsearch | only a username                                    | rejected |
+      | Elasticsearch | grouped username without a password                | rejected |
+      | Elasticsearch | grouped client cert without a key                  | rejected |
+      | Elasticsearch | grouped CA file with verification disabled         | rejected |
       | Elasticsearch | only a password                                    | rejected |
       | Elasticsearch | only an API key                                    | rejected |
       | Elasticsearch | only an API secret                                 | rejected |

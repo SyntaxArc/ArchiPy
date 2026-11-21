@@ -938,6 +938,30 @@ def _cloud_id_for_host(host: str) -> str:
     return "name:" + base64.b64encode(f"{domain}${es_id}$kibana".encode()).decode()
 
 
+# Settings that live in a group of the Elasticsearch config, as ``GROUP.FIELD``.
+_ES_GROUPED_FIELDS = {
+    "BEARER_AUTH": "AUTH.BEARER",
+    "SSL_VERSION": "TLS.VERSION",
+    "MIN_DELAY_BETWEEN_SNIFFING": "SNIFFING.MIN_DELAY",
+    "SNIFF_BEFORE_REQUESTS": "SNIFFING.BEFORE_REQUESTS",
+}
+
+
+def _apply_es_updates(config, updates):
+    """Copy ``config`` with ``updates``, whose ``GROUP.FIELD`` keys update a field inside a group."""
+    top = {}
+    grouped = {}
+    for key, value in updates.items():
+        if "." in key:
+            group, field = key.split(".")
+            grouped.setdefault(group, {})[field] = value
+        else:
+            top[key] = value
+    for group, values in grouped.items():
+        top[group] = getattr(config, group).model_copy(update=values)
+    return config.model_copy(update=top)
+
+
 @given('an Elasticsearch config with "{field}" set to "{value}"')
 def step_es_config_field(context: Context, field: str, value: str) -> None:
     """Collect config overrides on top of the global Elasticsearch config."""
@@ -956,10 +980,10 @@ def step_es_config_field(context: Context, field: str, value: str) -> None:
         "MAP_ERRORS": lambda text: text == "true",
         "IGNORE_STATUS": lambda text: tuple(int(code) for code in text.split(",")),
     }
-    updates[field] = parsers[field](value)
+    updates[_ES_GROUPED_FIELDS.get(field, field)] = parsers[field](value)
     if field == "BEARER_AUTH":
         # Bearer auth is exclusive with the container's own credentials
-        updates.update(API_KEY=None, API_SECRET=None, HTTP_USER_NAME=None, HTTP_PASSWORD=None)
+        updates.update({"AUTH.API_KEY": None, "AUTH.API_SECRET": None, "AUTH.USER_NAME": None, "AUTH.PASSWORD": None})
     scenario_context.store("es_config_updates", updates)
 
 
@@ -967,7 +991,7 @@ def step_es_config_field(context: Context, field: str, value: str) -> None:
 async def step_create_adapter_from_config(context: Context, mode: str) -> None:
     """Build an adapter from the overridden config."""
     scenario_context = _get_scenario_context(context)
-    config = BaseConfig.global_config().ELASTIC.model_copy(update=scenario_context.get("es_config_updates", {}))
+    config = _apply_es_updates(BaseConfig.global_config().ELASTIC, scenario_context.get("es_config_updates", {}))
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         if _is_async_scenario(context):
