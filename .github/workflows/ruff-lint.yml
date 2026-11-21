@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/astral-sh/uv:0.13.9-trixie
     env:
-      UV_PYTHON: ${{ matrix.python-version }}+gil
+      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:

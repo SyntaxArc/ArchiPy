@@ -274,7 +274,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      UV_PYTHON: ${{ matrix.python-version }}+gil
+      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -296,11 +296,13 @@ jobs:
           uv run --no-sync python - <<'PY'
           import os
           import sys
+          import sysconfig
 
           from archipy.configs.base_config import BaseConfig
 
           version = f"{sys.version_info.major}.{sys.version_info.minor}"
           assert version == os.environ["EXPECTED_PYTHON"], version
+          assert not sysconfig.get_config_var("Py_GIL_DISABLED"), "Expected a GIL-enabled CPython build"
           PY
           uv run --no-sync python -m compileall -q archipy packages
           uv cache prune --ci
@@ -485,7 +487,7 @@ jobs:
       if: env.RUN == 'true'
       uses: ./.github/actions/run-uv
       env:
-        UV_PYTHON: ${{ matrix.python-version }}+gil
+        UV_PYTHON: ${{ matrix.python-version }}
         FEATURES: ${{ matrix.group.features }}
         EXCLUDED_FEATURES: ${{ matrix.group.exclude }}
       with:
