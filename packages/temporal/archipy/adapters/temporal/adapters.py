@@ -334,13 +334,13 @@ class TemporalAdapter(TemporalPort):
 
         Returns:
             TLSConfig | bool | None: A TLS configuration when TLS settings are present (unless TLS is forced off),
-                the ``TLS.ENABLED`` flag otherwise, or None to let the SDK enable TLS when an API key is set.
+                the ``TLS.IS_ENABLED`` flag otherwise, or None to let the SDK enable TLS when an API key is set.
         """
-        if self.config.TLS.ENABLED is False:
+        if self.config.TLS.IS_ENABLED is False:
             return False
         if self._has_tls_config():
             return self._build_tls_config()
-        return self.config.TLS.ENABLED
+        return self.config.TLS.IS_ENABLED
 
     def _build_tls_config(self) -> TLSConfig:
         """Build TLS configuration for secure connections from the configured files.

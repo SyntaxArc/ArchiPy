@@ -638,7 +638,7 @@ _SECTION_SETTINGS = {
     ),
     ("Redis", "grouped client certificate without a key"): (
         RedisConfig,
-        {"TLS": {"ENABLED": True, "CERTFILE": "/tmp/c.pem"}},
+        {"TLS": {"IS_ENABLED": True, "CERTFILE": "/tmp/c.pem"}},
     ),
     ("Redis", "grouped CA file with TLS disabled"): (RedisConfig, {"TLS": {"CA_CERTS": "/tmp/ca.pem"}}),
     ("Redis", "cluster mode with nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER_NODES": ["localhost:7000"]}),
@@ -669,7 +669,7 @@ _SECTION_SETTINGS = {
     ("ScyllaDB", "TLS enabled with a CA file"): (ScyllaDBConfig, {"TLS_ENABLED": True, "TLS_CA_FILE": "/tmp/ca.pem"}),
     ("ScyllaDB", "a grouped client certificate without a key"): (
         ScyllaDBConfig,
-        {"TLS": {"ENABLED": True, "CERT_FILE": "/tmp/client.pem"}},
+        {"TLS": {"IS_ENABLED": True, "CERT_FILE": "/tmp/client.pem"}},
     ),
     ("ScyllaDB", "a grouped CA file with TLS disabled"): (ScyllaDBConfig, {"TLS": {"CA_FILE": "/tmp/ca.pem"}}),
     ("ScyllaDB", "a grouped exponential reconnection above the max"): (
@@ -682,7 +682,7 @@ _SECTION_SETTINGS = {
     ),
     ("ScyllaDB", "grouped TLS enabled with a CA file"): (
         ScyllaDBConfig,
-        {"TLS": {"ENABLED": True, "CA_FILE": "/tmp/ca.pem"}},
+        {"TLS": {"IS_ENABLED": True, "CA_FILE": "/tmp/ca.pem"}},
     ),
     ("Elasticsearch", "grouped username without a password"): (ElasticsearchConfig, {"AUTH": {"USER_NAME": "user"}}),
     ("Elasticsearch", "grouped client cert without a key"): (

@@ -33,7 +33,7 @@ class SQLAlchemyCountCacheConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    ENABLED: bool = Field(
+    IS_ENABLED: bool = Field(
         default=False,
         description="Whether to cache the total count of search queries, so only the first page runs a COUNT",
     )
@@ -122,7 +122,7 @@ class SQLAlchemyConfig(BaseModel):
     COUNT_CACHE_ENABLED: bool = Field(
         default=False,
         description="Whether to cache the total count of search queries, so only the first page runs a COUNT",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "COUNT_CACHE_ENABLED", "COUNT_CACHE", "ENABLED"),
+        deprecated=deprecated_flat_message("SQLALCHEMY", "COUNT_CACHE_ENABLED", "COUNT_CACHE", "IS_ENABLED"),
     )
     COUNT_CACHE_MAX_SIZE: int = Field(
         default=1000,
@@ -159,7 +159,7 @@ class SQLAlchemyConfig(BaseModel):
             "COUNT_CACHE",
             SQLAlchemyCountCacheConfig,
             {
-                "COUNT_CACHE_ENABLED": "ENABLED",
+                "COUNT_CACHE_ENABLED": "IS_ENABLED",
                 "COUNT_CACHE_MAX_SIZE": "MAX_SIZE",
                 "COUNT_CACHE_TTL_SECONDS": "TTL_SECONDS",
             },

@@ -50,7 +50,7 @@ class RedisTlsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    ENABLED: bool = Field(default=False, description="Connect to Redis over TLS")
+    IS_ENABLED: bool = Field(default=False, description="Connect to Redis over TLS")
     CA_CERTS: str | None = Field(default=None, description="Path to the CA bundle used to verify the server")
     CERTFILE: str | None = Field(default=None, description="Path to the client certificate (mTLS)")
     KEYFILE: str | None = Field(default=None, description="Path to the client private key (mTLS)")
@@ -58,10 +58,10 @@ class RedisTlsConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_tls_files(self) -> Self:
-        """Validate that the client certificate and key come together and need ``ENABLED``."""
+        """Validate that the client certificate and key come together and need ``IS_ENABLED``."""
         if bool(self.CERTFILE) != bool(self.KEYFILE):
             raise ConfigurationError(operation="redis", reason="ssl_certfile_and_keyfile_must_be_set_together")
-        if not self.ENABLED and (self.CA_CERTS or self.CERTFILE):
+        if not self.IS_ENABLED and (self.CA_CERTS or self.CERTFILE):
             raise ConfigurationError(operation="redis", reason="ssl_options_require_ssl_enabled")
         return self
 
@@ -159,7 +159,7 @@ class RedisConfig(BaseModel):
     SSL: bool = Field(
         default=False,
         description="Connect to Redis over TLS",
-        deprecated=deprecated_flat_message("REDIS", "SSL", "TLS", "ENABLED"),
+        deprecated=deprecated_flat_message("REDIS", "SSL", "TLS", "IS_ENABLED"),
     )
     SSL_CA_CERTS: str | None = Field(
         default=None,
@@ -235,7 +235,7 @@ class RedisConfig(BaseModel):
             "TLS",
             RedisTlsConfig,
             {
-                "SSL": "ENABLED",
+                "SSL": "IS_ENABLED",
                 "SSL_CA_CERTS": "CA_CERTS",
                 "SSL_CERTFILE": "CERTFILE",
                 "SSL_KEYFILE": "KEYFILE",
@@ -287,8 +287,8 @@ class RedisConfig(BaseModel):
     @model_validator(mode="after")
     def warn_insecure_tls(self) -> Self:
         """Warn when credentials travel without TLS or the server identity is not verified."""
-        if not self.TLS.ENABLED and (self.PASSWORD or self.SENTINEL.PASSWORD):
+        if not self.TLS.IS_ENABLED and (self.PASSWORD or self.SENTINEL.PASSWORD):
             logger.warning("Redis credentials are configured without SSL; they are sent in clear text")
-        if self.TLS.ENABLED and not self.TLS.CHECK_HOSTNAME:
+        if self.TLS.IS_ENABLED and not self.TLS.CHECK_HOSTNAME:
             logger.warning("Redis TLS.CHECK_HOSTNAME is disabled; the server identity is not verified")
         return self

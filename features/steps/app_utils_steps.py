@@ -705,14 +705,14 @@ def _tls_grpc_config(directory: Path, *, mtls: bool, client_cert: bool) -> BaseC
     return _config_with_grpc(
         GrpcConfig(
             TLS={
-                "ENABLED": True,
+                "IS_ENABLED": True,
                 "CERT_FILE": str(cert_path),
                 "KEY_FILE": str(key_path),
                 "CA_FILE": str(cert_path) if mtls else None,
                 "REQUIRE_CLIENT_AUTH": mtls,
             },
             STUB_TLS={
-                "ENABLED": True,
+                "IS_ENABLED": True,
                 "CA_FILE": str(cert_path),
                 "CERT_FILE": str(cert_path) if client_cert else None,
                 "KEY_FILE": str(key_path) if client_cert else None,
@@ -824,7 +824,7 @@ def step_when_grpc_config_built(context, settings):
     for key in keys:
         group, _, name = key.rpartition(".")
         target = values.setdefault(group, {}) if group else values
-        if name in {"ENABLED", "TLS_ENABLED", "REQUIRE_CLIENT_AUTH", "TLS_REQUIRE_CLIENT_AUTH"}:
+        if name in {"IS_ENABLED", "TLS_ENABLED", "REQUIRE_CLIENT_AUTH", "TLS_REQUIRE_CLIENT_AUTH"}:
             target[name] = True
         elif name.endswith("_FILE"):
             target[name] = "/nonexistent/x.pem"

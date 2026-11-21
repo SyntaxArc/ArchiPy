@@ -52,7 +52,7 @@ class GrpcTlsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    ENABLED: bool = Field(
+    IS_ENABLED: bool = Field(
         default=False,
         description=(
             "When True, ``AppUtils.add_grpc_port`` binds a TLS port with ``grpc.ssl_server_credentials`` instead of "
@@ -73,7 +73,7 @@ class GrpcTlsConfig(BaseModel):
     @model_validator(mode="after")
     def validate_tls_settings(self) -> Self:
         """Check that TLS has a certificate and key, and mTLS has a CA."""
-        if self.ENABLED and not (self.CERT_FILE and self.KEY_FILE):
+        if self.IS_ENABLED and not (self.CERT_FILE and self.KEY_FILE):
             raise InvalidArgumentError(argument_name="GRPC.TLS.CERT_FILE")
         if self.REQUIRE_CLIENT_AUTH and not self.CA_FILE:
             raise InvalidArgumentError(argument_name="GRPC.TLS.CA_FILE")
@@ -85,7 +85,7 @@ class GrpcStubTlsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    ENABLED: bool = Field(
+    IS_ENABLED: bool = Field(
         default=False,
         description="When True, ``AppUtils.create_grpc_channel`` opens a TLS channel instead of a plaintext one.",
     )
@@ -221,7 +221,7 @@ class GrpcConfig(BaseModel):
             "When True, ``AppUtils.add_grpc_port`` binds a TLS port with ``grpc.ssl_server_credentials`` instead of "
             "an insecure port. Requires ``TLS_CERT_FILE`` and ``TLS_KEY_FILE``."
         ),
-        deprecated=deprecated_flat_message("GRPC", "TLS_ENABLED", "TLS", "ENABLED"),
+        deprecated=deprecated_flat_message("GRPC", "TLS_ENABLED", "TLS", "IS_ENABLED"),
     )
     TLS_CERT_FILE: str | None = Field(
         default=None,
@@ -246,7 +246,7 @@ class GrpcConfig(BaseModel):
     STUB_TLS_ENABLED: bool = Field(
         default=False,
         description="When True, ``AppUtils.create_grpc_channel`` opens a TLS channel instead of a plaintext one.",
-        deprecated=deprecated_flat_message("GRPC", "STUB_TLS_ENABLED", "STUB_TLS", "ENABLED"),
+        deprecated=deprecated_flat_message("GRPC", "STUB_TLS_ENABLED", "STUB_TLS", "IS_ENABLED"),
     )
     STUB_TLS_CA_FILE: str | None = Field(
         default=None,
@@ -272,7 +272,7 @@ class GrpcConfig(BaseModel):
             "TLS",
             GrpcTlsConfig,
             {
-                "TLS_ENABLED": "ENABLED",
+                "TLS_ENABLED": "IS_ENABLED",
                 "TLS_CERT_FILE": "CERT_FILE",
                 "TLS_KEY_FILE": "KEY_FILE",
                 "TLS_CA_FILE": "CA_FILE",
@@ -284,7 +284,7 @@ class GrpcConfig(BaseModel):
             "STUB_TLS",
             GrpcStubTlsConfig,
             {
-                "STUB_TLS_ENABLED": "ENABLED",
+                "STUB_TLS_ENABLED": "IS_ENABLED",
                 "STUB_TLS_CA_FILE": "CA_FILE",
                 "STUB_TLS_CERT_FILE": "CERT_FILE",
                 "STUB_TLS_KEY_FILE": "KEY_FILE",

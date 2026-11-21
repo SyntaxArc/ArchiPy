@@ -16,7 +16,7 @@ class TemporalTlsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    ENABLED: bool | None = Field(
+    IS_ENABLED: bool | None = Field(
         default=None,
         description=(
             "Force TLS on (system CA bundle) or off; None enables it when API_KEY or any TLS_* file is set "
@@ -362,7 +362,7 @@ class TemporalConfig(BaseModel):
             "Force TLS on (system CA bundle) or off; None enables it when API_KEY or any TLS_* file is set "
             "(server-only TLS needs just TLS_CA_CERT or nothing)"
         ),
-        deprecated=deprecated_flat_message("TEMPORAL", "TLS_ENABLED", "TLS", "ENABLED"),
+        deprecated=deprecated_flat_message("TEMPORAL", "TLS_ENABLED", "TLS", "IS_ENABLED"),
     )
     TLS_CA_CERT: str | None = Field(
         default=None,
@@ -622,7 +622,7 @@ class TemporalConfig(BaseModel):
             "TLS",
             TemporalTlsConfig,
             {
-                "TLS_ENABLED": "ENABLED",
+                "TLS_ENABLED": "IS_ENABLED",
                 "TLS_CA_CERT": "CA_CERT",
                 "TLS_CLIENT_CERT": "CLIENT_CERT",
                 "TLS_CLIENT_KEY": "CLIENT_KEY",

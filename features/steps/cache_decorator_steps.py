@@ -784,7 +784,7 @@ from archipy.adapters.base.sqlalchemy.query_helpers import _build_async_count_ca
 from archipy.configs.config_template import SQLAlchemyConfig
 
 try:
-    _build_async_count_cache(SQLAlchemyConfig(COUNT_CACHE={"ENABLED": True}))
+    _build_async_count_cache(SQLAlchemyConfig(COUNT_CACHE={"IS_ENABLED": True}))
 except Exception as exception:
     print(type(exception).__name__, exception.additional_data)
 """

@@ -18,7 +18,7 @@ class ScyllaTlsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    ENABLED: bool = Field(
+    IS_ENABLED: bool = Field(
         default=False,
         description=(
             "Encrypt the connection to the cluster with TLS. When disabled (default) credentials and data "
@@ -62,13 +62,13 @@ class ScyllaTlsConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_tls(self) -> Self:
-        """Validate TLS settings: files need ENABLED, and the client cert and key come as a pair."""
+        """Validate TLS settings: files need IS_ENABLED, and the client cert and key come as a pair."""
         if (self.CERT_FILE is None) != (self.KEY_FILE is None):
             raise InvalidArgumentError(
                 argument_name="tls",
                 additional_data={"error": "TLS_CERT_FILE and TLS_KEY_FILE must be provided together"},
             )
-        if not self.ENABLED and (self.CA_FILE or self.CERT_FILE):
+        if not self.IS_ENABLED and (self.CA_FILE or self.CERT_FILE):
             raise InvalidArgumentError(
                 argument_name="tls",
                 additional_data={"error": "TLS_ENABLED must be true when TLS certificate files are set"},
@@ -81,7 +81,7 @@ class ScyllaTlsConfig(BaseModel):
         Returns:
             ssl.SSLContext | None: The context for ``Cluster(ssl_context=)``, or None when TLS is disabled.
         """
-        if not self.ENABLED:
+        if not self.IS_ENABLED:
             return None
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.minimum_version = ssl.TLSVersion.TLSv1_2
@@ -193,7 +193,7 @@ class ScyllaPreparedCacheConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    ENABLED: bool = Field(
+    IS_ENABLED: bool = Field(
         default=True,
         description="Enable prepared statement caching",
     )
@@ -409,7 +409,7 @@ class ScyllaDBConfig(BaseModel):
             "Encrypt the connection to the cluster with TLS. When disabled (default) credentials and data "
             "travel in plain text."
         ),
-        deprecated=deprecated_flat_message("SCYLLADB", "TLS_ENABLED", "TLS", "ENABLED"),
+        deprecated=deprecated_flat_message("SCYLLADB", "TLS_ENABLED", "TLS", "IS_ENABLED"),
     )
     TLS_CA_FILE: str | None = Field(
         default=None,
@@ -527,7 +527,12 @@ class ScyllaDBConfig(BaseModel):
     ENABLE_PREPARED_STATEMENT_CACHE: bool = Field(
         default=True,
         description="Enable prepared statement caching",
-        deprecated=deprecated_flat_message("SCYLLADB", "ENABLE_PREPARED_STATEMENT_CACHE", "PREPARED_CACHE", "ENABLED"),
+        deprecated=deprecated_flat_message(
+            "SCYLLADB",
+            "ENABLE_PREPARED_STATEMENT_CACHE",
+            "PREPARED_CACHE",
+            "IS_ENABLED",
+        ),
     )
     PREPARED_STATEMENT_CACHE_SIZE: int = Field(
         default=100,
@@ -616,7 +621,7 @@ class ScyllaDBConfig(BaseModel):
             "TLS",
             ScyllaTlsConfig,
             {
-                "TLS_ENABLED": "ENABLED",
+                "TLS_ENABLED": "IS_ENABLED",
                 "TLS_CA_FILE": "CA_FILE",
                 "TLS_CERT_FILE": "CERT_FILE",
                 "TLS_KEY_FILE": "KEY_FILE",
@@ -659,7 +664,7 @@ class ScyllaDBConfig(BaseModel):
             "PREPARED_CACHE",
             ScyllaPreparedCacheConfig,
             {
-                "ENABLE_PREPARED_STATEMENT_CACHE": "ENABLED",
+                "ENABLE_PREPARED_STATEMENT_CACHE": "IS_ENABLED",
                 "PREPARED_STATEMENT_CACHE_SIZE": "SIZE",
                 "PREPARED_STATEMENT_CACHE_TTL_SECONDS": "TTL_SECONDS",
             },

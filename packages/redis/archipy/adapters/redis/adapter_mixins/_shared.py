@@ -80,7 +80,7 @@ def _tls_acl_kwargs(configs: RedisConfig) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
     if configs.USERNAME:
         kwargs["username"] = configs.USERNAME
-    if configs.TLS.ENABLED:
+    if configs.TLS.IS_ENABLED:
         kwargs["ssl"] = True
         kwargs["ssl_check_hostname"] = configs.TLS.CHECK_HOSTNAME
         if configs.TLS.CA_CERTS:
@@ -150,7 +150,7 @@ def _sentinel_kwargs(configs: RedisConfig) -> dict[str, Any] | None:
         kwargs["username"] = configs.SENTINEL.USERNAME
     if configs.SENTINEL.PASSWORD:
         kwargs["password"] = configs.SENTINEL.PASSWORD.get_secret_value()
-    if configs.TLS.ENABLED:
+    if configs.TLS.IS_ENABLED:
         kwargs.update({k: v for k, v in _tls_acl_kwargs(configs).items() if k != "username"})
     return kwargs or None
 

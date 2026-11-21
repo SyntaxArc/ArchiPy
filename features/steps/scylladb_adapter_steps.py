@@ -1429,7 +1429,7 @@ def step_build_cluster_capture_security_log(context: Context, credentials: str, 
     updates: dict[str, Any] = {
         "USERNAME": "user" if credentials == "set" else None,
         "PASSWORD": SecretStr("secret") if credentials == "set" else None,
-        "TLS": ScyllaTlsConfig(ENABLED=tls == "on", VERIFY_MODE=verify),
+        "TLS": ScyllaTlsConfig(IS_ENABLED=tls == "on", VERIFY_MODE=verify),
     }
     config = get_scylladb_adapter(context).config.model_copy(update=updates)
     adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
@@ -1805,7 +1805,7 @@ def step_build_scylladb_tls_cluster(context: Context, enabled: str, server_name:
 
     updates = {
         "TLS": ScyllaTlsConfig(
-            ENABLED=enabled == "yes",
+            IS_ENABLED=enabled == "yes",
             SERVER_NAME=None if server_name == "-" else server_name,
             SESSION_CACHE_ENABLED=cache == "yes",
         ),

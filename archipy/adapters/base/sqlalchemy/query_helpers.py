@@ -56,7 +56,7 @@ async def _run_async_count_request(request: _CountRequest) -> int:
 
 def _build_count_cache(config: SQLAlchemyConfig) -> Callable[[_CountRequest], int] | None:
     """Create the cached count runner when the config enables it (needs the ``cache`` extra)."""
-    if not config.COUNT_CACHE.ENABLED:
+    if not config.COUNT_CACHE.IS_ENABLED:
         return None
     from archipy.helpers.decorators.ttl_caching import ttl_cache  # noqa: PLC0415  # optional "cache" extra
 
@@ -71,7 +71,7 @@ def _build_async_count_cache(config: SQLAlchemyConfig) -> Callable[[_CountReques
     Raises:
         ConfigurationError: If the count cache is enabled but ``async-lru`` is not installed.
     """
-    if not config.COUNT_CACHE.ENABLED:
+    if not config.COUNT_CACHE.IS_ENABLED:
         return None
     try:
         from async_lru import alru_cache  # noqa: PLC0415  # optional "cache" extra

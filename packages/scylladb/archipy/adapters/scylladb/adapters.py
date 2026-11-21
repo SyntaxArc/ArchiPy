@@ -177,7 +177,7 @@ def _tls_cluster_options(config: ScyllaDBConfig) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Keyword arguments for ``Cluster``; empty when TLS is disabled.
     """
-    if not config.TLS.ENABLED:
+    if not config.TLS.IS_ENABLED:
         return {}
     options: dict[str, Any] = {}
     if config.TLS.SERVER_NAME:
@@ -218,11 +218,11 @@ def _warn_insecure_connection(config: ScyllaDBConfig) -> None:
     Args:
         config (ScyllaDBConfig): The ScyllaDB configuration.
     """
-    if config.USERNAME and config.PASSWORD and not config.TLS.ENABLED:
+    if config.USERNAME and config.PASSWORD and not config.TLS.IS_ENABLED:
         logger.warning(
-            "ScyllaDB credentials are sent in plain text: enable SCYLLADB.TLS.ENABLED to encrypt the connection",
+            "ScyllaDB credentials are sent in plain text: enable SCYLLADB.TLS.IS_ENABLED to encrypt the connection",
         )
-    if config.TLS.ENABLED and config.TLS.VERIFY_MODE == "CERT_NONE":
+    if config.TLS.IS_ENABLED and config.TLS.VERIFY_MODE == "CERT_NONE":
         logger.warning("ScyllaDB TLS certificate verification is disabled: the server identity is not checked")
 
 
@@ -765,7 +765,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = self.get_session()
         try:
-            if self.config.PREPARED_CACHE.ENABLED:
+            if self.config.PREPARED_CACHE.IS_ENABLED:
                 # Use cached version if available - call the cached method
                 cached_method: Any = getattr(self, "_prepare_cached", None)
                 if cached_method is not None:
@@ -780,7 +780,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     def __post_init__(self) -> None:
         """Post-initialization hook to apply cache decorator if enabled."""
-        if self.config.PREPARED_CACHE.ENABLED:
+        if self.config.PREPARED_CACHE.IS_ENABLED:
             # Create a method to cache
             def _prepare_internal(keyspace: str | None, query: str) -> PreparedStatement:  # noqa: ARG001
                 """Prepare a CQL statement; the keyspace only keys the cache."""
@@ -816,7 +816,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             ResultSet: The query result set.
         """
-        if self.config.PREPARED_CACHE.ENABLED:
+        if self.config.PREPARED_CACHE.IS_ENABLED:
             statement = self.prepare(query.replace("%s", "?"))
             statement.is_idempotent = idempotent
             return self.execute_prepared(statement, params)
@@ -1312,7 +1312,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = await self.get_session()
         try:
-            if self.config.PREPARED_CACHE.ENABLED:
+            if self.config.PREPARED_CACHE.IS_ENABLED:
                 # Use cached version if available - call the cached method
                 cached_method: Any = getattr(self, "_prepare_cached", None)
                 if cached_method is not None:
@@ -1327,7 +1327,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     def __post_init__(self) -> None:
         """Post-initialization hook to apply cache decorator if enabled."""
-        if self.config.PREPARED_CACHE.ENABLED:
+        if self.config.PREPARED_CACHE.IS_ENABLED:
             # Create an async method to cache
             async def _prepare_internal(keyspace: str | None, query: str) -> PreparedStatement:  # noqa: ARG001
                 """Prepare a CQL statement asynchronously; the keyspace only keys the cache."""
@@ -1369,7 +1369,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             ResultSet: The query result set.
         """
-        if self.config.PREPARED_CACHE.ENABLED:
+        if self.config.PREPARED_CACHE.IS_ENABLED:
             statement = await self.prepare(query.replace("%s", "?"))
             statement.is_idempotent = idempotent
             return await self.execute_prepared(statement, params)
