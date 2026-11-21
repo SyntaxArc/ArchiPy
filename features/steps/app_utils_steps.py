@@ -273,7 +273,7 @@ def step_when_options_preflight_type(context, preflight_type):
     scenario_context = get_current_scenario_context(context)
     app = scenario_context.get("app")
     test_config = BaseConfig.global_config()
-    allowed_origin = test_config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS[0]
+    allowed_origin = test_config.FASTAPI.CORS.ALLOW_ORIGINS[0]
 
     client = TestClient(app)
 
@@ -402,10 +402,10 @@ def step_then_check_422_error(context):
 
 
 def _reset_optional_middleware_config(fastapi_config) -> None:
-    fastapi_config.GZIP_MIDDLEWARE_IS_ENABLED = False
-    fastapi_config.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = False
-    fastapi_config.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = []
-    fastapi_config.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED = False
+    fastapi_config.GZIP.IS_ENABLED = False
+    fastapi_config.TRUSTED_HOST.IS_ENABLED = False
+    fastapi_config.TRUSTED_HOST.ALLOWED_HOSTS = []
+    fastapi_config.HTTPS_REDIRECT.IS_ENABLED = False
 
 
 @given("a FastAPI app with GZip middleware enabled")
@@ -413,7 +413,7 @@ def step_given_fastapi_app_with_gzip(context):
     scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     _reset_optional_middleware_config(test_config.FASTAPI)
-    test_config.FASTAPI.GZIP_MIDDLEWARE_IS_ENABLED = True
+    test_config.FASTAPI.GZIP.IS_ENABLED = True
 
     app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
 
@@ -433,8 +433,8 @@ def step_given_fastapi_app_with_trusted_host(context, host):
     scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     _reset_optional_middleware_config(test_config.FASTAPI)
-    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
-    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = [host]
+    test_config.FASTAPI.TRUSTED_HOST.IS_ENABLED = True
+    test_config.FASTAPI.TRUSTED_HOST.ALLOWED_HOSTS = [host]
 
     app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
     _add_test_endpoint(app)
@@ -446,7 +446,7 @@ def step_given_fastapi_app_trusted_host_empty_hosts(context):
     scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     _reset_optional_middleware_config(test_config.FASTAPI)
-    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
+    test_config.FASTAPI.TRUSTED_HOST.IS_ENABLED = True
 
     app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
     scenario_context.store("app", app)
@@ -457,7 +457,7 @@ def step_given_fastapi_app_with_https_redirect(context):
     scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     _reset_optional_middleware_config(test_config.FASTAPI)
-    test_config.FASTAPI.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED = True
+    test_config.FASTAPI.HTTPS_REDIRECT.IS_ENABLED = True
 
     app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
     _add_test_endpoint(app)
@@ -916,8 +916,8 @@ def _store_websocket_app(context, configure) -> None:
 @given('a FastAPI app with TrustedHost middleware enabled for "{host}" and an echo WebSocket')
 def step_given_trusted_host_websocket_app(context, host):
     def configure(fastapi_config):
-        fastapi_config.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
-        fastapi_config.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = [host]
+        fastapi_config.TRUSTED_HOST.IS_ENABLED = True
+        fastapi_config.TRUSTED_HOST.ALLOWED_HOSTS = [host]
 
     _store_websocket_app(context, configure)
 
@@ -926,7 +926,7 @@ def step_given_trusted_host_websocket_app(context, host):
 def step_given_https_redirect_websocket_app(context, state):
     _store_websocket_app(
         context,
-        lambda fastapi_config: setattr(fastapi_config, "HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED", state == "enabled"),
+        lambda fastapi_config: setattr(fastapi_config.HTTPS_REDIRECT, "IS_ENABLED", state == "enabled"),
     )
 
 

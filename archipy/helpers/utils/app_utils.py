@@ -86,18 +86,18 @@ class FastAPIUtils:
             app (FastAPI): The FastAPI application instance.
             config (BaseConfig): The configuration object containing CORS settings.
         """
-        origins = [str(origin).strip("/") for origin in config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS]
+        origins = [str(origin).strip("/") for origin in config.FASTAPI.CORS.ALLOW_ORIGINS]
         # Use app.add_middleware with CORSMiddleware directly
         # CORSMiddleware is compatible with FastAPI's middleware system at runtime
         app.add_middleware(
             CORSMiddleware,
             allow_origins=origins,
-            allow_credentials=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_CREDENTIALS,
-            allow_methods=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_METHODS,
-            allow_headers=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_HEADERS,
-            allow_origin_regex=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGIN_REGEX,
-            expose_headers=config.FASTAPI.CORS_MIDDLEWARE_EXPOSE_HEADERS,
-            max_age=config.FASTAPI.CORS_MIDDLEWARE_MAX_AGE,
+            allow_credentials=config.FASTAPI.CORS.ALLOW_CREDENTIALS,
+            allow_methods=config.FASTAPI.CORS.ALLOW_METHODS,
+            allow_headers=config.FASTAPI.CORS.ALLOW_HEADERS,
+            allow_origin_regex=config.FASTAPI.CORS.ALLOW_ORIGIN_REGEX,
+            expose_headers=config.FASTAPI.CORS.EXPOSE_HEADERS,
+            max_age=config.FASTAPI.CORS.MAX_AGE,
         )
 
     @staticmethod
@@ -108,13 +108,13 @@ class FastAPIUtils:
             app (FastAPI): The FastAPI application instance.
             config (BaseConfig): The configuration object containing GZip middleware settings.
         """
-        if not config.FASTAPI.GZIP_MIDDLEWARE_IS_ENABLED:
+        if not config.FASTAPI.GZIP.IS_ENABLED:
             return
 
         app.add_middleware(
             GZipMiddleware,
-            minimum_size=config.FASTAPI.GZIP_MIDDLEWARE_MINIMUM_SIZE,
-            compresslevel=config.FASTAPI.GZIP_MIDDLEWARE_COMPRESSLEVEL,
+            minimum_size=config.FASTAPI.GZIP.MINIMUM_SIZE,
+            compresslevel=config.FASTAPI.GZIP.COMPRESSLEVEL,
         )
 
     @staticmethod
@@ -125,20 +125,20 @@ class FastAPIUtils:
             app (FastAPI): The FastAPI application instance.
             config (BaseConfig): The configuration object containing TrustedHost middleware settings.
         """
-        if not config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED:
+        if not config.FASTAPI.TRUSTED_HOST.IS_ENABLED:
             return
 
-        allowed_hosts = config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS
+        allowed_hosts = config.FASTAPI.TRUSTED_HOST.ALLOWED_HOSTS
         if not allowed_hosts:
             logger.warning(
-                "TrustedHost middleware enabled but TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS is empty; skipping",
+                "TrustedHost middleware enabled but TRUSTED_HOST.ALLOWED_HOSTS is empty; skipping",
             )
             return
 
         app.add_middleware(
             TrustedHostMiddleware,
             allowed_hosts=allowed_hosts,
-            www_redirect=config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT,
+            www_redirect=config.FASTAPI.TRUSTED_HOST.WWW_REDIRECT,
         )
 
     @staticmethod
@@ -149,7 +149,7 @@ class FastAPIUtils:
             app (FastAPI): The FastAPI application instance.
             config (BaseConfig): The configuration object containing HTTPS redirect middleware settings.
         """
-        if not config.FASTAPI.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED:
+        if not config.FASTAPI.HTTPS_REDIRECT.IS_ENABLED:
             return
 
         app.add_middleware(HTTPSRedirectMiddleware)

@@ -77,10 +77,10 @@ def _build_sse_app(config: BaseConfig, state: _SseState) -> FastAPI:
 
 def _reset_optional_middleware(config: BaseConfig) -> None:
     fastapi_config = config.FASTAPI
-    fastapi_config.GZIP_MIDDLEWARE_IS_ENABLED = False
-    fastapi_config.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = False
-    fastapi_config.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = []
-    fastapi_config.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED = False
+    fastapi_config.GZIP.IS_ENABLED = False
+    fastapi_config.TRUSTED_HOST.IS_ENABLED = False
+    fastapi_config.TRUSTED_HOST.ALLOWED_HOSTS = []
+    fastapi_config.HTTPS_REDIRECT.IS_ENABLED = False
 
 
 def _store_app(context, *, gzip: bool = False, reset: bool = True, trusted_hosts: list[str] | None = None) -> None:
@@ -88,10 +88,10 @@ def _store_app(context, *, gzip: bool = False, reset: bool = True, trusted_hosts
     config = BaseConfig.global_config()
     if reset:
         _reset_optional_middleware(config)
-    config.FASTAPI.GZIP_MIDDLEWARE_IS_ENABLED = gzip
+    config.FASTAPI.GZIP.IS_ENABLED = gzip
     if trusted_hosts:
-        config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
-        config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = trusted_hosts
+        config.FASTAPI.TRUSTED_HOST.IS_ENABLED = True
+        config.FASTAPI.TRUSTED_HOST.ALLOWED_HOSTS = trusted_hosts
     state = _SseState()
     scenario_context.store("sse_state", state)
     scenario_context.store("sse_app", _build_sse_app(config, state))
