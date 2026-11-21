@@ -4124,11 +4124,9 @@ workers) or with no web framework at all.</p>
 </ol>
 <p>There is no requirement to adopt the full four-layer structure immediately.</p>
 <h3 id="why-does-archipy-require-python-314">Why does ArchiPy require Python 3.14+?<a class="headerlink" href="#why-does-archipy-require-python-314" title="Permanent link">&para;</a></h3>
-<p>ArchiPy targets the latest stable Python release to stay lean and forward-looking. Requiring 3.14+
-ensures access to the full set of current runtime improvements, performance gains, and security patches,
-while dropping legacy compatibility shims like <code>typing.Optional</code>, <code>typing.Union</code>, and
+<p>ArchiPy uses Python 3.14 as its minimum and tests on CPython 3.14 and 3.15. Python 3.14 provides
+deferred evaluation of annotations by default, so ArchiPy can use modern type hints without
 <code>from __future__ import annotations</code>.</p>
-<p>Using the latest stable Python keeps dependencies minimal and the code idiomatic.</p>
 <hr />
 <h2 id="adapters">Adapters<a class="headerlink" href="#adapters" title="Permanent link">&para;</a></h2>
 <h3 id="how-do-i-use-multiple-databases-at-the-same-time">How do I use multiple databases at the same time?<a class="headerlink" href="#how-do-i-use-multiple-databases-at-the-same-time" title="Permanent link">&para;</a></h3>
