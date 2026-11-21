@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
-from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
@@ -31,7 +31,7 @@ from archipy.configs.config_template import (
     VaultConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
-from archipy.configs.sections._common import fold_flat_fields
+from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.configs.vault_settings_source import create_vault_client
 from archipy.models.errors import ConfigurationError
 
@@ -920,12 +920,12 @@ class _FoldGroup(BaseModel):
 
 
 class _FoldSection(BaseModel):
-    NAME: str | None = None
+    NAME: str | None = Field(default=None, deprecated=deprecated_flat_message("TEST", "NAME", "GROUP", "NAME"))
     GROUP: _FoldGroup | None = None
 
     @model_validator(mode="after")
     def _fold(self):
-        fold_flat_fields(self, "TEST", "GROUP", _FoldGroup, {"NAME": "NAME"})
+        fold_flat_fields(self, "GROUP", _FoldGroup, {"NAME": "NAME"})
         return self
 
 

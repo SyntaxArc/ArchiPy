@@ -1,6 +1,5 @@
 """Helpers for config sections that move flat fields into nested groups."""
 
-import warnings
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -26,19 +25,18 @@ def deprecated_flat_message(section: str, flat_name: str, group: str, field: str
 
 def fold_flat_fields(
     owner: BaseModel,
-    section: str,
     group: str,
     group_type: type[BaseModel],
     flat_to_field: Mapping[str, str],
 ) -> None:
-    """Copy deprecated flat settings into a nested group and warn once.
+    """Copy deprecated flat settings into a nested group.
 
-    Only flat fields the user set explicitly are used. A value already set on the group wins. The group is created
-    when it is ``None``. Call this from a ``model_validator(mode="after")`` of the section.
+    Only flat fields the user set explicitly are used. Declare them with ``Field(deprecated=...)``: reading them here
+    makes pydantic emit one ``DeprecationWarning`` per field. A value already set on the group wins. The group is
+    created when it is ``None``. Call this from a ``model_validator(mode="after")`` of the section.
 
     Args:
         owner: The section model that holds the flat fields and the group.
-        section: Config section name used in the warning, for example ``"VAULT"``.
         group: Attribute name of the group on ``owner``.
         group_type: Model class of the group.
         flat_to_field: Maps each flat field name to its field name inside the group.
@@ -51,9 +49,3 @@ def fold_flat_fields(
     for name in used:
         values.setdefault(flat_to_field[name], getattr(owner, name))
     object.__setattr__(owner, group, group_type(**values))
-    names = ", ".join(f"{section}.{name}" for name in used)
-    warnings.warn(
-        f"{names} are deprecated and will be removed in 6.0.0; set the same values on {section}.{group} instead",
-        DeprecationWarning,
-        stacklevel=3,
-    )
