@@ -64,12 +64,9 @@ There is no requirement to adopt the full four-layer structure immediately.
 
 ### Why does ArchiPy require Python 3.14+?
 
-ArchiPy targets the latest stable Python release to stay lean and forward-looking. Requiring 3.14+
-ensures access to the full set of current runtime improvements, performance gains, and security patches,
-while dropping legacy compatibility shims like `typing.Optional`, `typing.Union`, and
+ArchiPy uses Python 3.14 as its minimum and tests on CPython 3.14 and 3.15. Python 3.14 provides
+deferred evaluation of annotations by default, so ArchiPy can use modern type hints without
 `from __future__ import annotations`.
-
-Using the latest stable Python keeps dependencies minimal and the code idiomatic.
 
 ---
 

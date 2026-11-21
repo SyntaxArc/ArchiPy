@@ -10,41 +10,54 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  ruff:
+    name: Ruff (${{ matrix.target-version }})
     runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:0.13.9-trixie
+    strategy:
+      fail-fast: false
+      matrix:
+        target-version: ["py314", "py315"]
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Install lint tools
+        run: uv sync --locked --only-group dev
+
       - name: Run Ruff check
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: check --output-format=github
-          src: "archipy packages features/steps scripts"
+        run: uv run --no-sync ruff check --no-fix --output-format=github --target-version ${{ matrix.target-version }} archipy packages features/steps scripts
 
       - name: Run Ruff format check
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: format --check
-          src: "archipy packages features/steps scripts"
+        run: uv run --no-sync ruff format --check --target-version ${{ matrix.target-version }} archipy packages features/steps scripts
 
-      - name: Set up Python 3.14
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.14"
+  gherkin:
+    name: gherkin (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:0.13.9-trixie
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@v6
 
-      - name: Install UV
-        uses: astral-sh/setup-uv@v7
-
-      - name: Cache UV
-        uses: actions/cache@v5
+      - uses: ./.github/actions/cache-uv
         with:
-          path: ~/.cache/uv
-          key: uv-${{ runner.os }}-3.14-${{ hashFiles('uv.lock') }}
+          suffix: gherkin-${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --group dev --frozen
+        run: uv sync --locked --group dev
 
       - name: Run Gherkin format check
-        run: uv run gherkin-formatter --check features/
+        run: uv run --no-sync gherkin-formatter --check features/
+
+  lint:
+    needs: [ruff, gherkin]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.ruff.result }}" = success && test "${{ needs.gherkin.result }}" = success

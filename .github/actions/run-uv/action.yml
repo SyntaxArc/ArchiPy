@@ -1,0 +1,41 @@
+name: Run in the Astral uv image
+description: Run a project command with the runner workspace and temporary directory mounted.
+inputs:
+  command:
+    description: Bash commands to run in the image.
+    required: true
+  testcontainers:
+    description: Give the test process access to the runner's Docker daemon.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        UV_COMMAND: ${{ inputs.command }}
+        USE_TESTCONTAINERS: ${{ inputs.testcontainers }}
+      run: |
+        args=(
+          --rm --init
+          --user "$(id -u):$(id -g)"
+          --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE"
+          --mount "type=bind,src=$RUNNER_TEMP,dst=$RUNNER_TEMP"
+          --workdir "$GITHUB_WORKSPACE"
+          # Temporal's Go CLI needs a username when the runner UID has no container passwd entry.
+          --env USER="$(id -un)"
+          --env TMPDIR="$RUNNER_TEMP"
+          --env UV_PYTHON_INSTALL_DIR="$RUNNER_TEMP/uv-python"
+          --env UV_PYTHON --env UV_CACHE_DIR --env EXPECTED_PYTHON
+          --env GITHUB_STEP_SUMMARY
+        )
+        if [[ "$USE_TESTCONTAINERS" == "true" ]]; then
+          # Redis and Kafka advertise localhost. The Docker daemon also needs to see temporary fixture files.
+          args+=(
+            --network host
+            --group-add "$(stat -c %g /var/run/docker.sock)"
+            --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock
+            --env TESTCONTAINERS_CONNECTION_MODE=docker_host --env TESTCONTAINERS_HOST_OVERRIDE=127.0.0.1
+            --env BEHAVE_JOBS --env BEHAVE_HEAVY_JOBS --env FEATURES --env EXCLUDED_FEATURES
+          )
+        fi
+        docker run "${args[@]}" ghcr.io/astral-sh/uv:0.13.9-trixie bash -ec "$UV_COMMAND"

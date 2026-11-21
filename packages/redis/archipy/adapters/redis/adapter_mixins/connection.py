@@ -142,19 +142,19 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             raise InvalidArgumentError(argument_name="SENTINEL_SERVICE_NAME")
         sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL_NODES]
 
-        sentinel = Sentinel(
+        sentinel_connection = Sentinel(
             sentinel_nodes,
             socket_timeout=configs.SENTINEL_SOCKET_TIMEOUT,
             password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
-        self.client = sentinel.master_for(
+        self.client = sentinel_connection.master_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=False),
         )
 
-        self.read_only_client = sentinel.slave_for(
+        self.read_only_client = sentinel_connection.slave_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=False),
         )
@@ -420,19 +420,19 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             raise InvalidArgumentError(argument_name="SENTINEL_SERVICE_NAME")
         sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL_NODES]
 
-        sentinel = AsyncSentinel(
+        sentinel_connection = AsyncSentinel(
             sentinel_nodes,
             socket_timeout=configs.SENTINEL_SOCKET_TIMEOUT,
             password=configs.PASSWORD.get_secret_value() if configs.PASSWORD else None,
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
-        self.client = sentinel.master_for(
+        self.client = sentinel_connection.master_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=True),
         )
 
-        self.read_only_client = sentinel.slave_for(
+        self.read_only_client = sentinel_connection.slave_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=True),
         )

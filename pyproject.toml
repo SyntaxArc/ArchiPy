@@ -7,6 +7,10 @@ authors = [
 readme = "README.md"
 version = "0.1.0" # This version set on publish flow!
 requires-python = ">=3.14,<4"
+classifiers = [
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+]
 dependencies = [
     "pydantic>=2.14.3",
     "pydantic-settings>=2.16.3",
@@ -221,7 +225,7 @@ exclude = [
 line-length = 120
 
 # Target Python version
-target-version = "py314"
+target-version = "py315"
 
 # Ruff format configuration
 [tool.ruff.format]
@@ -344,7 +348,7 @@ ignore-variadic-names = true  # Allow unused *args, **kwargs
 
 [tool.ty.environment]
 # Target Python version
-python-version = "3.14"
+python-version = "3.15"
 
 [tool.ty.src]
 # Include source directories

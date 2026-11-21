@@ -1526,6 +1526,8 @@ class MailpitTestContainer(metaclass=Singleton, thread_safe=True):
             .with_env("MP_SMTP_AUTH", f"{self.USERNAME}:{self.PASSWORD}")
             # Mailpit resolves the name of every SMTP client; with no DNS in the container each connection waits 20 s.
             .with_env("MP_SMTP_DISABLE_RDNS", "true")
+            # Keep the /api/v1/info trace probe independent of GitHub's release API.
+            .with_env("MP_DISABLE_VERSION_CHECK", "true")
             .with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["mailpit"])
         )
         if self.WITH_TLS:

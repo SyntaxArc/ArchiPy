@@ -10,29 +10,34 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  check:
+    name: ty (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.14", "3.15"]
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Set up Python 3.14
-        uses: actions/setup-python@v6
+      - uses: ./.github/actions/cache-uv
         with:
-          python-version: "3.14"  # From pyproject.toml
-
-      - name: Cache UV
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
-
-      - name: Install UV
-        uses: astral-sh/setup-uv@v7
-
-      - name: Install dependencies
-        run: uv sync --all-extras --all-groups  # Follows pyproject.toml exactly
+          suffix: adapters-${{ matrix.python-version }}
 
       - name: Run Ty type checking
-        run: uv run ty check --fix archipy packages  # Config from pyproject.toml
+        uses: ./.github/actions/run-uv
+        with:
+          command: |
+            make ci-install
+            uv run --no-sync ty check --python-version "${{ matrix.python-version }}" archipy packages
+
+  lint:
+    needs: check
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.check.result }}" = success

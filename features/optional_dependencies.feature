@@ -7,6 +7,10 @@ Feature: Optional dependencies
     Then the plain message should be built
     And the template message should fail with a message mentioning "jinja2"
 
+  Scenario: The PostgreSQL adapter requires the Psycopg binary distribution
+    When I read the "base" extra of the "postgres" package
+    Then it should require "psycopg[binary]>=3.3.9"
+
   Scenario Outline: The <package> async extra installs greenlet through sqlalchemy[asyncio]
     When I read the "<extra>" extra of the "<package>" package
     Then it should require "sqlalchemy[asyncio]"

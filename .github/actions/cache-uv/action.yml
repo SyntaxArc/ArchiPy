@@ -1,0 +1,15 @@
+name: Cache uv dependencies
+description: Share package downloads and built wheels between uv jobs.
+inputs:
+  suffix:
+    description: Cache namespace and Python version.
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v5
+      with:
+        path: .uv-cache
+        key: uv-0.13.9-${{ runner.os }}-${{ runner.arch }}-${{ inputs.suffix }}-${{ hashFiles('uv.lock') }}
+    - shell: bash
+      run: echo "UV_CACHE_DIR=.uv-cache" >> "$GITHUB_ENV"
