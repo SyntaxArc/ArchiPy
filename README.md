@@ -6,7 +6,7 @@
 [![Stars](https://img.shields.io/github/stars/SyntaxArc/ArchiPy)](https://github.com/SyntaxArc/ArchiPy)
 [![Python](https://img.shields.io/badge/Python-3.14+-blue.svg)](https://www.python.org/downloads/)
 [![UV](https://img.shields.io/badge/UV-package%20manager-blue)](https://docs.astral.sh/uv/)
-[![Documentation](https://img.shields.io/badge/docs-MkDocs-blue.svg)](https://syntaxarc.github.io/ArchiPy/)
+[![Documentation](https://img.shields.io/badge/docs-Zensical-blue.svg)](https://syntaxarc.github.io/ArchiPy/)
 [![License](https://img.shields.io/github/license/SyntaxArc/ArchiPy)](https://github.com/SyntaxArc/ArchiPy/blob/master/LICENSE)
 [![Maintained](https://img.shields.io/badge/Maintained-yes-brightgreen)](https://github.com/SyntaxArc/ArchiPy)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)](https://github.com/SyntaxArc/ArchiPy/blob/master/CONTRIBUTING.md)
@@ -180,9 +180,9 @@ Support ArchiPy by checking out our amazing sponsors! [View Sponsors](SPONSORS.m
 
 ## 📚 Documentation
 
-ArchiPy's documentation has been migrated from Sphinx to MkDocs for improved readability and organization:
+ArchiPy's documentation has been built with Zensical for improved readability and organization:
 
-- **Modern Interface**: Material theme with responsive design
+- **Modern Interface**: Responsive theme with responsive design
 - **Improved Navigation**: Intuitive organization and search
 - **Clearer Examples**: Expanded code samples with explanations
 - **API Reference**: Auto-generated from source code docstrings

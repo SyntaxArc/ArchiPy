@@ -231,48 +231,47 @@ check-mr: ## Run pre-commit only on files changed vs BASE (default master), e.g.
 	$(PRE_COMMIT) run --files $$CHANGED
 
 .PHONY: docs-serve
-docs-serve: ## Serve MkDocs documentation locally (balanced mode)
+docs-serve: ## Serve Zensical documentation locally (balanced mode)
 	@echo "${BLUE}Serving documentation...${NC}"
-	$(UV) run --group docs mkdocs serve -f docs/mkdocs.yml
+	$(UV) run --group docs zensical serve -f mkdocs.yml
 
 .PHONY: docs-serve-fast
-docs-serve-fast: ## Serve MkDocs documentation with fast build (for quick iterations)
+docs-serve-fast: ## Serve Zensical documentation with fast build (for quick iterations)
 	@echo "${BLUE}Serving documentation (fast mode)...${NC}"
-	$(UV) run --group docs mkdocs serve -f docs/mkdocs-fast.yml
+	$(UV) run --group docs zensical serve -f mkdocs-fast.yml
 
 .PHONY: docs-serve-no-api
-docs-serve-no-api: ## Serve MkDocs documentation without API auto-generation (fastest)
+docs-serve-no-api: ## Serve Zensical documentation without API auto-generation (fastest)
 	@echo "${BLUE}Serving documentation (no API generation)...${NC}"
-	ENABLE_MKDOCSTRINGS=false $(UV) run --group docs mkdocs serve -f docs/mkdocs.yml
+	ENABLE_MKDOCSTRINGS=false $(UV) run --group docs zensical serve -f mkdocs.yml
 
 .PHONY: docs-build
-docs-build: ## Build MkDocs documentation (balanced mode)
+docs-build: ## Build Zensical documentation (balanced mode)
 	@echo "${BLUE}Building documentation...${NC}"
-	$(UV) run --group docs mkdocs build -f docs/mkdocs.yml
+	$(UV) run --group docs zensical build -f mkdocs.yml
 
 .PHONY: docs-check
 docs-check: ## Build the docs in strict mode: broken links and API reference errors fail
 	@echo "${BLUE}Checking documentation...${NC}"
-	$(UV) run --group docs mkdocs build --strict -f docs/mkdocs.yml -d $$(mktemp -d)
+	$(UV) run --group docs zensical build --strict -f mkdocs.yml
 
 .PHONY: docs-build-fast
-docs-build-fast: ## Build MkDocs documentation with fast config
+docs-build-fast: ## Build Zensical documentation with fast config
 	@echo "${BLUE}Building documentation (fast mode)...${NC}"
-	$(UV) run --group docs mkdocs build -f docs/mkdocs-fast.yml
+	$(UV) run --group docs zensical build -f mkdocs-fast.yml
 
 .PHONY: docs-build-full
-docs-build-full: ## Build MkDocs documentation with full features (for production)
+docs-build-full: ## Build Zensical documentation with full features (for production)
 	@echo "${BLUE}Building documentation (full mode)...${NC}"
-	$(UV) run --group docs mkdocs build -f docs/mkdocs-full.yml --clean
+	$(UV) run --group docs zensical build -f mkdocs-full.yml --clean
 
 .PHONY: docs-time
 docs-time: ## Time the documentation build
 	@echo "${BLUE}Timing documentation build...${NC}"
-	time $(UV) run --group docs mkdocs build -f docs/mkdocs.yml
+	time $(UV) run --group docs zensical build -f mkdocs.yml
 
 .PHONY: docs-deploy
-docs-deploy: ## Deploy MkDocs to GitHub Pages
-	@echo "${BLUE}Deploying documentation...${NC}"
-	$(UV) run --group docs mkdocs gh-deploy --force -f docs/mkdocs-full.yml
+docs-deploy: ## Documentation deploys from CI, not locally
+	@echo "${YELLOW}Documentation is published by .github/workflows/deploy-docs.yml on push to master.${NC}"
 
 .DEFAULT_GOAL := help

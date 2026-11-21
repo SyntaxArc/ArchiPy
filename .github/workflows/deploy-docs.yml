@@ -1,4 +1,4 @@
-name: Deploy MkDocs to GitHub Pages
+name: Deploy documentation to GitHub Pages
 
 on:
   push:
@@ -9,12 +9,14 @@ on:
       - 'docs/**'
       - 'archipy/**'
       - 'packages/**'
+      - 'mkdocs*.yml'
       - 'pyproject.toml'
       - 'uv.lock'
       - '.python-version'
       - '.github/workflows/deploy-docs.yml'
   pull_request:
     paths:
+      - 'mkdocs*.yml'
       - '.python-version'
       - '.github/workflows/deploy-docs.yml'
 
@@ -22,46 +24,37 @@ permissions:
   contents: read
 
 jobs:
-  deployment-smoke-test:
-    if: github.event_name == 'pull_request'
+  build:
     runs-on: ubuntu-latest
-    container: &uv-image ghcr.io/astral-sh/uv:0.13.9-trixie
-    steps: &deployment-steps
+    container: ghcr.io/astral-sh/uv:0.13.9-trixie
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0  # Fetch all history for proper versioning
-          persist-credentials: ${{ github.event_name == 'push' }}
-
-      - name: Cache uv dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/uv
-          key: uv-docs-deploy-${{ runner.arch }}-${{ hashFiles('.python-version', 'uv.lock') }}
+          persist-credentials: false
 
       - name: Install dependencies
         run: uv sync --locked --group docs
 
-      - name: Configure Git user
-        run: |
-          # Checkout only trusts the runner-owned workspace in its temporary Git config.
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+      - name: Build documentation
+        run: uv run --no-sync zensical build --clean -f mkdocs-full.yml
 
-      - name: Deploy documentation
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
-            git init --bare "$RUNNER_TEMP/docs-deploy.git"
-            git remote add deployment-test "$RUNNER_TEMP/docs-deploy.git"
-            set -- --remote-name deployment-test
-          fi
-          uv run --no-sync mkdocs gh-deploy --force -f docs/mkdocs-full.yml "$@"
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
 
   deploy:
     if: github.event_name == 'push'
+    needs: build
     runs-on: ubuntu-latest
-    container: *uv-image
     permissions:
-      contents: write
-    steps: *deployment-steps
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

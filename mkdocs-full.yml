@@ -1,6 +1,6 @@
 # Full documentation build with all features
-# Use this for production builds: mkdocs build -f docs/mkdocs-full.yml
-# Plugin settings are merged over docs/mkdocs.yml: only the differences are listed here.
+# Use this for production builds: zensical build -f mkdocs-full.yml
+# Plugin settings are merged over mkdocs.yml: only the differences are listed here.
 
 INHERIT: ./mkdocs.yml
 
