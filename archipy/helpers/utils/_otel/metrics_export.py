@@ -26,7 +26,7 @@ def resolve_grouping_key(configured: dict[str, str] | None) -> dict[str, str]:
     ``hostNetwork`` and the container ID on plain Docker.
 
     Args:
-        configured: ``METRICS_PUSHGATEWAY_GROUPING_KEY`` from the configuration.
+        configured: ``PUSHGATEWAY.GROUPING_KEY`` from the configuration.
 
     Returns:
         The grouping key to push and delete with.
@@ -184,16 +184,16 @@ class MetricsExport:
             msg = "Metrics registry missing before Pushgateway start"
             raise RuntimeError(msg)
 
-        gateway_url = str(otel.METRICS_PUSHGATEWAY_URL or "").strip()
+        gateway_url = str(otel.PUSHGATEWAY.URL or "").strip()
         if not gateway_url:
-            msg = "METRICS_PUSHGATEWAY_URL is required when METRICS_EXPORTER=pushgateway"
+            msg = "PUSHGATEWAY.URL is required when METRICS_EXPORTER=pushgateway"
             raise RuntimeError(msg)
 
-        job = str(otel.METRICS_PUSHGATEWAY_JOB or otel.SERVICE_NAME or "archipy").strip() or "archipy"
-        grouping_key = resolve_grouping_key(otel.METRICS_PUSHGATEWAY_GROUPING_KEY)
-        interval = int(otel.METRICS_PUSHGATEWAY_INTERVAL_SECONDS)
-        timeout = float(otel.METRICS_PUSHGATEWAY_TIMEOUT_SECONDS)
-        delete_on_shutdown = bool(otel.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN)
+        job = str(otel.PUSHGATEWAY.JOB or otel.SERVICE_NAME or "archipy").strip() or "archipy"
+        grouping_key = resolve_grouping_key(otel.PUSHGATEWAY.GROUPING_KEY)
+        interval = int(otel.PUSHGATEWAY.INTERVAL_SECONDS)
+        timeout = float(otel.PUSHGATEWAY.TIMEOUT_SECONDS)
+        delete_on_shutdown = bool(otel.PUSHGATEWAY.DELETE_ON_SHUTDOWN)
 
         stop_event = threading.Event()
         self._pushgateway_stop = stop_event

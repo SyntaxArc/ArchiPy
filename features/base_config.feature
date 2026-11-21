@@ -273,6 +273,8 @@ Feature: Base Configuration System
       | Elasticsearch | an unknown node selector                           | rejected |
       | Elasticsearch | the random node selector                           | accepted |
       | Temporal      | only a client certificate                          | rejected |
+      | OpenTelemetry | a pushgateway exporter without a URL               | rejected |
+      | OpenTelemetry | a pushgateway exporter with a grouped URL          | accepted |
       | Temporal      | only a CA certificate                              | accepted |
       | Temporal      | a client key without a certificate                 | rejected |
       | Temporal      | a run timeout above the execution one              | rejected |

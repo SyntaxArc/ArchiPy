@@ -23,6 +23,7 @@ from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import (
     ElasticsearchConfig,
     KafkaConfig,
+    OpentelemetryConfig,
     PostgresSQLAlchemyConfig,
     RedisConfig,
     ScyllaDBConfig,
@@ -708,6 +709,14 @@ _SECTION_SETTINGS = {
     ),
     ("Elasticsearch", "an unknown node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "fastest"}),
     ("Elasticsearch", "the random node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "random"}),
+    ("OpenTelemetry", "a pushgateway exporter without a URL"): (
+        OpentelemetryConfig,
+        {"METRICS_EXPORTER": "pushgateway"},
+    ),
+    ("OpenTelemetry", "a pushgateway exporter with a grouped URL"): (
+        OpentelemetryConfig,
+        {"METRICS_EXPORTER": "pushgateway", "PUSHGATEWAY": {"URL": "http://pushgateway:9091"}},
+    ),
     ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
     ("Temporal", "a grouped client certificate without a key"): (
         TemporalConfig,

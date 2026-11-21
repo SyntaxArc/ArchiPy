@@ -5,8 +5,9 @@ from enum import StrEnum
 from itertools import pairwise
 from typing import Literal, Self
 
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
+from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.models.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,40 @@ class OtelSampler(StrEnum):
     PARENTBASED_ALWAYS_ON = "parentbased_always_on"
     PARENTBASED_ALWAYS_OFF = "parentbased_always_off"
     PARENTBASED_TRACEIDRATIO = "parentbased_traceidratio"
+
+
+class OtelPushgatewayConfig(BaseModel):
+    """Prometheus Pushgateway settings (METRICS_EXPORTER=pushgateway)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    URL: str | None = Field(
+        default=None,
+        description="Prometheus Pushgateway base URL when METRICS_EXPORTER=pushgateway (e.g. http://host:9091)",
+    )
+    JOB: str | None = Field(
+        default=None,
+        description="Pushgateway job label (defaults to SERVICE_NAME when unset)",
+    )
+    INTERVAL_SECONDS: int = Field(
+        default=60,
+        ge=1,
+        description="Interval between Pushgateway pushes when METRICS_EXPORTER=pushgateway",
+    )
+    TIMEOUT_SECONDS: float = Field(
+        default=10.0,
+        gt=0,
+        description="HTTP timeout in seconds for Pushgateway push/delete calls",
+    )
+    GROUPING_KEY: dict[str, str] = Field(
+        default_factory=dict,
+        max_length=16,
+        description="Extra Pushgateway grouping labels (instance, component, ...)",
+    )
+    DELETE_ON_SHUTDOWN: bool = Field(
+        default=True,
+        description="Delete the Pushgateway grouping key on graceful OTel shutdown",
+    )
 
 
 class OpentelemetryConfig(BaseModel):
@@ -330,33 +365,6 @@ class OpentelemetryConfig(BaseModel):
         le=65535,
         description="Bind port for the metrics pull scrape server (/metrics)",
     )
-    METRICS_PUSHGATEWAY_URL: str | None = Field(
-        default=None,
-        description="Prometheus Pushgateway base URL when METRICS_EXPORTER=pushgateway (e.g. http://host:9091)",
-    )
-    METRICS_PUSHGATEWAY_JOB: str | None = Field(
-        default=None,
-        description="Pushgateway job label (defaults to SERVICE_NAME when unset)",
-    )
-    METRICS_PUSHGATEWAY_INTERVAL_SECONDS: int = Field(
-        default=60,
-        ge=1,
-        description="Interval between Pushgateway pushes when METRICS_EXPORTER=pushgateway",
-    )
-    METRICS_PUSHGATEWAY_TIMEOUT_SECONDS: float = Field(
-        default=10.0,
-        gt=0,
-        description="HTTP timeout in seconds for Pushgateway push/delete calls",
-    )
-    METRICS_PUSHGATEWAY_GROUPING_KEY: dict[str, str] = Field(
-        default_factory=dict,
-        max_length=16,
-        description="Extra Pushgateway grouping labels (instance, component, ...)",
-    )
-    METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN: bool = Field(
-        default=True,
-        description="Delete the Pushgateway grouping key on graceful OTel shutdown",
-    )
     SYSTEM_METRICS_ENABLED: bool = Field(
         default=True,
         description="Instrument process/system metrics when METRICS_ENABLED is true",
@@ -399,6 +407,78 @@ class OpentelemetryConfig(BaseModel):
             "Prefer WARNING+ in production when LOGS_EXPORTER=otlp to limit export volume."
         ),
     )
+
+    PUSHGATEWAY: OtelPushgatewayConfig = Field(
+        default_factory=OtelPushgatewayConfig,
+        description="Prometheus Pushgateway settings (METRICS_EXPORTER=pushgateway)",
+    )
+
+    METRICS_PUSHGATEWAY_URL: str | None = Field(
+        default=None,
+        description="Prometheus Pushgateway base URL when METRICS_EXPORTER=pushgateway (e.g. http://host:9091)",
+        deprecated=deprecated_flat_message("OTEL", "METRICS_PUSHGATEWAY_URL", "PUSHGATEWAY", "URL"),
+    )
+    METRICS_PUSHGATEWAY_JOB: str | None = Field(
+        default=None,
+        description="Pushgateway job label (defaults to SERVICE_NAME when unset)",
+        deprecated=deprecated_flat_message("OTEL", "METRICS_PUSHGATEWAY_JOB", "PUSHGATEWAY", "JOB"),
+    )
+    METRICS_PUSHGATEWAY_INTERVAL_SECONDS: int = Field(
+        default=60,
+        ge=1,
+        description="Interval between Pushgateway pushes when METRICS_EXPORTER=pushgateway",
+        deprecated=deprecated_flat_message(
+            "OTEL",
+            "METRICS_PUSHGATEWAY_INTERVAL_SECONDS",
+            "PUSHGATEWAY",
+            "INTERVAL_SECONDS",
+        ),
+    )
+    METRICS_PUSHGATEWAY_TIMEOUT_SECONDS: float = Field(
+        default=10.0,
+        gt=0,
+        description="HTTP timeout in seconds for Pushgateway push/delete calls",
+        deprecated=deprecated_flat_message(
+            "OTEL",
+            "METRICS_PUSHGATEWAY_TIMEOUT_SECONDS",
+            "PUSHGATEWAY",
+            "TIMEOUT_SECONDS",
+        ),
+    )
+    METRICS_PUSHGATEWAY_GROUPING_KEY: dict[str, str] = Field(
+        default_factory=dict,
+        max_length=16,
+        description="Extra Pushgateway grouping labels (instance, component, ...)",
+        deprecated=deprecated_flat_message("OTEL", "METRICS_PUSHGATEWAY_GROUPING_KEY", "PUSHGATEWAY", "GROUPING_KEY"),
+    )
+    METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN: bool = Field(
+        default=True,
+        description="Delete the Pushgateway grouping key on graceful OTel shutdown",
+        deprecated=deprecated_flat_message(
+            "OTEL",
+            "METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN",
+            "PUSHGATEWAY",
+            "DELETE_ON_SHUTDOWN",
+        ),
+    )
+
+    @model_validator(mode="after")
+    def fold_deprecated_flat_fields(self) -> Self:
+        """Copy deprecated flat settings into their groups."""
+        fold_flat_fields(
+            self,
+            "PUSHGATEWAY",
+            OtelPushgatewayConfig,
+            {
+                "METRICS_PUSHGATEWAY_URL": "URL",
+                "METRICS_PUSHGATEWAY_JOB": "JOB",
+                "METRICS_PUSHGATEWAY_INTERVAL_SECONDS": "INTERVAL_SECONDS",
+                "METRICS_PUSHGATEWAY_TIMEOUT_SECONDS": "TIMEOUT_SECONDS",
+                "METRICS_PUSHGATEWAY_GROUPING_KEY": "GROUPING_KEY",
+                "METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN": "DELETE_ON_SHUTDOWN",
+            },
+        )
+        return self
 
     def _fit_batch_sizes_to_queues(self) -> None:
         """Keep each batch no larger than its queue.
@@ -455,7 +535,7 @@ class OpentelemetryConfig(BaseModel):
         if (
             self.METRICS_ENABLED
             and self.METRICS_EXPORTER == OtelMetricsExporter.PUSHGATEWAY
-            and not (self.METRICS_PUSHGATEWAY_URL and self.METRICS_PUSHGATEWAY_URL.strip())
+            and not (self.PUSHGATEWAY.URL and self.PUSHGATEWAY.URL.strip())
         ):
             raise ConfigurationError(
                 operation="otel",
