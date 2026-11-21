@@ -21,6 +21,8 @@ runs:
           --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE"
           --mount "type=bind,src=$RUNNER_TEMP,dst=$RUNNER_TEMP"
           --workdir "$GITHUB_WORKSPACE"
+          # Temporal's Go CLI needs a username when the runner UID has no container passwd entry.
+          --env USER="$(id -un)"
           --env TMPDIR="$RUNNER_TEMP"
           --env UV_PYTHON_INSTALL_DIR="$RUNNER_TEMP/uv-python"
           --env UV_PYTHON --env UV_CACHE_DIR --env EXPECTED_PYTHON
