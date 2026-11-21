@@ -53,7 +53,7 @@ def _install_email_config(context, **overrides):
         BaseConfig.set_global(BaseConfig())
     config = BaseConfig.global_config()
     previous_email = config.EMAIL
-    values = {"POOL_SIZE": 1, "MAX_RETRIES": 3}
+    values = {"POOL": {"SIZE": 1}, "MAX_RETRIES": 3}
     values.update(overrides)
     config.EMAIL = EmailConfig(**values)
 
@@ -166,7 +166,7 @@ def step_given_smtp_credentials(context, username, password):
 
 @given("the configured attachment maximum size is {size:d} bytes")
 def step_given_attachment_max_size(context, size):
-    BaseConfig.global_config().EMAIL.ATTACHMENT_MAX_SIZE = size
+    BaseConfig.global_config().EMAIL.ATTACHMENTS.MAX_SIZE = size
 
 
 @given("an email adapter")
@@ -178,7 +178,7 @@ def step_given_email_adapter(context):
 @given("an email connection pool of size {size:d}")
 def step_given_connection_pool(context, size):
     scenario_context = get_current_scenario_context(context)
-    BaseConfig.global_config().EMAIL.POOL_SIZE = size
+    BaseConfig.global_config().EMAIL.POOL.SIZE = size
     scenario_context.store("pool", EmailConnectionPool(BaseConfig.global_config().EMAIL))
 
 
@@ -276,7 +276,7 @@ def step_given_url_attachment(context, filename, content):
 
 @given('the URL attachment hosts "{hosts}" are allowed')
 def step_given_url_hosts(context, hosts):
-    BaseConfig.global_config().EMAIL.ATTACHMENT_URL_ALLOWED_HOSTS = hosts.split(",")
+    BaseConfig.global_config().EMAIL.ATTACHMENTS.URL_ALLOWED_HOSTS = hosts.split(",")
 
 
 @when('I try to create a URL attachment from "{url}"')
@@ -417,7 +417,7 @@ def step_when_take_connection(context):
 
 @given("the connection timeout is {seconds:d} seconds")
 def step_given_connection_timeout(context, seconds):
-    BaseConfig.global_config().EMAIL.CONNECTION_TIMEOUT = seconds
+    BaseConfig.global_config().EMAIL.POOL.CONNECTION_TIMEOUT = seconds
 
 
 @when("I try to take a connection from the pool {count:d} times")
@@ -459,7 +459,7 @@ def step_when_return_connection(context):
 
 @given("the connection refresh interval is {seconds:d} seconds")
 def step_given_refresh_interval(context, seconds):
-    BaseConfig.global_config().EMAIL.CONNECTION_REFRESH_SECONDS = seconds
+    BaseConfig.global_config().EMAIL.POOL.CONNECTION_REFRESH_SECONDS = seconds
 
 
 @when("I wait {seconds:f} seconds")
@@ -706,28 +706,28 @@ def step_no_span_exposes(context, secret):
 
 @given('the SMTP transport security is "{mode}"')
 def step_given_transport_security(context, mode):
-    BaseConfig.global_config().EMAIL.TLS_MODE = mode
+    BaseConfig.global_config().EMAIL.TLS.MODE = mode
 
 
 @given('the SMTP transport security is "{mode}" verified with the Mailpit CA')
 def step_given_transport_security_mailpit_ca(context, mode):
     config = BaseConfig.global_config().EMAIL
-    config.TLS_MODE = mode
-    config.TLS_CA_FILE = _mailpit("mailpit").ca_file
+    config.TLS.MODE = mode
+    config.TLS.CA_FILE = _mailpit("mailpit").ca_file
 
 
 @given('the SMTP transport security is "{mode}" without certificate verification')
 def step_given_transport_security_unverified(context, mode):
     config = BaseConfig.global_config().EMAIL
-    config.TLS_MODE = mode
-    config.TLS_VERIFY = False
+    config.TLS.MODE = mode
+    config.TLS.VERIFY = False
 
 
 @given('the SMTP transport security is "{mode}" verified with the local SMTPS CA')
 def step_given_transport_security_local_ca(context, mode):
     config = BaseConfig.global_config().EMAIL
-    config.TLS_MODE = mode
-    config.TLS_CA_FILE = get_current_scenario_context(context).get("smtps_ca_file")
+    config.TLS.MODE = mode
+    config.TLS.CA_FILE = get_current_scenario_context(context).get("smtps_ca_file")
 
 
 @given("a local SMTPS server")

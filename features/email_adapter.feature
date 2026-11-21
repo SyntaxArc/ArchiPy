@@ -135,7 +135,7 @@ Feature: Email adapter
   Scenario: The deprecated auto transport security warns
     Given the Mailpit SMTP server is configured
     When I create an email adapter
-    Then an email deprecation warning mentions "TLS_MODE"
+    Then an email deprecation warning mentions "TLS.MODE"
 
   Scenario Outline: Insecure credential and verification settings warn
     Given the Mailpit SMTP server is configured
@@ -146,8 +146,8 @@ Feature: Email adapter
     Examples:
       | mode     | verification                     | text                        |
       | none     | verified with the Mailpit CA     | sends USERNAME and PASSWORD |
-      | starttls | without certificate verification | TLS_VERIFY=False            |
-      | implicit | without certificate verification | TLS_VERIFY=False            |
+      | starttls | without certificate verification | TLS.VERIFY=False            |
+      | implicit | without certificate verification | TLS.VERIFY=False            |
 
   Scenario Outline: Out-of-range pool, retry and timeout settings are rejected
     When I build an email config with <field> set to <value>
