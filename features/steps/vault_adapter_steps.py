@@ -12,6 +12,7 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.config_template import VaultConfig
+from archipy.configs.sections.vault import VaultAppRoleConfig, VaultHttpConfig, VaultTokenRenewalConfig
 from archipy.configs.vault_settings_source import _vault_config_from_env
 from archipy.models.errors import ConfigurationError, InvalidArgumentError, NotFoundError, UnavailableError
 
@@ -40,7 +41,7 @@ def _admin_client() -> hvac.Client:
     """Return an hvac client using the global Vault root token."""
     vault = TestConfig.global_config().VAULT
     token = vault.TOKEN.get_secret_value() if vault.TOKEN else None
-    return hvac.Client(url=vault.ADDR, token=token, verify=vault.VERIFY_SSL)
+    return hvac.Client(url=vault.ADDR, token=token, verify=vault.TLS.VERIFY_SSL)
 
 
 @given("a configured Vault adapter")
@@ -100,8 +101,7 @@ def _adapter_with_token(context, token: str, threshold: int) -> VaultAdapter:
         update={
             "ENABLED": True,
             "TOKEN": token,
-            "AUTO_RENEW_TOKEN": True,
-            "RENEW_THRESHOLD_SECONDS": threshold,
+            "TOKEN_RENEWAL": VaultTokenRenewalConfig(AUTO_RENEW_TOKEN=True, RENEW_THRESHOLD_SECONDS=threshold),
         },
     )
     adapter = _store_adapter(context, VaultAdapter(config))
@@ -164,8 +164,7 @@ def step_given_approle_adapter(context):
             "ENABLED": True,
             "AUTH_METHOD": "approle",
             "TOKEN": None,
-            "APPROLE_ROLE_ID": role_id,
-            "APPROLE_SECRET_ID": secret_id,
+            "APPROLE": VaultAppRoleConfig(ROLE_ID=role_id, SECRET_ID=secret_id),
         },
     )
     adapter = _store_adapter(context, VaultAdapter(config))
@@ -441,8 +440,8 @@ def step_then_token_renewed(context):
     scenario_context = get_current_scenario_context(context)
     before_ttl = scenario_context.get("token_ttl_before")
     assert before_ttl is not None, "Missing token TTL before sample"
-    assert before_ttl <= adapter.configs.RENEW_THRESHOLD_SECONDS, (
-        f"Precondition failed: TTL {before_ttl} should be <= threshold {adapter.configs.RENEW_THRESHOLD_SECONDS}"
+    assert before_ttl <= adapter.configs.TOKEN_RENEWAL.RENEW_THRESHOLD_SECONDS, (
+        f"Precondition failed: TTL {before_ttl} should be <= threshold {adapter.configs.TOKEN_RENEWAL.RENEW_THRESHOLD_SECONDS}"
     )
     assert adapter.token_renew_count >= 1, f"Expected at least one token renew, got {adapter.token_renew_count}"
 
@@ -534,8 +533,8 @@ def step_given_unavailable_vault(context, retries: int):
             "ADDR": f"http://{host}:{port}",
             "TOKEN": "stub-token",
             "AUTH_METHOD": "token",
-            "RETRIES_MAX_ATTEMPTS": retries,
-            "AUTO_RENEW_TOKEN": False,
+            "HTTP": VaultHttpConfig(RETRIES_MAX_ATTEMPTS=retries),
+            "TOKEN_RENEWAL": VaultTokenRenewalConfig(AUTO_RENEW_TOKEN=False),
             "SECRET_CACHE_TTL": 0,
         },
     )
@@ -590,7 +589,7 @@ def step_parse_verify_ssl(context, value):
     os.environ["VAULT__VERIFY_SSL"] = value
     result: object
     try:
-        result = _vault_config_from_env().VERIFY_SSL
+        result = _vault_config_from_env().TLS.VERIFY_SSL
     except ConfigurationError as e:
         result = e
     finally:
@@ -616,3 +615,51 @@ def step_then_repr_hides_credentials(context):
     text = repr(config)
     for secret in ("tok-secret-1", "sid-secret-2", "pw-secret-3"):
         assert secret not in text, f"repr leaks {secret}"
+
+
+def _vault_setting(config, path):
+    value = config
+    for part in path.split("."):
+        value = getattr(value, part)
+    return value.get_secret_value() if hasattr(value, "get_secret_value") else value
+
+
+@when("a Vault config is built with {settings}")
+def step_when_vault_config_built(context, settings):
+    import warnings
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        config = VaultConfig(**json.loads(settings))
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("vault_grouped_config", config)
+    scenario_context.store("vault_grouped_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
+@when("the Vault bootstrap config is read with environment {env}")
+def step_when_vault_bootstrap_env(context, env):
+    wanted = json.loads(env)
+    saved = {key: os.environ.get(key) for key in wanted}
+    os.environ.update(wanted)
+    try:
+        config = _vault_config_from_env()
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+    get_current_scenario_context(context).store("vault_grouped_config", config)
+
+
+@then('the Vault setting "{path}" should be "{expected}"')
+def step_then_vault_setting(context, path, expected):
+    config = get_current_scenario_context(context).get("vault_grouped_config")
+    actual = _vault_setting(config, path)
+    assert str(actual) == expected, f"{path}: expected {expected}, got {actual}"
+
+
+@then("{count:d} Vault deprecation warning should be raised")
+def step_then_vault_warnings(context, count):
+    caught = get_current_scenario_context(context).get("vault_grouped_warnings")
+    assert len(caught) == count, [str(w.message) for w in caught]

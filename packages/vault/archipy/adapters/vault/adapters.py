@@ -256,7 +256,7 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
         extra round trip. Non-expiring (``ttl == 0``) and non-renewable tokens are
         never renewed; a failed renewal is logged and the real call still runs.
         """
-        if not self.configs.AUTO_RENEW_TOKEN:
+        if not self.configs.TOKEN_RENEWAL.AUTO_RENEW_TOKEN:
             return
         with self._token_lock:
             try:
@@ -266,7 +266,7 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
                 if (
                     expires_at is None
                     or not self._token_renewable
-                    or expires_at - time.monotonic() > self.configs.RENEW_THRESHOLD_SECONDS
+                    or expires_at - time.monotonic() > self.configs.TOKEN_RENEWAL.RENEW_THRESHOLD_SECONDS
                 ):
                     return
                 response = self._client.auth.token.renew_self()

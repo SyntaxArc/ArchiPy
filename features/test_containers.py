@@ -1419,7 +1419,7 @@ class VaultTestContainer(metaclass=Singleton, thread_safe=True):
         global_config.VAULT.ADDR = self.addr
         global_config.VAULT.TOKEN = SecretStr(self.root_token)
         global_config.VAULT.AUTH_METHOD = "token"
-        global_config.VAULT.VERIFY_SSL = False
+        global_config.VAULT.TLS.VERIFY_SSL = False
         global_config.VAULT.MOUNT_POINT = "secret"
         global_config.VAULT.ENABLED = False  # settings source opt-in per scenario
 
