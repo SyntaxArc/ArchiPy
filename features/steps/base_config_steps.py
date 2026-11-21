@@ -225,7 +225,7 @@ def step_given_app_name_with_identity_defaults(context, app_name):
     config.APP_NAME = app_name
     config.OTEL.SERVICE_NAME = None
     config.FASTAPI.PROJECT_NAME = "project_name"
-    config.AUTH.JWT_ISSUER = "your-app-name"
+    config.AUTH.JWT.ISSUER = "your-app-name"
     config.TEMPORAL.CLIENT_IDENTITY = None
     scenario_context.store("pending_global_config", config)
 
@@ -251,10 +251,10 @@ def step_then_fastapi_project_name(context, expected):
     assert actual == expected, f"Expected FASTAPI.PROJECT_NAME={expected!r}, got {actual!r}"
 
 
-@then('AUTH.JWT_ISSUER should be "{expected}"')
+@then('AUTH.JWT.ISSUER should be "{expected}"')
 def step_then_auth_jwt_issuer(context, expected):
-    actual = BaseConfig.global_config().AUTH.JWT_ISSUER
-    assert actual == expected, f"Expected AUTH.JWT_ISSUER={expected!r}, got {actual!r}"
+    actual = BaseConfig.global_config().AUTH.JWT.ISSUER
+    assert actual == expected, f"Expected AUTH.JWT.ISSUER={expected!r}, got {actual!r}"
 
 
 @then('TEMPORAL.CLIENT_IDENTITY should be "{expected}"')

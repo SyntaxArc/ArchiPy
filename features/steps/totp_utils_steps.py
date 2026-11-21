@@ -163,14 +163,16 @@ def step_then_expiration_within_window(context):
     expires = get_current_scenario_context(context).get("expires")
     auth = BaseConfig.global_config().AUTH
     remaining = expires - DatetimeUtils.get_datetime_now()
-    longest = timedelta(seconds=(auth.TOTP_VERIFICATION_WINDOW + 1) * auth.TOTP_TIME_STEP)
+    longest = timedelta(seconds=(auth.TOTP.VERIFICATION_WINDOW + 1) * auth.TOTP.TIME_STEP)
     assert remaining <= longest + timedelta(seconds=1), f"{remaining} > {longest}"
 
 
 @when("a secret key is generated without a TOTP master key")
 def step_when_secret_key_without_master_key(context):
     scenario_context = get_current_scenario_context(context)
-    auth = BaseConfig.global_config().AUTH.model_copy(update={"TOTP_SECRET_KEY": None})
+    auth = BaseConfig.global_config().AUTH.model_copy(
+        update={"TOTP": BaseConfig.global_config().AUTH.TOTP.model_copy(update={"SECRET_KEY": None})},
+    )
     try:
         TOTPUtils.generate_secret_key_for_totp(auth)
         scenario_context.store("secret_key_error", None)

@@ -55,7 +55,7 @@ Feature: Base Configuration System
     When the global configuration is set
     Then OTEL.SERVICE_NAME should be "my-service"
     And FASTAPI.PROJECT_NAME should be "my-service"
-    And AUTH.JWT_ISSUER should be "my-service"
+    And AUTH.JWT.ISSUER should be "my-service"
     And TEMPORAL.CLIENT_IDENTITY should be "my-service"
 
   Scenario: Explicit nested identity overrides win over APP_NAME

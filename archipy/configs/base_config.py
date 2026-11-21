@@ -236,7 +236,7 @@ class BaseConfig[R](BaseSettings):
         It is called automatically by `set_global()`.
 
         When ``APP_NAME`` is set, unset or placeholder nested identity fields are
-        filled: ``OTEL.SERVICE_NAME``, ``FASTAPI.PROJECT_NAME``, ``AUTH.JWT_ISSUER``,
+        filled: ``OTEL.SERVICE_NAME``, ``FASTAPI.PROJECT_NAME``, ``AUTH.JWT.ISSUER``,
         and ``TEMPORAL.CLIENT_IDENTITY``. Explicit nested values always win.
 
         An unset ``COUNT_THRESHOLD`` of the SQLAlchemy configs is filled with ``PAGINATION.MAX_ITEMS``.
@@ -257,8 +257,8 @@ class BaseConfig[R](BaseSettings):
                 self.OTEL.SERVICE_NAME = self.APP_NAME
             if self.FASTAPI.PROJECT_NAME == "project_name":
                 self.FASTAPI.PROJECT_NAME = self.APP_NAME
-            if self.AUTH.JWT_ISSUER == "your-app-name":
-                self.AUTH.JWT_ISSUER = self.APP_NAME
+            if self.AUTH.JWT.ISSUER == "your-app-name":
+                self.AUTH.JWT.ISSUER = self.APP_NAME
             if self.TEMPORAL.CLIENT_IDENTITY is None:
                 self.TEMPORAL.CLIENT_IDENTITY = self.APP_NAME
 

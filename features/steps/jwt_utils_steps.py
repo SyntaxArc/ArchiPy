@@ -144,7 +144,9 @@ def step_when_token_with_additional_claim(context, claim):
 @when('an access token is created with the signing algorithm "{algorithm}"')
 def step_when_token_with_algorithm(context, algorithm):
     scenario_context = get_current_scenario_context(context)
-    auth = BaseConfig.global_config().AUTH.model_copy(update={"HASH_ALGORITHM": algorithm})
+    auth = BaseConfig.global_config().AUTH.model_copy(
+        update={"JWT": BaseConfig.global_config().AUTH.JWT.model_copy(update={"ALGORITHM": algorithm})},
+    )
     _try_create(scenario_context, auth_config=auth)
 
 
@@ -169,7 +171,7 @@ def _decode(scenario_context, **kwargs):
     auth = BaseConfig.global_config().AUTH
     leeway = kwargs.pop("leeway", None)
     if leeway is not None:
-        auth = auth.model_copy(update={"JWT_LEEWAY": leeway})
+        auth = auth.model_copy(update={"JWT": auth.JWT.model_copy(update={"LEEWAY": leeway})})
     try:
         payload = JWTUtils.decode_token(scenario_context.get("token"), auth_config=auth, **kwargs)
         scenario_context.store("decode_success", True)
@@ -197,6 +199,20 @@ def step_when_auth_config_leeway(context, leeway):
 
     scenario_context = get_current_scenario_context(context)
     try:
+        AuthConfig(JWT={"LEEWAY": leeway})
+        scenario_context.store("config_error", None)
+    except ValidationError as e:
+        scenario_context.store("config_error", e)
+
+
+@when("an authentication configuration is built with the deprecated flat leeway of {leeway:d}")
+def step_when_auth_config_flat_leeway(context, leeway):
+    from pydantic import ValidationError
+
+    from archipy.configs.config_template import AuthConfig
+
+    scenario_context = get_current_scenario_context(context)
+    try:
         AuthConfig(JWT_LEEWAY=leeway)
         scenario_context.store("config_error", None)
     except ValidationError as e:
@@ -213,7 +229,10 @@ def step_when_token_with_key_length(context, length, algorithm):
     from pydantic import SecretStr
 
     auth = BaseConfig.global_config().AUTH.model_copy(
-        update={"SECRET_KEY": SecretStr("k" * length), "HASH_ALGORITHM": algorithm},
+        update={
+            "SECRET_KEY": SecretStr("k" * length),
+            "JWT": BaseConfig.global_config().AUTH.JWT.model_copy(update={"ALGORITHM": algorithm}),
+        },
     )
     _try_create(get_current_scenario_context(context), auth_config=auth)
 
@@ -241,7 +260,7 @@ def step_given_valid_token_of_kind(context, kind):
     scenario_context = get_current_scenario_context(context)
     create = JWTUtils.create_access_token if kind == "access" else JWTUtils.create_refresh_token
     scenario_context.store(
-        "token", create(scenario_context.get("user_uuid"), auth_config=BaseConfig.global_config().AUTH)
+        "token", create(scenario_context.get("user_uuid"), auth_config=BaseConfig.global_config().AUTH),
     )
 
 
@@ -260,7 +279,9 @@ def step_when_token_verified_as(context, required):
 def step_when_decoded_after_version_change(context):
     scenario_context = get_current_scenario_context(context)
     auth_config = BaseConfig.global_config().AUTH
-    newer = auth_config.model_copy(update={"TOKEN_VERSION": auth_config.TOKEN_VERSION + 1})
+    newer = auth_config.model_copy(
+        update={"JWT": auth_config.JWT.model_copy(update={"TOKEN_VERSION": auth_config.JWT.TOKEN_VERSION + 1})},
+    )
     try:
         JWTUtils.decode_token(scenario_context.get("token"), auth_config=newer)
         scenario_context.store("decode_error", None)
