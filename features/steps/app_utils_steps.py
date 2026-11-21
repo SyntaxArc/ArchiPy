@@ -845,7 +845,9 @@ def step_given_rate_limit_enabled_failing_redis(context, fail_closed):
     # A sentinel-mode Redis config without a service name makes the real RedisAdapter refuse to build its clients.
     global_config = BaseConfig.global_config()
     original_redis = global_config.REDIS
-    global_config.REDIS = original_redis.model_copy(update={"MODE": RedisMode.SENTINEL, "SENTINEL_SERVICE_NAME": None})
+    global_config.REDIS = original_redis.model_copy(
+        update={"MODE": RedisMode.SENTINEL, "SENTINEL": original_redis.SENTINEL.model_copy(update={"SERVICE_NAME": None})},
+    )
 
     def restore_redis() -> None:
         global_config.REDIS = original_redis

@@ -1503,7 +1503,7 @@ Feature: Redis Testing
     Examples: Settings
       | settings                            | warning            |
       | TLS disabled                        | without SSL        |
-      | TLS enabled without hostname checks | SSL_CHECK_HOSTNAME |
+      | TLS enabled without hostname checks | TLS.CHECK_HOSTNAME |
 
   Scenario Outline: upsert_hash writes one atomic HSET and deprecates replace False
     Given a configured container

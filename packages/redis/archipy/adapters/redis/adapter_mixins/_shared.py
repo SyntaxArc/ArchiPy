@@ -80,25 +80,25 @@ def _tls_acl_kwargs(configs: RedisConfig) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
     if configs.USERNAME:
         kwargs["username"] = configs.USERNAME
-    if configs.SSL:
+    if configs.TLS.ENABLED:
         kwargs["ssl"] = True
-        kwargs["ssl_check_hostname"] = configs.SSL_CHECK_HOSTNAME
-        if configs.SSL_CA_CERTS:
-            kwargs["ssl_ca_certs"] = configs.SSL_CA_CERTS
-        if configs.SSL_CERTFILE and configs.SSL_KEYFILE:
-            kwargs["ssl_certfile"] = configs.SSL_CERTFILE
-            kwargs["ssl_keyfile"] = configs.SSL_KEYFILE
+        kwargs["ssl_check_hostname"] = configs.TLS.CHECK_HOSTNAME
+        if configs.TLS.CA_CERTS:
+            kwargs["ssl_ca_certs"] = configs.TLS.CA_CERTS
+        if configs.TLS.CERTFILE and configs.TLS.KEYFILE:
+            kwargs["ssl_certfile"] = configs.TLS.CERTFILE
+            kwargs["ssl_keyfile"] = configs.TLS.KEYFILE
     return kwargs
 
 
 def _resilience_kwargs(configs: RedisConfig, *, is_async: bool = False) -> dict[str, Any]:
     """Build retry, keepalive and client-name kwargs; empty when none is configured."""
     kwargs: dict[str, Any] = {}
-    if configs.RETRY_ATTEMPTS is not None:
-        backoff = ExponentialBackoff(cap=configs.RETRY_BACKOFF_CAP, base=configs.RETRY_BACKOFF_BASE)
+    if configs.RETRY.ATTEMPTS is not None:
+        backoff = ExponentialBackoff(cap=configs.RETRY.BACKOFF_CAP, base=configs.RETRY.BACKOFF_BASE)
         retry_class = AsyncRetry if is_async else Retry
-        kwargs["retry"] = retry_class(backoff, configs.RETRY_ATTEMPTS)
-    if configs.RETRY_ON_TIMEOUT:
+        kwargs["retry"] = retry_class(backoff, configs.RETRY.ATTEMPTS)
+    if configs.RETRY.ON_TIMEOUT:
         kwargs["retry_on_error"] = [RedisTimeoutError]
     if configs.SOCKET_KEEPALIVE is not None:
         kwargs["socket_keepalive"] = configs.SOCKET_KEEPALIVE
@@ -146,11 +146,11 @@ def _sentinel_redis_kwargs(configs: RedisConfig, *, is_async: bool = False) -> d
 def _sentinel_kwargs(configs: RedisConfig) -> dict[str, Any] | None:
     """Build sentinel-node kwargs: sentinel username, password and the shared TLS settings."""
     kwargs: dict[str, Any] = {}
-    if configs.SENTINEL_USERNAME:
-        kwargs["username"] = configs.SENTINEL_USERNAME
-    if configs.SENTINEL_PASSWORD:
-        kwargs["password"] = configs.SENTINEL_PASSWORD.get_secret_value()
-    if configs.SSL:
+    if configs.SENTINEL.USERNAME:
+        kwargs["username"] = configs.SENTINEL.USERNAME
+    if configs.SENTINEL.PASSWORD:
+        kwargs["password"] = configs.SENTINEL.PASSWORD.get_secret_value()
+    if configs.TLS.ENABLED:
         kwargs.update({k: v for k, v in _tls_acl_kwargs(configs).items() if k != "username"})
     return kwargs or None
 

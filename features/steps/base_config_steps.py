@@ -619,6 +619,20 @@ _SECTION_SETTINGS = {
         {"HEARTBEAT_INTERVAL_MS": 20000, "SESSION_TIMEOUT_MS": 10000},
     ),
     ("Redis", "cluster mode without nodes"): (RedisConfig, {"MODE": "CLUSTER"}),
+    ("Redis", "grouped cluster mode without nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER": {"NODES": []}}),
+    ("Redis", "grouped cluster mode with nodes"): (
+        RedisConfig,
+        {"MODE": "CLUSTER", "CLUSTER": {"NODES": ["localhost:7000"]}},
+    ),
+    ("Redis", "grouped sentinel mode without a service name"): (
+        RedisConfig,
+        {"MODE": "SENTINEL", "SENTINEL": {"NODES": ["localhost:26379"]}},
+    ),
+    ("Redis", "grouped client certificate without a key"): (
+        RedisConfig,
+        {"TLS": {"ENABLED": True, "CERTFILE": "/tmp/c.pem"}},
+    ),
+    ("Redis", "grouped CA file with TLS disabled"): (RedisConfig, {"TLS": {"CA_CERTS": "/tmp/ca.pem"}}),
     ("Redis", "cluster mode with nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER_NODES": ["localhost:7000"]}),
     ("Redis", "sentinel mode without a service name"): (
         RedisConfig,

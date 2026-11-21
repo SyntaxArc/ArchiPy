@@ -240,6 +240,11 @@ Feature: Base Configuration System
       | Redis         | cluster mode with nodes                            | accepted |
       | Redis         | sentinel mode without a service name               | rejected |
       | Redis         | standalone mode without a host                     | rejected |
+      | Redis         | grouped cluster mode without nodes                 | rejected |
+      | Redis         | grouped cluster mode with nodes                    | accepted |
+      | Redis         | grouped sentinel mode without a service name       | rejected |
+      | Redis         | grouped client certificate without a key           | rejected |
+      | Redis         | grouped CA file with TLS disabled                  | rejected |
       | ScyllaDB      | no contact points                                  | rejected |
       | ScyllaDB      | a username without a password                      | rejected |
       | ScyllaDB      | a minimum pool above the maximum                   | rejected |
