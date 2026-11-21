@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
@@ -31,6 +31,7 @@ from archipy.configs.config_template import (
     VaultConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
+from archipy.configs.sections._common import fold_flat_fields
 from archipy.configs.vault_settings_source import create_vault_client
 from archipy.models.errors import ConfigurationError
 
@@ -910,3 +911,53 @@ def step_when_elasticsearch_insecure_config(context, credential, transport):
 def step_then_elasticsearch_warning_count(context, count):
     messages = get_current_scenario_context(context).get("es_config_warnings")
     assert len(messages) == count, messages
+
+
+class _FoldGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    NAME: str | None = None
+
+
+class _FoldSection(BaseModel):
+    NAME: str | None = None
+    GROUP: _FoldGroup | None = None
+
+    @model_validator(mode="after")
+    def _fold(self):
+        fold_flat_fields(self, "TEST", "GROUP", _FoldGroup, {"NAME": "NAME"})
+        return self
+
+
+@given('a test section with flat "{flat}" set to {flat_value} and group "{group}" set to {group_value}')
+def step_given_fold_section(context, flat, flat_value, group, group_value):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("fold_flat", {} if flat == "none" else {flat: json.loads(flat_value)})
+    scenario_context.store("fold_group", None if group == "none" else {group: json.loads(group_value)})
+
+
+@when("the test section is validated")
+def step_when_fold_validated(context):
+    scenario_context = get_current_scenario_context(context)
+    group = scenario_context.get("fold_group")
+    data = dict(scenario_context.get("fold_flat"))
+    if group is not None:
+        data["GROUP"] = group
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        section = _FoldSection(**data)
+    scenario_context.store("fold_section", section)
+    scenario_context.store("fold_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
+@then("the group value should be {expected}")
+def step_then_fold_value(context, expected):
+    section = get_current_scenario_context(context).get("fold_section")
+    actual = section.GROUP.NAME if section.GROUP else None
+    assert actual == json.loads(expected), actual
+
+
+@then("{count:d} deprecation warning should be raised")
+def step_then_fold_warnings(context, count):
+    caught = get_current_scenario_context(context).get("fold_warnings")
+    assert len(caught) == count, [str(w.message) for w in caught]

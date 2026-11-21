@@ -398,3 +398,16 @@ Feature: Base Configuration System
       | async | sqlite  | TIMEOUT           | 2.5   | {"timeout": 2.5}             |
       | sync  | sqlite  | CHECK_SAME_THREAD | false | {"check_same_thread": false} |
       | async | sqlite  | CHECK_SAME_THREAD | false | {}                           |
+
+  Scenario Outline: Deprecated flat settings fold into a nested group
+    Given a test section with flat "<flat>" set to <flat_value> and group "<group>" set to <group_value>
+    When the test section is validated
+    Then the group value should be <expected>
+    And <warnings> deprecation warning should be raised
+
+    Examples:
+      | flat | flat_value | group | group_value | expected | warnings |
+      | NAME | "old"      | none  | none        | "old"    | 1        |
+      | NAME | "old"      | NAME  | "new"       | "new"    | 1        |
+      | none | none       | NAME  | "new"       | "new"    | 0        |
+      | none | none       | none  | none        | null     | 0        |
