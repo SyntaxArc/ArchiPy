@@ -3196,6 +3196,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#previewing-the-zensical-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Previewing the Zensical Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#documentation-improvement-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3859,6 +3870,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#previewing-the-zensical-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Previewing the Zensical Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#documentation-improvement-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4153,6 +4175,22 @@ bugs, requesting features, or proposing new adapters.</p>
 <p>Deploy to GitHub Pages:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>make<span class="w"> </span>docs-deploy
 </span></code></pre></div>
+<h3 id="previewing-the-zensical-migration">Previewing the Zensical Migration<a class="headerlink" href="#previewing-the-zensical-migration" title="Permanent link">&para;</a></h3>
+<p>Material for MkDocs reaches end of life on May 5, 2027. The Zensical preview inherits the full MkDocs
+configuration and sets paths relative to the repository root. Zensical requires its output to stay
+under the configuration directory, so it writes the preview to <code>site-zensical/</code>.
+<a href="https://zensical.org/docs/compatibility/mkdocs/migration/">Upstream migration guide</a></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.15<span class="w"> </span>--locked<span class="w"> </span>--group<span class="w"> </span>docs
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>uv<span class="w"> </span>run<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.15<span class="w"> </span>--no-sync<span class="w"> </span>--with<span class="w"> </span><span class="nv">zensical</span><span class="o">==</span><span class="m">0</span>.1.3<span class="w"> </span>zensical<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>zensical-preview.yml
+</span></code></pre></div>
+<p>The evaluation produced the same 275 page paths as MkDocs and retained the generated FastAPI and Redis
+API anchors. Zensical generated its own search index. Check representative navigation, search results,
+and existing inbound links in a hosted preview before the switch.</p>
+<p>For Pages, publish the generated directory with a static HTML publisher. The preview workflow tests
+a <code>gh-pages</code> branch using a temporary Git remote. For Read the Docs, copy the directory contents into
+<code>$READTHEDOCS_OUTPUT/html/</code> from the existing custom build command.
+<a href="https://zensical.org/docs/publish-your-site/">Zensical publishing guide</a> ·
+<a href="https://docs.readthedocs.com/platform/stable/build-customization.html">Read the Docs build customization</a></p>
 <h3 id="documentation-improvement-guidelines">Documentation Improvement Guidelines<a class="headerlink" href="#documentation-improvement-guidelines" title="Permanent link">&para;</a></h3>
 <p>When improving documentation:</p>
 <ol>
