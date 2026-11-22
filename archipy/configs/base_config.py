@@ -316,4 +316,4 @@ class BaseConfig[R](BaseSettings):
         cls.__global_config = config
 
 
-register_settings_provider(BaseConfig.global_config)
+register_settings_provider(BaseConfig.global_config, replace=False)

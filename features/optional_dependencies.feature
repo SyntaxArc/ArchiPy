@@ -51,6 +51,9 @@ Feature: Optional dependencies
   Scenario: Core helpers defer settings and error transports on Python 3.15
     Then importing core helpers honors the interpreter's import timing
 
+  Scenario: Loading global configuration preserves a custom settings provider
+    Then the custom settings provider still controls error localization
+
   Scenario Outline: Construct a <package> client with explicit settings
     Then the "<package>" adapter can defer global configuration when given explicit settings
 

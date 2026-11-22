@@ -189,7 +189,24 @@ def subclasses(cls):
 classes = subclasses(BaseError)
 assert len(classes) >= 80, len(classes)
 assert all(isinstance(cls.grpc_status, int) and 0 <= cls.grpc_status <= 16 for cls in classes)
-assert errors.ConfigurationError(operation="lazy", reason="error").grpc_status == 13
+expected_statuses = {
+    errors.UnknownError: 2,
+    errors.InvalidArgumentError: 3,
+    errors.DeadlineExceededError: 4,
+    errors.NotFoundError: 5,
+    errors.AlreadyExistsError: 6,
+    errors.PermissionDeniedError: 7,
+    errors.ResourceExhaustedError: 8,
+    errors.FailedPreconditionError: 9,
+    errors.AbortedError: 10,
+    errors.OutOfRangeError: 11,
+    errors.ConfigurationError: 13,
+    errors.UnavailableError: 14,
+    errors.DataLossError: 15,
+    errors.UnauthenticatedError: 16,
+}
+for error_type, status in expected_statuses.items():
+    assert error_type.grpc_status == status, error_type.__name__
 assert "grpc" not in sys.modules
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
@@ -226,6 +243,33 @@ import archipy.models.errors as errors
 _ = errors.InvalidPasswordError()
 assert errors.InvalidPasswordError.__module__ == "archipy.models.errors.validation_errors"
 assert "archipy.models.errors.validation_errors" in sys.modules
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@then("the custom settings provider still controls error localization")
+def step_custom_settings_provider(context):
+    script = """
+from types import SimpleNamespace
+
+from archipy.helpers.utils.password_utils import PasswordUtils
+from archipy.models.errors import InvalidPasswordError
+from archipy.models.runtime_settings import register_settings_provider
+from archipy.models.types.language_type import LanguageType
+
+settings = SimpleNamespace(LANGUAGE=LanguageType.EN)
+register_settings_provider(lambda: settings)
+assert InvalidPasswordError().lang == LanguageType.EN
+
+try:
+    PasswordUtils.hash_password("secret")
+except AssertionError as error:
+    assert "set global configs" in str(error)
+else:
+    raise AssertionError("Expected hash_password to require global settings")
+
+assert InvalidPasswordError().lang == LanguageType.EN, "Loading BaseConfig replaced the custom settings provider"
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
     assert result.returncode == 0, result.stderr
