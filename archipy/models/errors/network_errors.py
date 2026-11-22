@@ -7,12 +7,9 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     from http import HTTPStatus
 
-    from grpc import StatusCode
-
     from archipy.models.types.language_type import LanguageType
 else:
     HTTPStatus = None
-    StatusCode = None
 
 try:
     from http import HTTPStatus
@@ -20,13 +17,6 @@ try:
     HTTP_AVAILABLE = True
 except ImportError:
     HTTP_AVAILABLE = False
-
-try:
-    from grpc import StatusCode
-
-    GRPC_AVAILABLE = True
-except ImportError:
-    GRPC_AVAILABLE = False
 
 from archipy.models.errors.base_error import BaseError
 
@@ -38,11 +28,7 @@ class NetworkError(BaseError):
     message_en: ClassVar[str] = "Network error occurred"
     message_fa: ClassVar[str] = "خطای شبکه رخ داده است"
     http_status: ClassVar[int] = HTTPStatus.BAD_GATEWAY.value if HTTP_AVAILABLE and HTTPStatus is not None else 502
-    grpc_status: ClassVar[int] = (
-        StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
-    )
+    grpc_status: ClassVar[int] = 14
 
     def __init__(
         self,
@@ -66,11 +52,7 @@ class ConnectionTimeoutError(BaseError):
     message_en: ClassVar[str] = "Connection timed out"
     message_fa: ClassVar[str] = "اتصال با تایم‌اوت مواجه شد"
     http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value if HTTP_AVAILABLE and HTTPStatus is not None else 408
-    grpc_status: ClassVar[int] = (
-        StatusCode.DEADLINE_EXCEEDED.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
-        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE and StatusCode is not None else 4)
-    )
+    grpc_status: ClassVar[int] = 4
 
     def __init__(
         self,
@@ -99,11 +81,7 @@ class ServiceUnavailableError(BaseError):
     http_status: ClassVar[int] = (
         HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
     )
-    grpc_status: ClassVar[int] = (
-        StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
-    )
+    grpc_status: ClassVar[int] = 14
 
     def __init__(
         self,
@@ -130,11 +108,7 @@ class GatewayTimeoutError(BaseError):
     message_en: ClassVar[str] = "Gateway timeout"
     message_fa: ClassVar[str] = "تایم‌اوت دروازه"
     http_status: ClassVar[int] = HTTPStatus.GATEWAY_TIMEOUT.value if HTTP_AVAILABLE and HTTPStatus is not None else 504
-    grpc_status: ClassVar[int] = (
-        StatusCode.DEADLINE_EXCEEDED.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
-        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE and StatusCode is not None else 4)
-    )
+    grpc_status: ClassVar[int] = 4
 
     def __init__(
         self,
@@ -161,11 +135,7 @@ class BadGatewayError(BaseError):
     message_en: ClassVar[str] = "Bad gateway"
     message_fa: ClassVar[str] = "دروازه نامعتبر"
     http_status: ClassVar[int] = HTTPStatus.BAD_GATEWAY.value if HTTP_AVAILABLE and HTTPStatus is not None else 502
-    grpc_status: ClassVar[int] = (
-        StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
-    )
+    grpc_status: ClassVar[int] = 14
 
     def __init__(
         self,
@@ -191,11 +161,7 @@ class RateLimitExceededError(BaseError):
     http_status: ClassVar[int] = (
         HTTPStatus.TOO_MANY_REQUESTS.value if HTTP_AVAILABLE and HTTPStatus is not None else 429
     )
-    grpc_status: ClassVar[int] = (
-        StatusCode.RESOURCE_EXHAUSTED.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.RESOURCE_EXHAUSTED.value, tuple)
-        else (StatusCode.RESOURCE_EXHAUSTED.value if GRPC_AVAILABLE and StatusCode is not None else 8)
-    )
+    grpc_status: ClassVar[int] = 8
 
     def __init__(
         self,

@@ -115,22 +115,19 @@ assert {name!r} in exports and {implementation!r} in exports
 def step_base_config_import_timing(context):
     script = """
 import sys
-from importlib.util import find_spec
 
 from archipy.configs.base_config import BaseConfig
 
 eager = sys.version_info < (3, 15)
 assert ("archipy.models.errors" in sys.modules) == eager
-if find_spec("grpc") is not None:
-    assert ("grpc" in sys.modules) == eager
+assert "grpc" not in sys.modules
 assert BaseConfig is not None
 
 import archipy.models.errors as errors
 _ = errors.ConfigurationError(operation="lazy", reason="config")
 assert errors.ConfigurationError.__module__ == "archipy.models.errors.system_errors"
 assert "archipy.models.errors.system_errors" in sys.modules
-if find_spec("grpc") is not None:
-    assert "grpc" in sys.modules
+assert "grpc" not in sys.modules
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
     assert result.returncode == 0, result.stderr
@@ -140,7 +137,6 @@ if find_spec("grpc") is not None:
 def step_error_package_import_timing(context):
     script = """
 import sys
-from importlib.util import find_spec
 
 import archipy.models.errors as errors
 
@@ -148,15 +144,53 @@ eager = sys.version_info < (3, 15)
 assert "archipy.models.errors.base_error" in sys.modules
 assert ("archipy.models.errors.auth_errors" in sys.modules) == eager
 assert ("archipy.models.errors.system_errors" in sys.modules) == eager
-if find_spec("grpc") is not None:
-    assert ("grpc" in sys.modules) == eager
+assert "grpc" not in sys.modules
 
 error = errors.ConfigurationError(operation="lazy", reason="error")
 assert error.code == "CONFIGURATION_ERROR"
 assert error.__class__.__module__ == "archipy.models.errors.system_errors"
 assert "archipy.models.errors.system_errors" in sys.modules
-if find_spec("grpc") is not None:
-    assert "grpc" in sys.modules
+assert "grpc" not in sys.modules
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@then("the error package works when gRPC is not installed")
+def step_error_package_without_grpc(context):
+    script = """
+import importlib
+import pkgutil
+import sys
+
+class Blocker:
+    def find_spec(self, name, path=None, target=None):
+        if name == "grpc" or name.startswith("grpc."):
+            raise ModuleNotFoundError(f"No module named {name!r}")
+        return None
+
+sys.meta_path.insert(0, Blocker())
+
+import archipy.models.errors as errors
+from archipy.models.errors.base_error import BaseError
+
+for module in pkgutil.iter_modules(errors.__path__):
+    if module.name != "__init__":
+        importlib.import_module(f"{errors.__name__}.{module.name}")
+
+def subclasses(cls):
+    found = set()
+    for child in cls.__subclasses__():
+        if child not in found:
+            found.add(child)
+            found.update(subclasses(child))
+    return found
+
+classes = subclasses(BaseError)
+assert len(classes) >= 80, len(classes)
+assert all(isinstance(cls.grpc_status, int) and 0 <= cls.grpc_status <= 16 for cls in classes)
+assert errors.ConfigurationError(operation="lazy", reason="error").grpc_status == 13
+assert "grpc" not in sys.modules
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
     assert result.returncode == 0, result.stderr
@@ -318,7 +352,10 @@ VaultAdapter(VaultConfig(ADDR=os.environ["BDD_VAULT_ADDR"], TOKEN=os.environ["BD
             "BDD_VAULT_ADDR": vault.ADDR,
             "BDD_VAULT_TOKEN": vault.TOKEN.get_secret_value(),
         }
-    script = "import sys\n" + setup + f"""
+    script = (
+        "import sys\n"
+        + setup
+        + f"""
 assert ("archipy.configs.base_config" in sys.modules) == (sys.version_info < (3, 15))
 
 try:
@@ -336,6 +373,7 @@ settings = BaseConfig.model_construct()
 BaseConfig.set_global(settings)
 assert get_settings() is settings
 """
+    )
     result = subprocess.run(
         [sys.executable, "-c", script],
         capture_output=True,

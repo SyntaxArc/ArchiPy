@@ -5,11 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from http import HTTPStatus
-
-    from grpc import StatusCode
 else:
     HTTPStatus = None
-    StatusCode = None
 
 try:
     from keycloak.exceptions import KeycloakError

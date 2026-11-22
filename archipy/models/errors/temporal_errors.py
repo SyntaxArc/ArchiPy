@@ -9,10 +9,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     from http import HTTPStatus
 
-    from grpc import StatusCode
 else:
     HTTPStatus = None
-    StatusCode = None
 
 try:
     from http import HTTPStatus
@@ -20,13 +18,6 @@ try:
     HTTP_AVAILABLE = True
 except ImportError:
     HTTP_AVAILABLE = False
-
-try:
-    from grpc import StatusCode
-
-    GRPC_AVAILABLE = True
-except ImportError:
-    GRPC_AVAILABLE = False
 
 from archipy.models.errors.base_error import BaseError
 
@@ -44,11 +35,7 @@ class TemporalError(BaseError):
     http_status: ClassVar[int] = (
         HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
     )
-    grpc_status: ClassVar[int] = (
-        StatusCode.INTERNAL.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INTERNAL.value, tuple)
-        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE and StatusCode is not None else 13)
-    )
+    grpc_status: ClassVar[int] = 13
 
 
 class WorkerConnectionError(TemporalError):
@@ -60,11 +47,7 @@ class WorkerConnectionError(TemporalError):
     http_status: ClassVar[int] = (
         HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
     )
-    grpc_status: ClassVar[int] = (
-        StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
-    )
+    grpc_status: ClassVar[int] = 14
 
     def __init__(
         self,
@@ -83,11 +66,7 @@ class WorkerShutdownError(TemporalError):
     http_status: ClassVar[int] = (
         HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
     )
-    grpc_status: ClassVar[int] = (
-        StatusCode.INTERNAL.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INTERNAL.value, tuple)
-        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE and StatusCode is not None else 13)
-    )
+    grpc_status: ClassVar[int] = 13
 
     def __init__(
         self,

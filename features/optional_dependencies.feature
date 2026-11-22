@@ -39,11 +39,14 @@ Feature: Optional dependencies
   Scenario: The Keycloak ports defer the SDK on Python 3.15
     Then importing the public Keycloak ports honors the interpreter's import timing
 
-  Scenario: The base configuration defers error transports on Python 3.15
+  Scenario: The base configuration keeps error modules lazy on Python 3.15
     Then importing the base configuration honors the interpreter's import timing
 
-  Scenario: The error package defers optional transports on Python 3.15
+  Scenario: Error classes do not import gRPC
     Then importing the error package honors the interpreter's import timing
+
+  Scenario: Error classes work without the gRPC extra
+    Then the error package works when gRPC is not installed
 
   Scenario: Core helpers defer settings and error transports on Python 3.15
     Then importing core helpers honors the interpreter's import timing

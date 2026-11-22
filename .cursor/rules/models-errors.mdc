@@ -69,4 +69,5 @@ Organize new errors in the matching module:
 - Pass context via constructor kwargs / `additional_data`, not by mutating `code` ad hoc.
 - Adapters catch infrastructure exceptions and re-raise domain errors with `raise ... from e` (`adapter-conventions.mdc`).
 - Transport (HTTP/gRPC) mapping belongs on the error class / helper utilities — not scattered in adapters.
+- `grpc_status` is the stable gRPC protocol integer (`0`–`16`). Never import `grpc` in an error module: gRPC is an optional extra and error imports must stay lightweight. `http_status` uses the stdlib `HTTPStatus` values.
 - Export new public errors from `archipy/models/errors/__init__.py` when consumers need them.
