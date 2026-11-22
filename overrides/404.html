@@ -7,45 +7,46 @@
 {% block extrahead %}
 {{ super() }}
 <meta name="robots" content="noindex">
+<link rel="stylesheet" href="{{ 'assets/stylesheets/404.css' | url }}">
 {% endblock %}
 
+{% block site_nav %}{% endblock %}
+
 {% block content %}
-<h1>Page not found</h1>
-<p>This page may have moved. Use the site search or choose a destination below.</p>
+<div class="docs-404">
+  <nav id="docs-recovery" aria-label="Find documentation">
+    <div class="docs-404__hero">
+      <p class="docs-404__status">HTTP 404</p>
+      <h1>Page not found</h1>
+      <p>The link may be out of date. Try searching the docs.</p>
+      <a class="md-button md-button--primary" href="{{ '.' | url }}">Documentation home</a>
+    </div>
 
-<nav id="docs-recovery" aria-label="Find documentation">
-  <p><a class="md-button md-button--primary" href="{{ '.' | url }}">Documentation home</a></p>
-
-  <h2>Browse the docs</h2>
-  <div class="grid cards">
-    <ul>
+    <h2>Browse the docs</h2>
+    <ul class="docs-404__links">
       <li>
-        <a href="{{ 'getting-started/installation/' | url }}"><strong>Installation</strong></a>
-        <p>Install ArchiPy and its optional extras.</p>
+        <a href="{{ 'getting-started/quickstart/' | url }}">
+          <strong>Quickstart</strong>
+          <span>Build your first ArchiPy app.</span>
+        </a>
       </li>
       <li>
-        <a href="{{ 'getting-started/quickstart/' | url }}"><strong>Quickstart</strong></a>
-        <p>Run a small app with Redis caching.</p>
+        <a href="{{ 'tutorials/' | url }}">
+          <strong>Tutorials</strong>
+          <span>Work with adapters and helpers.</span>
+        </a>
       </li>
       <li>
-        <a href="{{ 'getting-started/concepts/' | url }}"><strong>Concepts</strong></a>
-        <p>Understand the layers and import rules.</p>
-      </li>
-      <li>
-        <a href="{{ 'tutorials/' | url }}"><strong>Tutorials</strong></a>
-        <p>Find examples for adapters and helpers.</p>
-      </li>
-      <li>
-        <a href="{{ 'api_reference/' | url }}"><strong>API Reference</strong></a>
-        <p>Look up public classes and functions.</p>
-      </li>
-      <li>
-        <a href="{{ 'community/faq/' | url }}"><strong>FAQ</strong></a>
-        <p>Find answers to common questions.</p>
+        <a href="{{ 'api_reference/' | url }}">
+          <strong>API Reference</strong>
+          <span>Look up classes and functions.</span>
+        </a>
       </li>
     </ul>
-  </div>
-</nav>
+  </nav>
 
-<p>Followed a link here? <a href="{{ config.repo_url }}/issues/new?template=documentation_improvement.yml">Report the broken link</a>.</p>
+  <p class="docs-404__report">
+    <a href="{{ config.repo_url }}/issues/new?template=documentation_improvement.yml">Report a broken link</a>
+  </p>
+</div>
 {% endblock %}
