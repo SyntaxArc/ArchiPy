@@ -329,9 +329,6 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
     def get_client_authenticator_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
         """List the client authenticator providers.
 
-        Args:
-            (none)
-
         Returns:
             The providers.
         """
@@ -347,9 +344,6 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def get_form_action_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
         """List the form action providers.
-
-        Args:
-            (none)
 
         Returns:
             The providers.
@@ -367,9 +361,6 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
     def get_form_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
         """List the form providers.
 
-        Args:
-            (none)
-
         Returns:
             The providers.
         """
@@ -385,9 +376,6 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def get_per_client_config_description(self) -> dict[str, list[KeycloakConfigPropertyDTO]]:
         """Describe the settings of every client authenticator.
-
-        Args:
-            (none)
 
         Returns:
             The settings by authenticator id.
@@ -743,9 +731,6 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
     async def get_client_authenticator_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
         """List the client authenticator providers.
 
-        Args:
-            (none)
-
         Returns:
             The providers.
         """
@@ -761,9 +746,6 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def get_form_action_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
         """List the form action providers.
-
-        Args:
-            (none)
 
         Returns:
             The providers.
@@ -781,9 +763,6 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
     async def get_form_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
         """List the form providers.
 
-        Args:
-            (none)
-
         Returns:
             The providers.
         """
@@ -799,9 +778,6 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def get_per_client_config_description(self) -> dict[str, list[KeycloakConfigPropertyDTO]]:
         """Describe the settings of every client authenticator.
-
-        Args:
-            (none)
 
         Returns:
             The settings by authenticator id.

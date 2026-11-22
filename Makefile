@@ -98,7 +98,7 @@ security: ## Run security scan with Bandit
 .PHONY: check-instrumentor-compat
 check-instrumentor-compat: ## Check whether OTel instrumentors now support the library versions ArchiPy requires
 	@echo "${BLUE}Checking OpenTelemetry instrumentor compatibility...${NC}"
-	./scripts/check_instrumentor_compat.sh
+	$(UV) run --script scripts/check_instrumentor_compat.py
 
 # Features that run at the same time, and how many of those may start a heavy container
 BEHAVE_JOBS ?= 8
@@ -231,44 +231,31 @@ check-mr: ## Run pre-commit only on files changed vs BASE (default master), e.g.
 	$(PRE_COMMIT) run --files $$CHANGED
 
 .PHONY: docs-serve
-docs-serve: ## Serve Zensical documentation locally (balanced mode)
+docs-serve: ## Preview documentation locally with live reload
 	@echo "${BLUE}Serving documentation...${NC}"
-	$(UV) run --group docs zensical serve -f mkdocs.yml
-
-.PHONY: docs-serve-fast
-docs-serve-fast: ## Serve Zensical documentation with fast build (for quick iterations)
-	@echo "${BLUE}Serving documentation (fast mode)...${NC}"
-	$(UV) run --group docs zensical serve -f mkdocs-fast.yml
-
-.PHONY: docs-serve-no-api
-docs-serve-no-api: ## Serve Zensical documentation without API auto-generation (fastest)
-	@echo "${BLUE}Serving documentation (no API generation)...${NC}"
-	ENABLE_MKDOCSTRINGS=false $(UV) run --group docs zensical serve -f mkdocs.yml
+	$(UV) run --group docs zensical serve
 
 .PHONY: docs-build
-docs-build: ## Build Zensical documentation (balanced mode)
+docs-build: ## Build the static documentation site
 	@echo "${BLUE}Building documentation...${NC}"
-	$(UV) run --group docs zensical build -f mkdocs.yml
+	$(UV) run --group docs zensical build
 
 .PHONY: docs-check
-docs-check: ## Build the docs in strict mode: broken links and API reference errors fail
+docs-check: ## Run a clean, strict documentation build
 	@echo "${BLUE}Checking documentation...${NC}"
-	$(UV) run --group docs zensical build --strict -f mkdocs.yml
+	$(UV) run --group docs python scripts/check_docs.py
 
-.PHONY: docs-build-fast
-docs-build-fast: ## Build Zensical documentation with fast config
-	@echo "${BLUE}Building documentation (fast mode)...${NC}"
-	$(UV) run --group docs zensical build -f mkdocs-fast.yml
+.PHONY: docs-smoke
+docs-smoke: ## Run the published quickstart and upgrade examples using Redis
+	$(UV) run --group docs --extra redis python scripts/smoke_docs.py
 
 .PHONY: docs-build-full
-docs-build-full: ## Build Zensical documentation with full features (for production)
-	@echo "${BLUE}Building documentation (full mode)...${NC}"
-	$(UV) run --group docs zensical build -f mkdocs-full.yml --clean
+docs-build-full: docs-check ## Build the production site
 
 .PHONY: docs-time
 docs-time: ## Time the documentation build
 	@echo "${BLUE}Timing documentation build...${NC}"
-	time $(UV) run --group docs zensical build -f mkdocs.yml
+	time $(UV) run --group docs zensical build
 
 .PHONY: docs-deploy
 docs-deploy: ## Documentation deploys from CI, not locally

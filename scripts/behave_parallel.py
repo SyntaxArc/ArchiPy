@@ -1,4 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.14,<4"
+# dependencies = []
+# ///
+
 """Run the Behave feature files in parallel, one ``behave`` process per feature.
 
 Behave has no parallel runner. Each feature starts the testcontainers it needs (the ``@needs-*`` tags of the
@@ -19,7 +24,7 @@ Coverage:
     process its own data file) and combines the data files at the end.
 
 Usage:
-    python scripts/behave_parallel.py [-j N] [--heavy-jobs N] [--coverage] [--exclude FEATURE ...] [FEATURE ...] [-- BEHAVE_ARGS ...]
+    uv run --script scripts/behave_parallel.py [-j N] [--heavy-jobs N] [--coverage] [--exclude FEATURE ...] [FEATURE ...] [-- BEHAVE_ARGS ...]
 """
 
 from __future__ import annotations
@@ -35,6 +40,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from importlib.util import find_spec
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -380,8 +386,10 @@ def _start_shared_telemetry_stack(runs: list[FeatureRun]) -> subprocess.Popen | 
         command.append("--apm")
     print("Starting the shared telemetry containers...", flush=True)
     stack = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, text=True)
+    stdout = stack.stdout
+    assert stdout is not None
     result: list[str] = []
-    reader = threading.Thread(target=lambda: result.append(stack.stdout.readline()), daemon=True)
+    reader = threading.Thread(target=lambda: result.append(stdout.readline()), daemon=True)
     reader.start()
     reader.join(SHARED_TELEMETRY_START_TIMEOUT_SECONDS)
     if not result or not result[0].strip():
@@ -410,6 +418,27 @@ def main(argv: list[str]) -> int:
     if not runs:
         print("No feature files found", file=sys.stderr)
         return 2
+    if find_spec("behave") is None:
+        # An inline uv script starts isolated. Features use the checkout's locked workspace extras.
+        version = f"{sys.version_info.major}.{sys.version_info.minor}"
+        environment = {key: value for key, value in os.environ.items() if key not in {"VIRTUAL_ENV", "UV_NO_SYNC"}}
+        os.execvpe(
+            "uv",
+            [
+                "uv",
+                "run",
+                "--project",
+                str(ROOT),
+                "--locked",
+                "--all-extras",
+                "--python",
+                version,
+                "python",
+                __file__,
+                *argv,
+            ],
+            environment,
+        )
     if arguments.coverage:
         for stale in ROOT.glob(".coverage*"):
             stale.unlink()

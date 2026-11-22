@@ -28,9 +28,6 @@ class KeycloakClientInitialAccessMixin(SyncKeycloakMixinBase):
     def get_client_initial_access_tokens(self) -> list[KeycloakClientInitialAccessDTO]:
         """List the client initial access tokens of the realm.
 
-        Args:
-            (none)
-
         Returns:
             The tokens, without their secret value.
         """
@@ -95,9 +92,6 @@ class AsyncKeycloakClientInitialAccessMixin(AsyncKeycloakMixinBase):
 
     async def get_client_initial_access_tokens(self) -> list[KeycloakClientInitialAccessDTO]:
         """List the client initial access tokens of the realm.
-
-        Args:
-            (none)
 
         Returns:
             The tokens, without their secret value.

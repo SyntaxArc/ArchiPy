@@ -300,9 +300,6 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
     def get_user_profile_config(self) -> KeycloakUserProfileConfigDTO:
         """Get the realm's user profile configuration.
 
-        Args:
-            (none)
-
         Returns:
             The user profile configuration.
         """
@@ -341,9 +338,6 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
 
     def get_user_profile_metadata(self) -> KeycloakUserProfileMetadataDTO:
         """Get the user profile metadata of the realm.
-
-        Args:
-            (none)
 
         Returns:
             The metadata.
@@ -1025,9 +1019,6 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
     async def get_user_profile_config(self) -> KeycloakUserProfileConfigDTO:
         """Get the realm's user profile configuration.
 
-        Args:
-            (none)
-
         Returns:
             The user profile configuration.
         """
@@ -1066,9 +1057,6 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
 
     async def get_user_profile_metadata(self) -> KeycloakUserProfileMetadataDTO:
         """Get the user profile metadata of the realm.
-
-        Args:
-            (none)
 
         Returns:
             The metadata.

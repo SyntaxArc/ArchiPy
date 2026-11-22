@@ -1,5 +1,5 @@
 ---
-description: Documentation standards for ArchiPy MkDocs pages
+description: Documentation standards for ArchiPy Zensical pages
 globs: docs/**/*.md
 alwaysApply: false
 ---
@@ -91,7 +91,7 @@ def get_item(key: str) -> str | None:
 
 When documenting a new adapter, create **both** files:
 
-- `docs/examples/adapters/<name>.md` — example guide with all 5 required sections
+- `docs/tutorials/adapters/<name>.md` — example guide with all 5 required sections
 - `docs/api_reference/adapters/<name>.md` — API reference with mkdocstrings directives
 
-Then add both entries under the appropriate `nav:` keys in `mkdocs.yml`.
+Then add both pages to the appropriate sections of the `nav` array in `zensical.toml`.

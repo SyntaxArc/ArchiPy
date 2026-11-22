@@ -30,6 +30,29 @@ functions through the same API.
 | `async_trace_span`          | `trace_span`       |
 | `async_trace_root`          | `trace_root`       |
 
+For example, replace `@retry_decorator` with `@retry` and keep the retry policy explicit:
+
+```python
+# retry_example.py
+from collections.abc import Iterator
+
+from archipy.helpers.decorators import retry
+
+
+@retry(max_retries=2, delay=0, retry_on=(ConnectionError,))
+def read_value(responses: Iterator[str | None]) -> str:
+    """Read a value from a source that can fail temporarily."""
+    value = next(responses)
+    if value is None:
+        raise ConnectionError("Source temporarily unavailable")
+    return value
+
+
+result = read_value(iter((None, "ready")))
+```
+
+The first attempt raises `ConnectionError`. The second returns `"ready"`.
+
 ### Removed import paths
 
 | Deprecated import path                       | Replacement                                           |
@@ -116,6 +139,16 @@ Import replacement functions directly. The `archipy.helpers.utils.error_utils` m
 Use the paths below in Python code. For environment variables, replace each dot with a double underscore.
 For example, `REDIS__SSL=true` becomes `REDIS__TLS__IS_ENABLED=true`. If you set a value under both 5.x names,
 keep the value you configured under the nested name.
+
+With `REDIS__TLS__IS_ENABLED=true` set in the environment, use the nested settings in Python:
+
+```python
+# redis_tls.py
+from archipy.configs.base_config import BaseConfig
+
+config = BaseConfig()
+redis_tls_enabled = config.REDIS.TLS.IS_ENABLED
+```
 
 ### AUTH
 

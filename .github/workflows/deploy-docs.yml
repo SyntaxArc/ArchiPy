@@ -7,16 +7,19 @@ on:
       - docs
     paths:
       - 'docs/**'
+      - 'overrides/**'
       - 'archipy/**'
       - 'packages/**'
-      - 'mkdocs*.yml'
+      - 'zensical.toml'
+      - 'scripts/check_docs.py'
       - 'pyproject.toml'
       - 'uv.lock'
       - '.python-version'
       - '.github/workflows/deploy-docs.yml'
   pull_request:
     paths:
-      - 'mkdocs*.yml'
+      - 'zensical.toml'
+      - 'scripts/check_docs.py'
       - '.python-version'
       - '.github/workflows/deploy-docs.yml'
 
@@ -37,7 +40,7 @@ jobs:
         run: uv sync --locked --group docs
 
       - name: Build documentation
-        run: uv run --no-sync zensical build --clean -f mkdocs-full.yml
+        run: uv run --no-sync python scripts/check_docs.py
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
