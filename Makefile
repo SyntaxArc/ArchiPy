@@ -98,7 +98,7 @@ security: ## Run security scan with Bandit
 .PHONY: check-instrumentor-compat
 check-instrumentor-compat: ## Check whether OTel instrumentors now support the library versions ArchiPy requires
 	@echo "${BLUE}Checking OpenTelemetry instrumentor compatibility...${NC}"
-	./scripts/check_instrumentor_compat.sh
+	$(UV) run --script scripts/check_instrumentor_compat.py
 
 # Features that run at the same time, and how many of those may start a heavy container
 BEHAVE_JOBS ?= 8

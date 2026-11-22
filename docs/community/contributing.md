@@ -319,6 +319,9 @@ make docs-smoke
 
 Set `REDIS__MASTER_HOST` and `REDIS__PORT` to use a test instance on a different address.
 
+The Make targets use the workspace lockfile. To run the docs checker with its inline uv dependencies,
+use `uv run --script scripts/check_docs.py`.
+
 GitHub Pages deploys when documentation or API sources change on `master`. Read the Docs builds from the same configuration.
 
 ### Documentation Improvement Guidelines

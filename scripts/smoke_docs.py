@@ -1,3 +1,13 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.14,<4"
+# dependencies = ["archipy[redis]", "click>=8"]
+#
+# [tool.uv.sources]
+# archipy = { path = "..", editable = true }
+# archipy-redis = { path = "../packages/redis", editable = true }
+# ///
+
 """Execute the Python examples published in the quickstart and upgrade guide."""
 
 import os

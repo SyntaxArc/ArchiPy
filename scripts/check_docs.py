@@ -1,3 +1,14 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.14,<4"
+# dependencies = [
+#     "mkdocstrings-python>=2.0.11",
+#     "mkdocstrings>=1.0.8",
+#     "pymdown-extensions>=13.1.2",
+#     "zensical==0.1.3",
+# ]
+# ///
+
 """Build the documentation and verify the generated error page and redirects."""
 
 import subprocess
@@ -17,17 +28,17 @@ class PageLinks(HTMLParser):
         self.refresh: str | None = None
         self.links: set[str] = set()
         self.recovery_links: set[str] = set()
-        self._in_recovery_list = False
+        self._in_recovery_navigation = False
         self.feed(source.read_text(encoding="utf-8"))
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         """Record canonical, refresh, and visible fallback links."""
         attributes = dict(attrs)
-        if tag == "ul" and attributes.get("id") == "docs-recovery":
-            self._in_recovery_list = True
+        if tag == "nav" and attributes.get("id") == "docs-recovery":
+            self._in_recovery_navigation = True
         if tag == "a" and (href := attributes.get("href")):
             self.links.add(href)
-            if self._in_recovery_list:
+            if self._in_recovery_navigation:
                 self.recovery_links.add(href)
         if tag == "link" and attributes.get("rel") == "canonical":
             self.canonical = attributes.get("href")
@@ -35,9 +46,9 @@ class PageLinks(HTMLParser):
             self.refresh = (attributes.get("content") or "").partition("url=")[2]
 
     def handle_endtag(self, tag: str) -> None:
-        """Stop collecting custom recovery links at the end of their list."""
-        if tag == "ul":
-            self._in_recovery_list = False
+        """Stop collecting links at the end of the recovery navigation."""
+        if tag == "nav":
+            self._in_recovery_navigation = False
 
 
 def markdown_url(path: str, directory_urls: bool) -> str:
@@ -89,12 +100,13 @@ def check_output(config_path: Path) -> None:
             raise SystemExit(f"Invalid generated redirect: {old} -> {new}")
 
     recovery = PageLinks(site / "404.html").recovery_links
-    if not recovery:
-        raise SystemExit("Generated 404.html is missing the custom recovery links")
     missing_url = urljoin(site_url, "missing/deep/page/")
-    for href in sorted(recovery):
-        if not site_file(site, site_url, urljoin(missing_url, href)).is_file():
-            raise SystemExit(f"Broken recovery link in 404.html: {href}")
+    destinations = {urljoin(missing_url, href) for href in recovery}
+    if site_url not in destinations:
+        raise SystemExit("Generated 404.html is missing the documentation home link")
+    for url in sorted(destinations):
+        if not site_file(site, site_url, url).is_file():
+            raise SystemExit(f"Broken recovery link in 404.html: {url}")
     print("Verified generated redirects and custom 404 links.")
 
 
