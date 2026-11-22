@@ -3,21 +3,13 @@
 import json
 from typing import TYPE_CHECKING, ClassVar
 
-if TYPE_CHECKING:
-    from http import HTTPStatus
-
-    from grpc import StatusCode
-else:
-    HTTPStatus = None
-    StatusCode = None
-
-try:
-    from keycloak.exceptions import KeycloakError
-except ImportError:
-    KeycloakError: type[Exception] = Exception
-
 from archipy.models.errors.base_error import BaseError
 from archipy.models.errors.system_errors import InternalError
+
+if TYPE_CHECKING:
+    from keycloak.exceptions import KeycloakError
+else:
+    KeycloakError = Exception
 
 HTTP_BAD_REQUEST = 400
 

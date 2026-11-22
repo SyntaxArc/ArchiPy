@@ -1,5 +1,11 @@
 """Reusable decorator helpers for ArchiPy."""
 
+__lazy_modules__ = [
+    "archipy.helpers.decorators.grpc_rate_limit_window",
+    "archipy.helpers.decorators.metrics",
+    "archipy.helpers.decorators.tracing",
+]
+
 from .deprecation_exception import class_deprecation_error, method_deprecation_error
 from .deprecation_warnings import class_deprecation_warning, method_deprecation_warning
 from .grpc_rate_limit_window import grpc_rate_limit

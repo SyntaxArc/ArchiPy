@@ -11,6 +11,26 @@ Feature: Optional dependencies
     When I read the "base" extra of the "postgres" package
     Then it should require "psycopg[binary]>=3.3.9"
 
+  Scenario: Error models are usable without transport SDKs
+    Then importing and using public error types does not load gRPC or Keycloak
+
+  Scenario: Resolving domain errors can defer application settings
+    Then resolving an error honors the interpreter's import timing for global configuration
+
+  Scenario: Reading a Redis config can defer other settings sections
+    Then loading a Redis config honors the interpreter's import timing for SQLAlchemy settings
+
+  Scenario Outline: Creating a <framework> app loads its framework on demand
+    Then the "<framework>" app loads with the interpreter's import timing
+
+    Examples:
+      | framework |
+      | fastapi   |
+      | grpc      |
+
+  Scenario: Application utilities can be imported without framework extras
+    Then application utilities report missing FastAPI and gRPC extras on request
+
   Scenario Outline: The <package> async extra installs greenlet through sqlalchemy[asyncio]
     When I read the "<extra>" extra of the "<package>" package
     Then it should require "sqlalchemy[asyncio]"
@@ -27,14 +47,17 @@ Feature: Optional dependencies
     Then loading "<implementation>" honors the interpreter's import timing for "<definition>" and "<dependency>"
 
     Examples:
-      | name              | package                                               | implementation                  | definition                              | dependency          |
-      | BaseError         | archipy.models.errors                                 | KeycloakInvalidCredentialsError | keycloak_errors.InvalidCredentialsError | keycloak.exceptions |
-      | TemporalPort      | archipy.adapters.temporal                             | TemporalWorkerManager           | worker.TemporalWorkerManager            | temporalio.worker   |
-      | TemporalPort      | archipy.adapters.temporal                             | TemporalAdapter                 | adapters.TemporalAdapter                | temporalio.client   |
-      | WorkerPort        | archipy.adapters.temporal                             | BaseWorkflow                    | base.BaseWorkflow                       | temporalio.workflow |
-      | ScyllaDBPort      | archipy.adapters.scylladb                             | ScyllaDBAdapter                 | adapters.ScyllaDBAdapter                | cassandra           |
-      | PaymentRequestDTO | archipy.adapters.internet_payment_gateways.ir.parsian | ParsianShaparakPaymentAdapter   | adapters.ParsianShaparakPaymentAdapter  | zeep                |
-      | PaymentRequestDTO | archipy.adapters.internet_payment_gateways.ir.saman   | SamanShaparakPaymentAdapter     | adapters.SamanShaparakPaymentAdapter    | httpx2              |
+      | name                   | package                                               | implementation                 | definition                                                 | dependency                       |
+      | TemporalPort           | archipy.adapters.temporal                             | TemporalWorkerManager          | worker.TemporalWorkerManager                               | temporalio.worker                |
+      | TemporalPort           | archipy.adapters.temporal                             | TemporalAdapter                | adapters.TemporalAdapter                                   | temporalio.client                |
+      | WorkerPort             | archipy.adapters.temporal                             | BaseWorkflow                   | base.BaseWorkflow                                          | temporalio.workflow              |
+      | ScyllaDBPort           | archipy.adapters.scylladb                             | ScyllaDBAdapter                | adapters.ScyllaDBAdapter                                   | cassandra                        |
+      | PaymentRequestDTO      | archipy.adapters.internet_payment_gateways.ir.parsian | ParsianShaparakPaymentAdapter  | adapters.ParsianShaparakPaymentAdapter                     | zeep                             |
+      | PaymentRequestDTO      | archipy.adapters.internet_payment_gateways.ir.saman   | SamanShaparakPaymentAdapter    | adapters.SamanShaparakPaymentAdapter                       | httpx2                           |
+      | InMemoryRateLimitStore | archipy.helpers.interceptors.grpc.rate_limit          | GrpcServerRateLimitInterceptor | grpc_rate_limit_interceptor.GrpcServerRateLimitInterceptor | grpc                             |
+      | timing                 | archipy.helpers.decorators                            | trace_span                     | tracing.trace_span                                         | archipy.helpers.utils.otel_utils |
+      | timing                 | archipy.helpers.decorators                            | measure_duration               | metrics.measure_duration                                   | archipy.helpers.utils.otel_utils |
+      | timing                 | archipy.helpers.decorators                            | grpc_rate_limit                | grpc_rate_limit_window.grpc_rate_limit                     | pydantic                         |
 
   Scenario: The Keycloak ports defer the SDK on Python 3.15
     Then importing the public Keycloak ports honors the interpreter's import timing

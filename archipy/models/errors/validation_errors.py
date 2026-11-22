@@ -1,28 +1,7 @@
 """Validation error types."""
 
-from typing import TYPE_CHECKING, Any, ClassVar
-
-if TYPE_CHECKING:
-    from http import HTTPStatus
-
-    from grpc import StatusCode
-else:
-    HTTPStatus = None
-    StatusCode = None
-
-try:
-    from http import HTTPStatus
-
-    HTTP_AVAILABLE = True
-except ImportError:
-    HTTP_AVAILABLE = False
-
-try:
-    from grpc import StatusCode
-
-    GRPC_AVAILABLE = True
-except ImportError:
-    GRPC_AVAILABLE = False
+from http import HTTPStatus
+from typing import Any, ClassVar
 
 from archipy.models.errors.base_error import BaseError
 from archipy.models.types.language_type import LanguageType
@@ -35,12 +14,8 @@ class InvalidArgumentError(BaseError):
     code: ClassVar[str] = "INVALID_ARGUMENT"
     message_en: ClassVar[str] = "Invalid argument provided: {argument}"
     message_fa: ClassVar[str] = "پارامتر ورودی نامعتبر است: {argument}"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -67,12 +42,8 @@ class InvalidFormatError(BaseError):
     code: ClassVar[str] = "INVALID_FORMAT"
     message_en: ClassVar[str] = "Invalid data format"
     message_fa: ClassVar[str] = "فرمت داده نامعتبر است"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -98,12 +69,8 @@ class InvalidEmailError(BaseError):
     code: ClassVar[str] = "INVALID_EMAIL"
     message_en: ClassVar[str] = "Invalid email format: {email}"
     message_fa: ClassVar[str] = "فرمت ایمیل نامعتبر است: {email}"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -130,12 +97,8 @@ class InvalidPhoneNumberError(BaseError):
     code: ClassVar[str] = "INVALID_PHONE"
     message_en: ClassVar[str] = "Invalid Iranian phone number: {phone_number}"
     message_fa: ClassVar[str] = "شماره تلفن همراه ایران نامعتبر است: {phone_number}"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -168,12 +131,8 @@ class InvalidLandlineNumberError(BaseError):
     code: ClassVar[str] = "INVALID_LANDLINE"
     message_en: ClassVar[str] = "Invalid Iranian landline number: {landline_number}"
     message_fa: ClassVar[str] = "شماره تلفن ثابت ایران نامعتبر است: {landline_number}"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -206,12 +165,8 @@ class InvalidNationalCodeError(BaseError):
     code: ClassVar[str] = "INVALID_NATIONAL_CODE"
     message_en: ClassVar[str] = "Invalid national code format: {national_code}"
     message_fa: ClassVar[str] = "فرمت کد ملی وارد شده اشتباه است: {national_code}"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -244,12 +199,8 @@ class InvalidPasswordError(BaseError):
     code: ClassVar[str] = "INVALID_PASSWORD"
     message_en: ClassVar[str] = "Password does not meet the security requirements"
     message_fa: ClassVar[str] = "رمز عبور الزامات امنیتی را برآورده نمی‌کند."
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -270,12 +221,8 @@ class InvalidDateError(BaseError):
     code: ClassVar[str] = "INVALID_DATE"
     message_en: ClassVar[str] = "Invalid date format"
     message_fa: ClassVar[str] = "فرمت تاریخ نامعتبر است"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -301,12 +248,8 @@ class InvalidUrlError(BaseError):
     code: ClassVar[str] = "INVALID_URL"
     message_en: ClassVar[str] = "Invalid URL format: {url}"
     message_fa: ClassVar[str] = "فرمت URL نامعتبر است: {url}"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -333,12 +276,8 @@ class InvalidIpError(BaseError):
     code: ClassVar[str] = "INVALID_IP"
     message_en: ClassVar[str] = "Invalid IP address format: {ip}"
     message_fa: ClassVar[str] = "فرمت آدرس IP نامعتبر است: {ip}"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -365,12 +304,8 @@ class InvalidJsonError(BaseError):
     code: ClassVar[str] = "INVALID_JSON"
     message_en: ClassVar[str] = "Invalid JSON format"
     message_fa: ClassVar[str] = "فرمت JSON نامعتبر است"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -393,12 +328,8 @@ class InvalidTimestampError(BaseError):
     code: ClassVar[str] = "INVALID_TIMESTAMP"
     message_en: ClassVar[str] = "Invalid timestamp format"
     message_fa: ClassVar[str] = "فرمت زمان نامعتبر است"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.INVALID_ARGUMENT.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INVALID_ARGUMENT.value, tuple)
-        else (StatusCode.INVALID_ARGUMENT.value if GRPC_AVAILABLE and StatusCode is not None else 3)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 3
 
     def __init__(
         self,
@@ -424,12 +355,8 @@ class OutOfRangeError(BaseError):
     code: ClassVar[str] = "OUT_OF_RANGE"
     message_en: ClassVar[str] = "Value is out of acceptable range"
     message_fa: ClassVar[str] = "مقدار خارج از محدوده مجاز است."
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
-    grpc_status: ClassVar[int] = (
-        StatusCode.OUT_OF_RANGE.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.OUT_OF_RANGE.value, tuple)
-        else (StatusCode.OUT_OF_RANGE.value if GRPC_AVAILABLE and StatusCode is not None else 11)
-    )
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
+    grpc_status: ClassVar[int] = 11
 
     def __init__(
         self,

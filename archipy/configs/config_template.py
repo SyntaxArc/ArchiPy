@@ -5,6 +5,27 @@ used in the application, including databases, message brokers, authentication se
 and more.
 """
 
+__lazy_modules__ = [
+    "archipy.configs.sections.auth",
+    "archipy.configs.sections.elasticsearch",
+    "archipy.configs.sections.email",
+    "archipy.configs.sections.fastapi",
+    "archipy.configs.sections.general",
+    "archipy.configs.sections.grpc",
+    "archipy.configs.sections.kafka",
+    "archipy.configs.sections.keycloak",
+    "archipy.configs.sections.minio",
+    "archipy.configs.sections.otel",
+    "archipy.configs.sections.payment",
+    "archipy.configs.sections.pydantic_ai",
+    "archipy.configs.sections.redis",
+    "archipy.configs.sections.scylladb",
+    "archipy.configs.sections.sqlalchemy",
+    "archipy.configs.sections.temporal",
+    "archipy.configs.sections.uvicorn",
+    "archipy.configs.sections.vault",
+]
+
 from archipy.configs.sections.auth import (
     AuthConfig,
 )
