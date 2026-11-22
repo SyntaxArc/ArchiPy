@@ -6,7 +6,6 @@ cryptographic security, token validation, and comprehensive error handling.
 
 from __future__ import annotations
 
-# JWT calls accept an explicit AuthConfig; importing the helper must not require global settings.
 __lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
 
 from typing import TYPE_CHECKING

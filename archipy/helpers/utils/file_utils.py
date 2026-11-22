@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-# File operations accept an explicit config; reading the global settings is deferred to the call that needs them.
 __lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
 
 import base64

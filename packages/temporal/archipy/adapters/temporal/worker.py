@@ -7,7 +7,6 @@ and integration with ArchiPy service adapters.
 
 from __future__ import annotations
 
-# Workers can be built from explicit settings; importing the module must not read the global config.
 __lazy_modules__ = ["archipy.configs.base_config"]
 
 import asyncio

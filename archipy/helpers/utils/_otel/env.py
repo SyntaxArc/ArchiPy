@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-# The config template imports every service section. Only functions in this module need a config instance.
+# Importing the config template loads every service section.
 __lazy_modules__ = ["archipy.configs.config_template", "archipy.models.errors"]
 
 import logging

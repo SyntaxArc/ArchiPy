@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-# The error is raised when the decorated callable runs, not while the decorator module is imported.
 __lazy_modules__ = ["archipy.models.errors"]
 
 from functools import wraps

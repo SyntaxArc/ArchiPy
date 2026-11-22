@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-# The error class is needed only when an unsupported propagator is requested.
 __lazy_modules__ = ["archipy.models.errors"]
 
 from typing import TYPE_CHECKING

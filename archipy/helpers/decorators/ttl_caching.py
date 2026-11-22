@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-# Errors are raised when a cache dependency is missing or configured invalidly, not while importing the decorator.
 __lazy_modules__ = ["archipy.models.errors"]
 
 import copy

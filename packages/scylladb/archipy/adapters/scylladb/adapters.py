@@ -4,7 +4,6 @@ This module provides concrete implementations of the ScyllaDB port interfaces,
 supporting both synchronous and asynchronous database operations.
 """
 
-# ScyllaDB adapters accept explicit settings; only the default constructor reads the global config.
 __lazy_modules__ = ["archipy.configs.base_config"]
 
 import asyncio

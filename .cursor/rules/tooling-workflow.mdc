@@ -23,8 +23,6 @@ uv add <package>
 uv add --group dev <package>
 ```
 
-Tests and `ty` resolve against `uv.lock`; a stale environment can fail with version-mismatch errors (for example an older FastAPI without `max_body_size`).
-
 ## Common Make Targets
 
 | Command | What it does |

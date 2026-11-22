@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-# Global Keycloak settings are read only when the adapter is built without explicit configuration.
 __lazy_modules__ = ["archipy.configs.base_config"]
 
 import asyncio

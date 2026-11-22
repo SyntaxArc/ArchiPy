@@ -1,6 +1,5 @@
 """Reusable decorator helpers for ArchiPy."""
 
-# Decorators declare their failures lazily; importing the package must not initialize optional transports.
 __lazy_modules__ = ["archipy.models.errors"]
 
 from typing import TYPE_CHECKING

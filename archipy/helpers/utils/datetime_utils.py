@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-# Time helpers read settings only when a caller does not pass an explicit config.
 __lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
 
 import threading

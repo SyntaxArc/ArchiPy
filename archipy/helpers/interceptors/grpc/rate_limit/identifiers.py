@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-# The global config is resolved per call, not while importing the interceptor package.
 __lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
 
 from functools import cache
