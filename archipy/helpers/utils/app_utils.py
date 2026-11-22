@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    "archipy.configs.base_config",
+    "archipy.helpers.utils._app_fastapi",
+    "archipy.helpers.utils._app_grpc",
+]
+
 import logging
 import re
 from concurrent import futures
@@ -9,6 +15,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils._app_fastapi import (
+    FASTAPI_APP,  # noqa: F401  # Preserve availability flag
+    CORSMiddleware,
+    FastAPI,
+    GZipMiddleware,
+    HTTPSRedirectMiddleware,
+    TrustedHostMiddleware,
+)
+from archipy.helpers.utils._app_grpc import (
+    GRPC_APP,  # noqa: F401  # Preserve availability flag
+    create_grpc_server,
+    grpc,
+    grpc_aio,
+)
 from archipy.models.errors import (
     ConfigurationError,
     InvalidArgumentError,
@@ -37,28 +57,6 @@ else:
     )
 
 logger = logging.getLogger(__name__)
-
-try:
-    import grpc
-    from grpc import aio as grpc_aio
-
-    create_grpc_server: CreateGrpcServerType = grpc_aio.server
-    GRPC_APP = True
-except ImportError:
-    GRPC_APP = False
-    grpc_aio = None
-    create_grpc_server: CreateGrpcServerType | None = None
-
-try:
-    from fastapi import FastAPI
-    from fastapi.middleware.gzip import GZipMiddleware
-    from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-    from fastapi.middleware.trustedhost import TrustedHostMiddleware
-    from starlette.middleware.cors import CORSMiddleware
-
-    FASTAPI_APP = True
-except ImportError:
-    FASTAPI_APP = False
 
 
 class FastAPIUtils:

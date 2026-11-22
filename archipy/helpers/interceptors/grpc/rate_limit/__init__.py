@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor"]
+
 from archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor import (
     AsyncGrpcServerRateLimitInterceptor,
     GrpcServerRateLimitInterceptor,
