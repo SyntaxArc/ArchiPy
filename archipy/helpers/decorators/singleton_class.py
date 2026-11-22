@@ -6,8 +6,6 @@ import threading
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any
 
-from archipy.helpers._deprecation import deprecated_alias
-
 if TYPE_CHECKING:
     from collections.abc import Callable
     from contextlib import AbstractContextManager
@@ -89,6 +87,3 @@ def singleton[T: type[Any]](*, thread_safe: bool = True) -> Callable[[T], T]:  #
         return cls
 
     return decorator
-
-
-singleton_decorator = deprecated_alias("singleton_decorator", singleton)

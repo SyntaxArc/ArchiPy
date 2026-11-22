@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -73,7 +72,7 @@ class KeycloakRequiredActionsMixin(SyncKeycloakMixinBase):
     def update_required_action(
         self,
         alias: str,
-        payload: KeycloakRequiredActionProviderRequestDTO | dict[str, Any],
+        payload: KeycloakRequiredActionProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a required action.
 
@@ -218,7 +217,7 @@ class KeycloakRequiredActionsMixin(SyncKeycloakMixinBase):
     def update_required_action_config(
         self,
         alias: str,
-        config: KeycloakRequiredActionConfigRequestDTO | dict[str, Any],
+        config: KeycloakRequiredActionConfigRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Set the settings of a required action.
 
@@ -323,7 +322,7 @@ class AsyncKeycloakRequiredActionsMixin(AsyncKeycloakMixinBase):
     async def update_required_action(
         self,
         alias: str,
-        payload: KeycloakRequiredActionProviderRequestDTO | dict[str, Any],
+        payload: KeycloakRequiredActionProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a required action.
 
@@ -468,7 +467,7 @@ class AsyncKeycloakRequiredActionsMixin(AsyncKeycloakMixinBase):
     async def update_required_action_config(
         self,
         alias: str,
-        config: KeycloakRequiredActionConfigRequestDTO | dict[str, Any],
+        config: KeycloakRequiredActionConfigRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Set the settings of a required action.
 

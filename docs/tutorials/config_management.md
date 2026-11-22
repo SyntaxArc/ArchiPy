@@ -260,13 +260,13 @@ files outside version control and load their paths from the environment.
 
 | Setting                                                      | Purpose                                                         |
 |--------------------------------------------------------------|-----------------------------------------------------------------|
-| `GRPC__TLS_ENABLED`                                          | Bind the server port with TLS                                   |
-| `GRPC__TLS_CERT_FILE`, `GRPC__TLS_KEY_FILE`                  | PEM server certificate chain and private key (both required)    |
-| `GRPC__TLS_CA_FILE`                                          | PEM CA bundle that verifies client certificates                 |
-| `GRPC__TLS_REQUIRE_CLIENT_AUTH`                              | Reject clients without a valid certificate (needs the CA file)  |
-| `GRPC__STUB_TLS_ENABLED`                                     | Open client channels with TLS                                   |
-| `GRPC__STUB_TLS_CA_FILE`                                     | PEM CA bundle that verifies the server (default: gRPC roots)    |
-| `GRPC__STUB_TLS_CERT_FILE`, `GRPC__STUB_TLS_KEY_FILE`        | Client certificate and key for mutual TLS (set together)        |
+| `GRPC__TLS__IS_ENABLED`                                          | Bind the server port with TLS                                   |
+| `GRPC__TLS__CERT_FILE`, `GRPC__TLS__KEY_FILE`                  | PEM server certificate chain and private key (both required)    |
+| `GRPC__TLS__CA_FILE`                                          | PEM CA bundle that verifies client certificates                 |
+| `GRPC__TLS__REQUIRE_CLIENT_AUTH`                              | Reject clients without a valid certificate (needs the CA file)  |
+| `GRPC__STUB_TLS__IS_ENABLED`                                     | Open client channels with TLS                                   |
+| `GRPC__STUB_TLS__CA_FILE`                                     | PEM CA bundle that verifies the server (default: gRPC roots)    |
+| `GRPC__STUB_TLS__CERT_FILE`, `GRPC__STUB_TLS__KEY_FILE`        | Client certificate and key for mutual TLS (set together)        |
 
 ```python
 from archipy.configs.base_config import BaseConfig

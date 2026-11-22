@@ -67,9 +67,7 @@ config = ScyllaDBConfig(
 
 ### Connection Pool Monitoring
 
-`scylla-driver` keeps one connection per host (per shard when shard-aware), so there is no pool to size.
-`MAX_CONNECTIONS_PER_HOST`, `MIN_CONNECTIONS_PER_HOST`, `CORE_CONNECTIONS_PER_HOST` and `MAX_REQUESTS_PER_CONNECTION` have
-no effect, are deprecated and will be removed in 6.0.0. To watch the connections, turn on monitoring:
+The driver keeps one connection per host, or per shard with shard awareness. Enable monitoring to inspect those connections.
 
 ```python
 config = ScyllaDBConfig(
@@ -86,8 +84,7 @@ config = ScyllaDBConfig(
     CONTACT_POINTS=["dc1-node1", "dc1-node2"],
     PORT=9042,
     LOCAL_DC="datacenter1",
-    REPLICATION_STRATEGY="NetworkTopologyStrategy",
-    REPLICATION_CONFIG={"datacenter1": 3, "datacenter2": 2},
+    REPLICATION={"STRATEGY": "NetworkTopologyStrategy", "CONFIG": {"datacenter1": 3, "datacenter2": 2}},
 )
 ```
 
@@ -98,13 +95,8 @@ These settings are optional. A setting left unset keeps the driver default.
 ```python
 config = ScyllaDBConfig(
     CONTACT_POINTS=["scylla-1", "scylla-2"],
-    IDLE_HEARTBEAT_INTERVAL=10.0,
-    IDLE_HEARTBEAT_TIMEOUT=10.0,
-    RECONNECTION_POLICY="EXPONENTIAL",
-    RECONNECTION_BASE_DELAY=1.0,
-    RECONNECTION_MAX_DELAY=60.0,
+    HEARTBEAT={"IDLE_INTERVAL": 10.0, "IDLE_TIMEOUT": 10.0}, RECONNECTION={"POLICY": "EXPONENTIAL", "BASE_DELAY": 1.0, "MAX_DELAY": 60.0}, SPECULATIVE_EXECUTION={"DELAY": 0.2},
     SERIAL_CONSISTENCY_LEVEL="LOCAL_SERIAL",
-    SPECULATIVE_EXECUTION_DELAY=0.2,
 )
 ```
 
@@ -134,10 +126,9 @@ config = ScyllaDBConfig(
     CONTACT_POINTS=["node1.example.com"],
     USERNAME="scylla_user",
     PASSWORD="secure_password",
-    TLS_ENABLED=True,
-    TLS_CA_FILE="/etc/ssl/scylla-ca.pem",  # system CAs when unset
-    TLS_CERT_FILE="/etc/ssl/client.pem",  # optional, mutual TLS (needs TLS_KEY_FILE)
-    TLS_KEY_FILE="/etc/ssl/client.key",
+    TLS={"IS_ENABLED": True, "CA_FILE": "/etc/ssl/scylla-ca.pem", "CERT_FILE": "/etc/ssl/client.pem", "KEY_FILE": "/etc/ssl/client.key"},
+      # system CAs when unset
+      # optional, mutual TLS (needs TLS_KEY_FILE)
 )
 ```
 
@@ -412,9 +403,8 @@ Prepared statements are cached automatically when enabled in configuration:
 
 ```python
 config = ScyllaDBConfig(
-    ENABLE_PREPARED_STATEMENT_CACHE=True,
-    PREPARED_STATEMENT_CACHE_SIZE=100,
-    PREPARED_STATEMENT_CACHE_TTL_SECONDS=3600,  # 1 hour
+    PREPARED_CACHE={"IS_ENABLED": True, "SIZE": 100, "TTL_SECONDS": 3600},
+      # 1 hour
 )
 adapter = ScyllaDBAdapter(config)
 ```
@@ -580,15 +570,12 @@ for host_stat in stats.get('hosts', []):
 ```python
 # Exponential backoff (default)
 config = ScyllaDBConfig(
-    RETRY_POLICY="EXPONENTIAL_BACKOFF",
-    RETRY_MAX_NUM_RETRIES=3,
-    RETRY_MIN_INTERVAL=0.1,
-    RETRY_MAX_INTERVAL=10.0,
+    RETRY={"POLICY": "EXPONENTIAL_BACKOFF", "MAX_NUM_RETRIES": 3, "MIN_INTERVAL": 0.1, "MAX_INTERVAL": 10.0},
 )
 
 # No retries (fail fast)
 config = ScyllaDBConfig(
-    RETRY_POLICY="FALLTHROUGH",
+    RETRY={"POLICY": "FALLTHROUGH"},
 )
 ```
 
@@ -685,9 +672,8 @@ config = ScyllaDBConfig(
     USERNAME="scylla",
     PASSWORD=SecretStr("password"),
     CONSISTENCY_LEVEL="QUORUM",
-    MAX_CONNECTIONS_PER_HOST=2,
+    PREPARED_CACHE={"IS_ENABLED": True},
     ENABLE_CONNECTION_POOL_MONITORING=True,
-    ENABLE_PREPARED_STATEMENT_CACHE=True,
 )
 
 adapter = ScyllaDBAdapter(config)
@@ -755,9 +741,6 @@ Configure connection pools based on your cluster size and workload:
 ```python
 # For production: 1-3 connections per CPU core per node
 config = ScyllaDBConfig(
-    MAX_CONNECTIONS_PER_HOST=2,
-    MIN_CONNECTIONS_PER_HOST=1,
-    CORE_CONNECTIONS_PER_HOST=1,
 )
 ```
 
@@ -824,8 +807,7 @@ For multi-datacenter deployments:
 ```python
 config = ScyllaDBConfig(
     LOCAL_DC="datacenter1",
-    REPLICATION_STRATEGY="NetworkTopologyStrategy",
-    REPLICATION_CONFIG={"datacenter1": 3, "datacenter2": 2},
+    REPLICATION={"STRATEGY": "NetworkTopologyStrategy", "CONFIG": {"datacenter1": 3, "datacenter2": 2}},
 )
 ```
 

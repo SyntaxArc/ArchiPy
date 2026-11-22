@@ -203,10 +203,11 @@ nav:
       - Contributing: community/contributing.md
       - Code of Conduct: community/code_of_conduct.md
       - FAQ: community/faq.md
-      - Deprecations: community/deprecations.md
+      - Upgrade to ArchiPy 6.0: community/deprecations.md
       - Security: community/security.md
       - Changelog:
           - Overview: community/changelog/index.md
+          - "6.x": community/changelog/6/index.md
           - "5.x": community/changelog/5/index.md
           - "4.x": community/changelog/4/index.md
           - "3.x": community/changelog/3/index.md

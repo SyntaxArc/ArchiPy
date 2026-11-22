@@ -57,8 +57,6 @@ def _set_messaging_attributes(task_queue: str | None, operation: str = "process"
     """
     span = trace.get_current_span()
     span.set_attribute("messaging.system", "temporal")
-    # ``messaging.operation`` is deprecated for ``messaging.operation.type``; backends still read the old key.
-    span.set_attribute("messaging.operation", operation)
     span.set_attribute("messaging.operation.type", operation)
     if task_queue is not None:
         span.set_attribute("messaging.destination.name", task_queue)

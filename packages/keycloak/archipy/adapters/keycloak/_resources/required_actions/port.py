@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.authenticator_dtos import KeycloakUnregisteredRequiredActionDTO
@@ -38,7 +38,7 @@ class KeycloakRequiredActionsPort:
     def update_required_action(
         self,
         alias: str,
-        payload: KeycloakRequiredActionProviderRequestDTO | dict[str, Any],
+        payload: KeycloakRequiredActionProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a required action."""
         raise NotImplementedError
@@ -77,7 +77,7 @@ class KeycloakRequiredActionsPort:
     def update_required_action_config(
         self,
         alias: str,
-        config: KeycloakRequiredActionConfigRequestDTO | dict[str, Any],
+        config: KeycloakRequiredActionConfigRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Set the settings of a required action."""
         raise NotImplementedError
@@ -110,7 +110,7 @@ class AsyncKeycloakRequiredActionsPort:
     async def update_required_action(
         self,
         alias: str,
-        payload: KeycloakRequiredActionProviderRequestDTO | dict[str, Any],
+        payload: KeycloakRequiredActionProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a required action."""
         raise NotImplementedError
@@ -149,7 +149,7 @@ class AsyncKeycloakRequiredActionsPort:
     async def update_required_action_config(
         self,
         alias: str,
-        config: KeycloakRequiredActionConfigRequestDTO | dict[str, Any],
+        config: KeycloakRequiredActionConfigRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Set the settings of a required action."""
         raise NotImplementedError

@@ -213,7 +213,7 @@ def after_scenario(context: Context, scenario: Scenario) -> None:
         "VAULT__SECRET_PATHS",
         "VAULT__AUTH_METHOD",
         "VAULT__MOUNT_POINT",
-        "VAULT__VERIFY_SSL",
+        "VAULT__TLS__VERIFY_SSL",
     )
     for key in vault_runtime_keys:
         os.environ.pop(key, None)

@@ -71,10 +71,6 @@ Feature: JWT Utilities
     When the token is decoded requiring an empty token type
     Then an InvalidTokenError should be raised
 
-  Scenario: A negative flat leeway is still rejected by the configuration
-    When an authentication configuration is built with the deprecated flat leeway of -1
-    Then the configuration is rejected
-
   Scenario: A negative leeway is rejected by the configuration
     When an authentication configuration is built with a leeway of -1
     Then the configuration is rejected

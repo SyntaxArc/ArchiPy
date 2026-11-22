@@ -33,7 +33,7 @@ class KeycloakOrganizationGroupsPort:
     def create_organization_group(
         self,
         organization_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a top-level group in an organization."""
         raise NotImplementedError
@@ -53,7 +53,7 @@ class KeycloakOrganizationGroupsPort:
         self,
         organization_id: str,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an organization group."""
         raise NotImplementedError
@@ -78,7 +78,7 @@ class KeycloakOrganizationGroupsPort:
         self,
         organization_id: str,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a child group under an organization group."""
         raise NotImplementedError
@@ -166,7 +166,7 @@ class KeycloakOrganizationGroupsPort:
         self,
         organization_id: str,
         group_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Assign realm roles to an organization group."""
         raise NotImplementedError
@@ -176,7 +176,7 @@ class KeycloakOrganizationGroupsPort:
         self,
         organization_id: str,
         group_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from an organization group."""
         raise NotImplementedError
@@ -217,7 +217,7 @@ class KeycloakOrganizationGroupsPort:
         organization_id: str,
         group_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Assign client roles to an organization group."""
         raise NotImplementedError
@@ -228,7 +228,7 @@ class KeycloakOrganizationGroupsPort:
         organization_id: str,
         group_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from an organization group."""
         raise NotImplementedError
@@ -250,7 +250,7 @@ class AsyncKeycloakOrganizationGroupsPort:
     async def create_organization_group(
         self,
         organization_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a top-level group in an organization."""
         raise NotImplementedError
@@ -270,7 +270,7 @@ class AsyncKeycloakOrganizationGroupsPort:
         self,
         organization_id: str,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an organization group."""
         raise NotImplementedError
@@ -295,7 +295,7 @@ class AsyncKeycloakOrganizationGroupsPort:
         self,
         organization_id: str,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a child group under an organization group."""
         raise NotImplementedError
@@ -387,7 +387,7 @@ class AsyncKeycloakOrganizationGroupsPort:
         self,
         organization_id: str,
         group_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Assign realm roles to an organization group."""
         raise NotImplementedError
@@ -397,7 +397,7 @@ class AsyncKeycloakOrganizationGroupsPort:
         self,
         organization_id: str,
         group_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from an organization group."""
         raise NotImplementedError
@@ -438,7 +438,7 @@ class AsyncKeycloakOrganizationGroupsPort:
         organization_id: str,
         group_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Assign client roles to an organization group."""
         raise NotImplementedError
@@ -449,7 +449,7 @@ class AsyncKeycloakOrganizationGroupsPort:
         organization_id: str,
         group_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from an organization group."""
         raise NotImplementedError

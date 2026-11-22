@@ -540,7 +540,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
     def update_realm_role(
         self,
         role_name: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a realm role.
 
@@ -665,7 +665,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
     def add_realm_role_composites(
         self,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite realm role.
 
@@ -690,7 +690,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
     def delete_realm_role_composites(
         self,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite realm role.
 
@@ -734,7 +734,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
     def update_realm_role_management_permissions(
         self,
         role_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a realm role.
 
@@ -781,7 +781,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         self,
         client_uuid: str,
         role_name: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client role.
 
@@ -968,7 +968,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         self,
         client_uuid: str,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite client role.
 
@@ -995,7 +995,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         self,
         client_uuid: str,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite client role.
 
@@ -1046,7 +1046,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         self,
         client_uuid: str,
         role_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a client role.
 
@@ -1569,7 +1569,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
     async def update_realm_role(
         self,
         role_name: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a realm role.
 
@@ -1702,7 +1702,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
     async def add_realm_role_composites(
         self,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite realm role.
 
@@ -1727,7 +1727,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
     async def delete_realm_role_composites(
         self,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite realm role.
 
@@ -1771,7 +1771,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
     async def update_realm_role_management_permissions(
         self,
         role_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a realm role.
 
@@ -1822,7 +1822,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         self,
         client_uuid: str,
         role_name: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client role.
 
@@ -2009,7 +2009,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         self,
         client_uuid: str,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite client role.
 
@@ -2036,7 +2036,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         self,
         client_uuid: str,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite client role.
 
@@ -2087,7 +2087,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         self,
         client_uuid: str,
         role_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a client role.
 

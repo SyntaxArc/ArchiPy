@@ -8,7 +8,7 @@ Feature: Keycloak Auth Guards Testing
   # --- Keycloak auth dependencies and decorators ---
   # Real tokens issued by the Keycloak container drive keycloak.auth fastapi_auth, grpc_auth and
   # AuthContextManager. gRPC uses a ServicerContext fake only to record aborts.
-  Scenario Outline: Auth FastAPI dependency populates request state for a valid token
+  Scenario Outline: Auth FastAPI dependency sets the auth context for a valid token
     Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
@@ -19,9 +19,10 @@ Feature: Keycloak Auth Guards Testing
     And the keycloak fastapi auth requires any of roles "auth-reader"
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth dependency returns the user info of user "authuser"
-    And the keycloak auth request state user roles include "auth-reader"
-    And the keycloak auth request state has an empty actor chain
+    And the keycloak auth context user roles include "auth-reader"
+    And the keycloak auth context has an empty actor chain
     And the keycloak auth context holds user "authuser" while the dependency is active
+    And the request state has no Keycloak auth fields
     And the keycloak auth context is cleared after the dependency ends
 
     Examples:
@@ -30,31 +31,6 @@ Feature: Keycloak Auth Guards Testing
       | envoy  |
 
   @auth-guards
-  Scenario Outline: Reading <field> from the request state warns and points to the auth context
-    Given a configured sync Keycloak adapter via <via>
-    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
-    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "authuser" and password "pass123" using sync adapter
-    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
-    And I assign realm role "auth-reader" to user "authuser" using sync adapter
-    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
-    And the keycloak fastapi auth requires any of roles "auth-reader"
-    When the keycloak auth fastapi dependency is called with the access token of user "authuser"
-    Then reading "<field>" from the request state warns and names "<replacement>"
-    And the value the keycloak auth dependency returned does not warn when it is read
-    And the request state keeps the same content as the auth context
-
-    Examples:
-      | field       | replacement                                         | via    |
-      | user_info   | AuthContextManager.get_auth_context().raw_user_info | direct |
-      | token_info  | AuthContextManager.get_auth_context().token_info    | direct |
-      | actor_chain | AuthContextManager.get_auth_context().actor_chain   | direct |
-      | user_roles  | AuthContextManager.get_auth_context().roles         | direct |
-      | user_info   | AuthContextManager.get_auth_context().raw_user_info | envoy  |
-      | token_info  | AuthContextManager.get_auth_context().token_info    | envoy  |
-      | actor_chain | AuthContextManager.get_auth_context().actor_chain   | envoy  |
-      | user_roles  | AuthContextManager.get_auth_context().roles         | envoy  |
-
   Scenario Outline: Auth FastAPI dependency accepts a client role from resource access
     Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -67,7 +43,7 @@ Feature: Keycloak Auth Guards Testing
     And I assign client role "auth-operator" of client "auth-client" to user "authuser" using sync adapter
     And the keycloak fastapi auth requires all roles "auth-reader,auth-operator"
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
-    Then the keycloak auth request state user roles include "auth-reader,auth-operator"
+    Then the keycloak auth context user roles include "auth-reader,auth-operator"
 
     Examples:
       | via    |

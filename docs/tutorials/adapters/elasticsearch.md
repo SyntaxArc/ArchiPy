@@ -25,7 +25,7 @@ Configure Elasticsearch via environment variables or an `ElasticsearchConfig` ob
 ### Environment Variables
 
 !!! warning
-    Keep `ELASTIC__HTTP_PASSWORD` and `ELASTIC__API_SECRET` out of source control. Prefer API key authentication over
+    Keep `ELASTIC__AUTH__PASSWORD` and `ELASTIC__AUTH__API_SECRET` out of source control. Prefer API key authentication over
     basic auth.
 
 !!! note
@@ -42,15 +42,15 @@ Configure Elasticsearch via environment variables or an `ElasticsearchConfig` ob
 ELASTIC__HOSTS='["https://localhost:9200"]'
 
 # Basic auth (alternative to API key)
-ELASTIC__HTTP_USER_NAME=elastic
-ELASTIC__HTTP_PASSWORD=your-password
+ELASTIC__AUTH__USER_NAME=elastic
+ELASTIC__AUTH__PASSWORD=your-password
 
 # API key auth (preferred over basic auth)
-ELASTIC__API_KEY=your-api-key-id
-ELASTIC__API_SECRET=your-api-key-secret
+ELASTIC__AUTH__API_KEY=your-api-key-id
+ELASTIC__AUTH__API_SECRET=your-api-key-secret
 
 # Bearer token / OIDC auth (exclusive with API key and basic auth)
-ELASTIC__BEARER_AUTH=your-token
+ELASTIC__AUTH__BEARER=your-token
 
 # Elastic Cloud (replaces HOSTS)
 ELASTIC__CLOUD_ID=name:base64-cloud-id
@@ -60,23 +60,22 @@ ELASTIC__OPAQUE_ID=billing-service          # sent as X-Opaque-Id
 ELASTIC__HEADERS='{"X-Team": "core"}'
 
 # TLS/SSL
-ELASTIC__SSL_VERSION=772                    # ssl.TLSVersion value (772 = TLS 1.3)
-ELASTIC__CA_CERTS=/path/to/ca.crt
-ELASTIC__VERIFY_CERTS=true
+ELASTIC__TLS__VERSION=772                    # ssl.TLSVersion value (772 = TLS 1.3)
+ELASTIC__TLS__CA_CERTS=/path/to/ca.crt
+ELASTIC__TLS__VERIFY_CERTS=true
 
 # Raise ArchiPy errors instead of raw elasticsearch-py exceptions (default false, will become true)
-ELASTIC__MAP_ERRORS=true
 
 # Connection behaviour
 ELASTIC__REQUEST_TIMEOUT=5.0
-ELASTIC__MAX_RETRIES=3
-ELASTIC__RETRY_ON_TIMEOUT=true
+ELASTIC__RETRY__MAX_RETRIES=3
+ELASTIC__RETRY__ON_TIMEOUT=true
 
 # Node pool and sniffing
 ELASTIC__NODE_SELECTOR_CLASS=random          # 'round_robin' (default) or 'random'
 ELASTIC__DEAD_NODE_BACKOFF_FACTOR=1.0
 ELASTIC__MAX_DEAD_NODE_BACKOFF=300.0
-ELASTIC__MIN_DELAY_BETWEEN_SNIFFING=60.0     # applied when SNIFF_BEFORE_REQUESTS=true
+ELASTIC__SNIFFING__MIN_DELAY=60.0     # applied when SNIFF_BEFORE_REQUESTS=true
 ELASTIC__IGNORE_STATUS='[404]'               # status codes not raised as errors
 ```
 
@@ -95,16 +94,11 @@ try:
     es_config = ElasticsearchConfig(
         HOSTS=["https://localhost:9200"],
         # API key auth (takes precedence over HTTP basic auth)
-        API_KEY="my-key-id",
-        API_SECRET="my-key-secret",  # type: ignore[arg-type]
+        AUTH={"API_KEY": "my-key-id", "API_SECRET": "my-key-secret"}, TLS={"CA_CERTS": "/path/to/ca.crt", "VERIFY_CERTS": True}, RETRY={"MAX_RETRIES": 3, "ON_TIMEOUT": True, "ON_STATUS": (429, 502, 503, 504)},
+          # type: ignore[arg-type]
         # TLS
-        CA_CERTS="/path/to/ca.crt",
-        VERIFY_CERTS=True,
         # Timeouts and retries
         REQUEST_TIMEOUT=5.0,
-        MAX_RETRIES=3,
-        RETRY_ON_TIMEOUT=True,
-        RETRY_ON_STATUS=(429, 502, 503, 504),
         # Connection pool
         CONNECTIONS_PER_NODE=10,
         HTTP_COMPRESS=True,
@@ -126,9 +120,7 @@ needs both values to back off.
 
 ### Error Mapping
 
-By default the adapters raise raw `elasticsearch` exceptions (`NotFoundError`, `ApiError`, `ConnectionError`), and
-creating an adapter with `MAP_ERRORS=False` emits a `DeprecationWarning` because mapping will become the default.
-Set `ELASTIC__MAP_ERRORS=true` to get ArchiPy errors, chained from the original exception:
+The adapters map Elasticsearch API and transport failures to ArchiPy errors and chain the original exception.
 
 | Elasticsearch failure | ArchiPy error |
 |-----------------------|---------------|

@@ -6,7 +6,6 @@ import base64
 import json
 import logging
 import time
-import warnings
 from typing import TYPE_CHECKING, Any
 
 from async_lru import alru_cache
@@ -99,9 +98,8 @@ def _build_jwk_set(raw: dict[str, Any]) -> jwk.JWKSet:
 def _check_token_claims(claims: dict[str, Any], configs: KeycloakConfig) -> None:
     """Check issuer, audience and token type of a locally verified token.
 
-    A claim is enforced only when its setting is configured (``EXPECTED_ISSUER`` for ``iss``,
-    ``EXPECTED_AUDIENCE`` for ``aud``; the ``typ == "Bearer"`` check is enforced when either is set). Without them a
-    mismatch only emits a ``DeprecationWarning``, because enforcement will become the default in 6.0.
+    The token issuer must match the configured issuer or the adapter's realm URL. The token type must be
+    ``Bearer``. The audience is checked when ``EXPECTED_AUDIENCE`` is configured.
 
     Args:
         claims: Verified token claims.
@@ -114,27 +112,19 @@ def _check_token_claims(claims: dict[str, Any], configs: KeycloakConfig) -> None
         configs.TOKEN_VALIDATION.EXPECTED_ISSUER
         or f"{(configs.SERVER_URL or '').rstrip('/')}/realms/{configs.REALM_NAME}"
     )
-    audience = claims.get("aud")
-    audiences = [audience] if isinstance(audience, str) else list(audience or [])
-    enforce_any = bool(configs.TOKEN_VALIDATION.EXPECTED_ISSUER or configs.TOKEN_VALIDATION.EXPECTED_AUDIENCE)
-    enforced: list[str] = []
-    advisory: list[str] = []
+    invalid_claims: list[str] = []
     if claims.get("iss") != expected_issuer:
-        (enforced if configs.TOKEN_VALIDATION.EXPECTED_ISSUER else advisory).append("iss")
-    if configs.TOKEN_VALIDATION.EXPECTED_AUDIENCE and configs.TOKEN_VALIDATION.EXPECTED_AUDIENCE not in audiences:
-        enforced.append("aud")
+        invalid_claims.append("iss")
+    expected_audience = configs.TOKEN_VALIDATION.EXPECTED_AUDIENCE
+    if expected_audience:
+        audience = claims.get("aud")
+        audiences = audience if isinstance(audience, list) else [audience]
+        if expected_audience not in audiences:
+            invalid_claims.append("aud")
     if claims.get("typ") != "Bearer":
-        (enforced if enforce_any else advisory).append("typ")
-    if enforced:
-        raise InvalidTokenError(additional_data={"claims": enforced})
-    if advisory:
-        warnings.warn(
-            f"Token claims {advisory} do not match the expected values; set "
-            "KEYCLOAK.TOKEN_VALIDATION.EXPECTED_ISSUER or KEYCLOAK.TOKEN_VALIDATION.EXPECTED_AUDIENCE "
-            "to enforce them. Enforcement becomes the default in 6.0.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
+        invalid_claims.append("typ")
+    if invalid_claims:
+        raise InvalidTokenError(additional_data={"claims": invalid_claims})
 
 
 def _normalize_userinfo(raw: dict[str, Any] | bytes) -> KeycloakUserType:

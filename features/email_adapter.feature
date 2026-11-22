@@ -64,23 +64,6 @@ Feature: Email adapter
     Then Mailpit holds 1 email
     And the adapter session is encrypted with TLS
 
-  Scenario: STARTTLS is skipped when the server does not advertise it
-    Given the plain Mailpit SMTP server is configured
-    And an email adapter
-    When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
-    Then Mailpit holds 1 email
-    And the delivered email is sent from "mailer@example.com"
-    And the adapter session is not encrypted with TLS
-
-  Scenario: A wrong SMTP password is rejected by the plain server too
-    Given the plain Mailpit SMTP server is configured
-    And SMTP credentials "mailer@example.com" and "wrong-password"
-    And an email adapter
-    When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
-    Then an unavailable error is raised for "SMTP"
-    And the unavailable error was caused by an authentication failure
-    And Mailpit holds 0 emails
-
   Scenario: Required STARTTLS delivers over a verified TLS session
     Given the Mailpit SMTP server is configured
     And the SMTP transport security is "starttls" verified with the Mailpit CA
@@ -98,17 +81,17 @@ Feature: Email adapter
     And the unavailable error was caused by a certificate verification failure
     And Mailpit holds 0 emails
 
-  Scenario: Required STARTTLS accepts an untrusted certificate when verification is off
-    Given the Mailpit SMTP server is configured
-    And the SMTP transport security is "starttls" without certificate verification
-    And an email adapter
-    When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
-    Then Mailpit holds 1 email
-    And the adapter session is encrypted with TLS
+  Scenario Outline: Removed SMTP security settings fail validation
+    When I build an email config with TLS setting <field> set to <value>
+    Then the email config is rejected for <field>
 
-  Scenario: Required STARTTLS fails instead of falling back to clear text
+    Examples:
+      | field  | value  |
+      | MODE   | "auto" |
+      | VERIFY | false  |
+
+  Scenario: Default STARTTLS fails instead of falling back to clear text
     Given the plain Mailpit SMTP server is configured
-    And the SMTP transport security is "starttls"
     And an email adapter
     When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
     Then an unavailable error is raised for "SMTP"
@@ -117,8 +100,8 @@ Feature: Email adapter
     And the adapter holds no open SMTP session
 
   Scenario: Transport security none sends in clear text on request
-    Given the Mailpit SMTP server is configured
-    And the SMTP transport security is "none"
+    Given the plain Mailpit SMTP server is configured
+    And the SMTP transport security is "none" without credentials
     And an email adapter
     When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
     Then Mailpit holds 1 email
@@ -132,32 +115,21 @@ Feature: Email adapter
     Then the connection is established
     And the pooled session is encrypted with TLS
 
-  Scenario: The deprecated auto transport security warns
+  Scenario: Authentication without TLS is rejected
     Given the Mailpit SMTP server is configured
+    And the SMTP transport security is "none" verified with the Mailpit CA
     When I create an email adapter
-    Then an email deprecation warning mentions "TLS.MODE"
-
-  Scenario Outline: Insecure credential and verification settings warn
-    Given the Mailpit SMTP server is configured
-    And the SMTP transport security is "<mode>" <verification>
-    When I create an email adapter
-    Then an email deprecation warning mentions "<text>"
-
-    Examples:
-      | mode     | verification                     | text                        |
-      | none     | verified with the Mailpit CA     | sends USERNAME and PASSWORD |
-      | starttls | without certificate verification | TLS.VERIFY=False            |
-      | implicit | without certificate verification | TLS.VERIFY=False            |
+    Then a configuration error is raised for "email_credentials"
 
   Scenario Outline: Out-of-range pool, retry and timeout settings are rejected
     When I build an email config with <field> set to <value>
     Then the email config is rejected for <field>
 
     Examples:
-      | field              | value |
-      | POOL_SIZE          | 0     |
-      | MAX_RETRIES        | 0     |
-      | CONNECTION_TIMEOUT | 0     |
+      | field                   | value |
+      | POOL.SIZE               | 0     |
+      | MAX_RETRIES             | 0     |
+      | POOL.CONNECTION_TIMEOUT | 0     |
 
   Scenario: The configured sender address is used as the From header
     Given the Mailpit SMTP server is configured
@@ -369,9 +341,10 @@ Feature: Email adapter
     And the "email.send" span has attribute "email.attachment_count" equal to "0"
     And the "email.send" span has attribute "email.tls_mode" equal to "starttls"
 
-  Scenario: The SMTP span reports no TLS when the server does not advertise STARTTLS
+  Scenario: The SMTP span reports no TLS for an unauthenticated clear-text session
     Given adapter spans are exported to the collector
     And the plain Mailpit SMTP server is configured
+    And the SMTP transport security is "none" without credentials
     And an email adapter
     When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
     Then the "email.send" span has attribute "email.tls_mode" equal to "none"

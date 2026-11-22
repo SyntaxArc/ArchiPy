@@ -583,10 +583,10 @@ def step_mutate_returned_secret(context, path):
     adapter.read_secret(path)["v"] = "mutated"
 
 
-@when('I parse VAULT__VERIFY_SSL "{value}"')
+@when('I parse VAULT__TLS__VERIFY_SSL "{value}"')
 def step_parse_verify_ssl(context, value):
-    previous = os.environ.get("VAULT__VERIFY_SSL")
-    os.environ["VAULT__VERIFY_SSL"] = value
+    previous = os.environ.get("VAULT__TLS__VERIFY_SSL")
+    os.environ["VAULT__TLS__VERIFY_SSL"] = value
     result: object
     try:
         result = _vault_config_from_env().TLS.VERIFY_SSL
@@ -594,13 +594,13 @@ def step_parse_verify_ssl(context, value):
         result = e
     finally:
         if previous is None:
-            os.environ.pop("VAULT__VERIFY_SSL", None)
+            os.environ.pop("VAULT__TLS__VERIFY_SSL", None)
         else:
-            os.environ["VAULT__VERIFY_SSL"] = previous
+            os.environ["VAULT__TLS__VERIFY_SSL"] = previous
     get_current_scenario_context(context).store("verify_ssl_result", result)
 
 
-@then('VAULT__VERIFY_SSL should resolve to "{outcome}"')
+@then('VAULT__TLS__VERIFY_SSL should resolve to "{outcome}"')
 def step_then_verify_ssl(context, outcome):
     result = get_current_scenario_context(context).get("verify_ssl_result")
     if outcome == "rejected":
@@ -611,7 +611,7 @@ def step_then_verify_ssl(context, outcome):
 
 @then("the Vault config repr should not contain its credentials")
 def step_then_repr_hides_credentials(context):
-    config = VaultConfig(TOKEN="tok-secret-1", APPROLE_SECRET_ID="sid-secret-2", PASSWORD="pw-secret-3")
+    config = VaultConfig(TOKEN="tok-secret-1", APPROLE={"SECRET_ID": "sid-secret-2"}, PASSWORD="pw-secret-3")
     text = repr(config)
     for secret in ("tok-secret-1", "sid-secret-2", "pw-secret-3"):
         assert secret not in text, f"repr leaks {secret}"
@@ -626,14 +626,8 @@ def _vault_setting(config, path):
 
 @when("a Vault config is built with {settings}")
 def step_when_vault_config_built(context, settings):
-    import warnings
-
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        config = VaultConfig(**json.loads(settings))
-    scenario_context = get_current_scenario_context(context)
-    scenario_context.store("vault_grouped_config", config)
-    scenario_context.store("vault_grouped_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+    config = VaultConfig(**json.loads(settings))
+    get_current_scenario_context(context).store("vault_grouped_config", config)
 
 
 @when("the Vault bootstrap config is read with environment {env}")
@@ -657,9 +651,3 @@ def step_then_vault_setting(context, path, expected):
     config = get_current_scenario_context(context).get("vault_grouped_config")
     actual = _vault_setting(config, path)
     assert str(actual) == expected, f"{path}: expected {expected}, got {actual}"
-
-
-@then("{count:d} Vault deprecation warning should be raised")
-def step_then_vault_warnings(context, count):
-    caught = get_current_scenario_context(context).get("vault_grouped_warnings")
-    assert len(caught) == count, [str(w.message) for w in caught]

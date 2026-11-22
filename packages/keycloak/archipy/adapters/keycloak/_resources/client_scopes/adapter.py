@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
@@ -61,7 +59,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
 
     def create_client_scope(
         self,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
         skip_exists: bool = False,
     ) -> str:
         """Create a new client scope."""
@@ -76,7 +74,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
     def update_client_scope(
         self,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client scope."""
         return to_mutation_result(
@@ -114,7 +112,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         self,
         client_id: str,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Add a default client scope to a client."""
         return to_mutation_result(
@@ -156,7 +154,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         self,
         client_id: str,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Add an optional client scope to a client."""
         return to_mutation_result(
@@ -286,7 +284,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
 
     async def create_client_scope(
         self,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
         skip_exists: bool = False,
     ) -> str:
         """Create a new client scope."""
@@ -301,7 +299,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
     async def update_client_scope(
         self,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client scope."""
         return to_mutation_result(
@@ -339,7 +337,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Add a default client scope to a client."""
         return to_mutation_result(
@@ -385,7 +383,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Add an optional client scope to a client."""
         return to_mutation_result(

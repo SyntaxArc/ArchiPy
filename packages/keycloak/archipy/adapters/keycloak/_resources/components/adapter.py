@@ -25,7 +25,7 @@ from archipy.models.dtos.keycloak.component_dtos import (
 class KeycloakComponentsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for component operations."""
 
-    def create_component(self, payload: KeycloakComponentRequestDTO | dict[str, Any]) -> str:
+    def create_component(self, payload: KeycloakComponentRequestDTO) -> str:
         """Create a Keycloak component.
 
         Args:
@@ -76,7 +76,7 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
     def update_component(
         self,
         component_id: str,
-        payload: KeycloakComponentRequestDTO | dict[str, Any],
+        payload: KeycloakComponentRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a component.
 
@@ -140,7 +140,7 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for component operations."""
 
-    async def create_component(self, payload: KeycloakComponentRequestDTO | dict[str, Any]) -> str:
+    async def create_component(self, payload: KeycloakComponentRequestDTO) -> str:
         """Create a Keycloak component.
 
         Args:
@@ -191,7 +191,7 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
     async def update_component(
         self,
         component_id: str,
-        payload: KeycloakComponentRequestDTO | dict[str, Any],
+        payload: KeycloakComponentRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a component.
 

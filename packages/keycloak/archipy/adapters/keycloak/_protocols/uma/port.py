@@ -24,7 +24,7 @@ class KeycloakUmaPort:
     """Sync Keycloak port interface for UMA operations."""
 
     @abstractmethod
-    def resource_set_create(self, payload: KeycloakUmaResourceRequestDTO | dict[str, Any]) -> KeycloakUmaResourceDTO:
+    def resource_set_create(self, payload: KeycloakUmaResourceRequestDTO) -> KeycloakUmaResourceDTO:
         """Create a UMA resource set.
 
         Args:
@@ -51,7 +51,7 @@ class KeycloakUmaPort:
     def resource_set_update(
         self,
         resource_id: str,
-        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+        payload: KeycloakUmaResourceRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a UMA resource set.
 
@@ -120,7 +120,7 @@ class KeycloakUmaPort:
     def policy_resource_create(
         self,
         resource_id: str,
-        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakUmaPolicyRequestDTO,
     ) -> KeycloakUmaPolicyDTO:
         """Create a UMA policy for a resource.
 
@@ -137,7 +137,7 @@ class KeycloakUmaPort:
     def policy_update(
         self,
         policy_id: str,
-        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakUmaPolicyRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a UMA policy.
 
@@ -218,7 +218,7 @@ class AsyncKeycloakUmaPort:
     @abstractmethod
     async def resource_set_create(
         self,
-        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+        payload: KeycloakUmaResourceRequestDTO,
     ) -> KeycloakUmaResourceDTO:
         """Create a UMA resource set.
 
@@ -246,7 +246,7 @@ class AsyncKeycloakUmaPort:
     async def resource_set_update(
         self,
         resource_id: str,
-        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+        payload: KeycloakUmaResourceRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a UMA resource set.
 
@@ -315,7 +315,7 @@ class AsyncKeycloakUmaPort:
     async def policy_resource_create(
         self,
         resource_id: str,
-        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakUmaPolicyRequestDTO,
     ) -> KeycloakUmaPolicyDTO:
         """Create a UMA policy for a resource.
 
@@ -332,7 +332,7 @@ class AsyncKeycloakUmaPort:
     async def policy_update(
         self,
         policy_id: str,
-        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakUmaPolicyRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a UMA policy.
 

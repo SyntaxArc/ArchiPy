@@ -66,7 +66,7 @@ reported as estimated too.
 
 ## Count cache
 
-With `COUNT_CACHE_ENABLED=true` each total is cached in process, so only the first page of a search runs a `COUNT` and
+With `COUNT_CACHE.IS_ENABLED=true` each total is cached in process, so only the first page of a search runs a `COUNT` and
 later pages reuse the total. A total can be stale for up to the TTL, so a row created just before a search may be
 missing from it.
 
@@ -75,9 +75,9 @@ missing from it.
 
 | Setting                   | Default | Meaning                                    |
 |---------------------------|---------|--------------------------------------------|
-| `COUNT_CACHE_ENABLED`     | `false` | Turns the cache on                         |
-| `COUNT_CACHE_TTL_SECONDS` | `60`    | Seconds a cached total stays valid         |
-| `COUNT_CACHE_MAX_SIZE`    | `1000`  | Number of cached searches kept per adapter |
+| `COUNT_CACHE.IS_ENABLED`     | `false` | Turns the cache on                         |
+| `COUNT_CACHE.TTL_SECONDS` | `60`    | Seconds a cached total stays valid         |
+| `COUNT_CACHE.MAX_SIZE`    | `1000`  | Number of cached searches kept per adapter |
 
 The cache is off by default and needs the `cache` extra: `ttl_cache` serves the sync adapter and `async-lru` serves the
 async one. Enabling it without the extra fails when the adapter is created.

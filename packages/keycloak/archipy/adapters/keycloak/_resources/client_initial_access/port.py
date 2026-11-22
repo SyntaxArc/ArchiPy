@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.client_initial_access_dtos import (
@@ -26,7 +26,7 @@ class KeycloakClientInitialAccessPort:
     @abstractmethod
     def create_client_initial_access(
         self,
-        payload: KeycloakClientInitialAccessCreateRequestDTO | dict[str, Any],
+        payload: KeycloakClientInitialAccessCreateRequestDTO,
     ) -> KeycloakClientInitialAccessDTO:
         """Create a client initial access token."""
         raise NotImplementedError
@@ -48,7 +48,7 @@ class AsyncKeycloakClientInitialAccessPort:
     @abstractmethod
     async def create_client_initial_access(
         self,
-        payload: KeycloakClientInitialAccessCreateRequestDTO | dict[str, Any],
+        payload: KeycloakClientInitialAccessCreateRequestDTO,
     ) -> KeycloakClientInitialAccessDTO:
         """Create a client initial access token."""
         raise NotImplementedError

@@ -1,5 +1,6 @@
 from behave import then, when
 from behave.runner import Context
+from features.test_containers import keycloak_test_issuer
 from features.steps.keycloak_adapter_steps import _adapter_call, _adapter_parts
 from features.test_helpers import realm_issuer
 
@@ -36,7 +37,8 @@ def _client_adapter(adapter, is_async: bool, realm: str, client: str, secret: st
         REALM_NAME=realm,
         CLIENT_ID=client,
         CLIENT_SECRET_KEY=secret,
-        VERIFY_SSL=False,
+        TLS={"VERIFY_SSL": False},
+        TOKEN_VALIDATION={"EXPECTED_ISSUER": keycloak_test_issuer(adapter.configs.SERVER_URL, realm)},
         ADMIN={"IS_ENABLED": False},
     )
     return AsyncKeycloakAdapter(configs) if is_async else KeycloakAdapter(configs)

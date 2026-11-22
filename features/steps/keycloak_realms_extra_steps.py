@@ -2,6 +2,8 @@ from behave import then
 from behave.runner import Context
 from features.steps.keycloak_adapter_steps import _adapter_call, _adapter_parts
 
+from archipy.models.dtos.keycloak.client_policy_dtos import KeycloakClientPoliciesRequestDTO
+from archipy.models.dtos.keycloak.client_policy_dtos import KeycloakClientProfilesRequestDTO
 from archipy.models.dtos.keycloak.event_dtos import KeycloakRealmEventsConfigRequestDTO
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupRequestDTO
 from archipy.models.dtos.keycloak.management_permission_dtos import KeycloakManagementPermissionDTO
@@ -27,9 +29,21 @@ async def step_realm_listing_and_settings(context: Context, realm: str, adapter_
     updated = await _adapter_call(adapter, is_async, "get_realm_events_config", realm)
     assert updated.events_enabled is True and updated.admin_events_enabled is True, (config, updated)
     policies = await _adapter_call(adapter, is_async, "get_realm_client_policies", realm, include_global_policies=True)
-    await _adapter_call(adapter, is_async, "update_realm_client_policies", realm, {"policies": policies.policies or []})
+    await _adapter_call(
+        adapter,
+        is_async,
+        "update_realm_client_policies",
+        realm,
+        KeycloakClientPoliciesRequestDTO.model_validate({"policies": policies.policies or []}),
+    )
     profiles = await _adapter_call(adapter, is_async, "get_realm_client_profiles", realm, include_global_profiles=True)
-    await _adapter_call(adapter, is_async, "update_realm_client_profiles", realm, {"profiles": profiles.profiles or []})
+    await _adapter_call(
+        adapter,
+        is_async,
+        "update_realm_client_profiles",
+        realm,
+        KeycloakClientProfilesRequestDTO.model_validate({"profiles": profiles.profiles or []}),
+    )
     try:
         types = await _adapter_call(adapter, is_async, "get_realm_client_types", realm)
     except Exception as e:  # noqa: BLE001 - client types are a preview feature the server may not enable

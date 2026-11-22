@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakAssignResultDTO,
@@ -46,7 +46,7 @@ class KeycloakClientScopesPort:
     @abstractmethod
     def create_client_scope(
         self,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
         skip_exists: bool = False,
     ) -> str:
         """Create a new client scope."""
@@ -56,7 +56,7 @@ class KeycloakClientScopesPort:
     def update_client_scope(
         self,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client scope."""
         raise NotImplementedError
@@ -76,7 +76,7 @@ class KeycloakClientScopesPort:
         self,
         client_id: str,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Add a default client scope to a client."""
         raise NotImplementedError
@@ -96,7 +96,7 @@ class KeycloakClientScopesPort:
         self,
         client_id: str,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Add an optional client scope to a client."""
         raise NotImplementedError
@@ -164,7 +164,7 @@ class AsyncKeycloakClientScopesPort:
     @abstractmethod
     async def create_client_scope(
         self,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
         skip_exists: bool = False,
     ) -> str:
         """Create a new client scope."""
@@ -174,7 +174,7 @@ class AsyncKeycloakClientScopesPort:
     async def update_client_scope(
         self,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client scope."""
         raise NotImplementedError
@@ -194,7 +194,7 @@ class AsyncKeycloakClientScopesPort:
         self,
         client_id: str,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Add a default client scope to a client."""
         raise NotImplementedError
@@ -218,7 +218,7 @@ class AsyncKeycloakClientScopesPort:
         self,
         client_id: str,
         client_scope_id: str,
-        payload: KeycloakClientScopeRequestDTO | dict[str, Any],
+        payload: KeycloakClientScopeRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Add an optional client scope to a client."""
         raise NotImplementedError

@@ -53,7 +53,7 @@ def _all_granted(wanted: list[UMAPermission], granted: object) -> bool:
 class KeycloakUmaMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for UMA operations."""
 
-    def resource_set_create(self, payload: KeycloakUmaResourceRequestDTO | dict[str, Any]) -> KeycloakUmaResourceDTO:
+    def resource_set_create(self, payload: KeycloakUmaResourceRequestDTO) -> KeycloakUmaResourceDTO:
         """Create a UMA resource set.
 
         Args:
@@ -90,7 +90,7 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
     def resource_set_update(
         self,
         resource_id: str,
-        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+        payload: KeycloakUmaResourceRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a UMA resource set.
 
@@ -189,7 +189,7 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
     def policy_resource_create(
         self,
         resource_id: str,
-        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakUmaPolicyRequestDTO,
     ) -> KeycloakUmaPolicyDTO:
         """Create a UMA policy for a resource.
 
@@ -214,7 +214,7 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
     def policy_update(
         self,
         policy_id: str,
-        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakUmaPolicyRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a UMA policy.
 
@@ -343,7 +343,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
 
     async def resource_set_create(
         self,
-        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+        payload: KeycloakUmaResourceRequestDTO,
     ) -> KeycloakUmaResourceDTO:
         """Create a UMA resource set.
 
@@ -381,7 +381,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
     async def resource_set_update(
         self,
         resource_id: str,
-        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+        payload: KeycloakUmaResourceRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a UMA resource set.
 
@@ -478,7 +478,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
     async def policy_resource_create(
         self,
         resource_id: str,
-        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakUmaPolicyRequestDTO,
     ) -> KeycloakUmaPolicyDTO:
         """Create a UMA policy for a resource.
 
@@ -503,7 +503,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
     async def policy_update(
         self,
         policy_id: str,
-        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakUmaPolicyRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a UMA policy.
 

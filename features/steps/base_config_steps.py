@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import ValidationError
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
@@ -32,7 +32,6 @@ from archipy.configs.config_template import (
     VaultConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
-from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.configs.vault_settings_source import create_vault_client
 from archipy.models.errors import ConfigurationError
 
@@ -167,7 +166,7 @@ def step_when_init_with_vault(context):
     os.environ["VAULT__ADDR"] = vault.ADDR or ""
     os.environ["VAULT__AUTH_METHOD"] = vault.AUTH_METHOD
     os.environ["VAULT__MOUNT_POINT"] = vault.MOUNT_POINT
-    os.environ["VAULT__VERIFY_SSL"] = "true" if vault.VERIFY_SSL else "false"
+    os.environ["VAULT__TLS__VERIFY_SSL"] = "true" if vault.TLS.VERIFY_SSL else "false"
     os.environ["VAULT__SECRET_PATHS"] = '["myapp/config"]'
 
     if scenario_context.get("vault_force_invalid_token"):
@@ -485,15 +484,15 @@ _VAULT_PROBLEMS = {
     "no token is set": {},
     "the token file cannot be read": {"TOKEN_FILE": "/nonexistent/vault-token"},
     "no role id is set": {},
-    "no secret id is set": {"APPROLE_ROLE_ID": "role"},
+    "no secret id is set": {"APPROLE": {"ROLE_ID": "role"}},
     "no username is set": {},
     "no password is set": {"USERNAME": "user"},
     "no role is set": {},
-    "no jwt is set": {"JWT_ROLE": "role", "AZURE_ROLE": "role", "GCP_ROLE": "role"},
+    "no jwt is set": {"JWT_AUTH": {"ROLE": "role"}, "AZURE": {"ROLE": "role"}, "GCP": {"ROLE": "role"}},
     "no access key is set": {},
     "no github token is set": {},
     "no address is set": {"ADDR": None, "TOKEN": "t"},
-    "only a client certificate is set": {"TOKEN": "t", "CLIENT_CERT_PATH": "/tmp/client.pem"},
+    "only a client certificate is set": {"TOKEN": "t", "TLS": {"CLIENT_CERT_PATH": "/tmp/client.pem"}},
 }
 
 
@@ -543,9 +542,7 @@ def step_given_vault_accepts_logins(context, method):
         settings.update(
             {
                 "AUTH_METHOD": "approle",
-                "APPROLE_ROLE_ID": role_id,
-                "APPROLE_SECRET_ID": secret_id,
-                "APPROLE_MOUNT_POINT": mount,
+                "APPROLE": {"ROLE_ID": role_id, "SECRET_ID": secret_id, "MOUNT_POINT": mount},
             },
         )
     else:
@@ -553,7 +550,7 @@ def step_given_vault_accepts_logins(context, method):
         admin.sys.enable_auth_method("userpass", path=mount)
         admin.auth.userpass.create_or_update_user("alice", "s3cret-pass", policies=["default"], mount_point=mount)
         settings.update(
-            {"AUTH_METHOD": "userpass", "USERNAME": "alice", "PASSWORD": "s3cret-pass", "USERPASS_MOUNT_POINT": mount},
+            {"AUTH_METHOD": "userpass", "USERNAME": "alice", "PASSWORD": "s3cret-pass", "USERPASS": {"MOUNT_POINT": mount}},
         )
     scenario_context.store("vault_login_settings", settings)
 
@@ -589,7 +586,7 @@ _VAULT_TLS_SETTINGS = {
 def step_given_test_identity_tls_and_timeouts(context, tls, connect, read):
     scenario_context = get_current_scenario_context(context)
     settings = scenario_context.get("vault_login_settings")
-    settings.update({**_VAULT_TLS_SETTINGS[tls], "CONNECT_TIMEOUT": connect, "READ_TIMEOUT": read})
+    settings.update(TLS=_VAULT_TLS_SETTINGS[tls], HTTP={"CONNECT_TIMEOUT": connect, "READ_TIMEOUT": read})
     scenario_context.store("vault_login_settings", settings)
 
 
@@ -604,158 +601,48 @@ def step_then_vault_client_request_options(context, verify, connect, read):
 
 _SECTION_SETTINGS = {
     ("Kafka", "SASL_SSL without credentials"): (KafkaConfig, {"SECURITY_PROTOCOL": "SASL_SSL"}),
-    (
-        "Kafka",
-        "SASL_SSL with credentials",
-    ): (
-        KafkaConfig,
-        {"SECURITY_PROTOCOL": "SASL_SSL", "SASL_MECHANISM": "PLAIN", "USERNAME": "user", "PASSWORD": "pass"},
-    ),
-    ("Kafka", "grouped SASL_SSL with credentials"): (
-        KafkaConfig,
-        {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "plain", "USERNAME": "user", "PASSWORD": "pass"}},
-    ),
-    ("Kafka", "grouped SASL_SSL without a password"): (
-        KafkaConfig,
-        {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "PLAIN", "USERNAME": "user"}},
-    ),
-    ("Kafka", "auto commit and no offset reset"): (
-        KafkaConfig,
-        {"ENABLE_AUTO_COMMIT": True, "AUTO_OFFSET_RESET": "none"},
-    ),
-    ("Kafka", "a heartbeat longer than the session"): (
-        KafkaConfig,
-        {"HEARTBEAT_INTERVAL_MS": 20000, "SESSION_TIMEOUT_MS": 10000},
-    ),
+    ("Kafka", "SASL_SSL with credentials"): (KafkaConfig, {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "PLAIN", "USERNAME": "user", "PASSWORD": "pass"}}),
+    ("Kafka", "grouped SASL_SSL with credentials"): (KafkaConfig, {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "plain", "USERNAME": "user", "PASSWORD": "pass"}}),
+    ("Kafka", "grouped SASL_SSL without a password"): (KafkaConfig, {"SECURITY_PROTOCOL": "SASL_SSL", "SASL": {"MECHANISM": "PLAIN", "USERNAME": "user"}}),
+    ("Kafka", "auto commit and no offset reset"): (KafkaConfig, {"ENABLE_AUTO_COMMIT": True, "AUTO_OFFSET_RESET": "none"}),
+    ("Kafka", "a heartbeat longer than the session"): (KafkaConfig, {"HEARTBEAT_INTERVAL_MS": 20000, "SESSION_TIMEOUT_MS": 10000}),
     ("Redis", "cluster mode without nodes"): (RedisConfig, {"MODE": "CLUSTER"}),
     ("Redis", "grouped cluster mode without nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER": {"NODES": []}}),
-    ("Redis", "grouped cluster mode with nodes"): (
-        RedisConfig,
-        {"MODE": "CLUSTER", "CLUSTER": {"NODES": ["localhost:7000"]}},
-    ),
-    ("Redis", "grouped sentinel mode without a service name"): (
-        RedisConfig,
-        {"MODE": "SENTINEL", "SENTINEL": {"NODES": ["localhost:26379"]}},
-    ),
-    ("Redis", "grouped client certificate without a key"): (
-        RedisConfig,
-        {"TLS": {"IS_ENABLED": True, "CERTFILE": "/tmp/c.pem"}},
-    ),
+    ("Redis", "grouped cluster mode with nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER": {"NODES": ["localhost:7000"]}}),
+    ("Redis", "grouped sentinel mode without a service name"): (RedisConfig, {"MODE": "SENTINEL", "SENTINEL": {"NODES": ["localhost:26379"]}}),
+    ("Redis", "grouped client certificate without a key"): (RedisConfig, {"TLS": {"IS_ENABLED": True, "CERTFILE": "/tmp/c.pem"}}),
     ("Redis", "grouped CA file with TLS disabled"): (RedisConfig, {"TLS": {"CA_CERTS": "/tmp/ca.pem"}}),
-    ("Redis", "cluster mode with nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER_NODES": ["localhost:7000"]}),
-    ("Redis", "sentinel mode without a service name"): (
-        RedisConfig,
-        {"MODE": "SENTINEL", "SENTINEL_NODES": ["localhost:26379"]},
-    ),
     ("Redis", "standalone mode without a host"): (RedisConfig, {"MODE": "STANDALONE", "MASTER_HOST": ""}),
     ("ScyllaDB", "no contact points"): (ScyllaDBConfig, {"CONTACT_POINTS": []}),
     ("ScyllaDB", "a username without a password"): (ScyllaDBConfig, {"USERNAME": "user"}),
-    ("ScyllaDB", "a minimum pool above the maximum"): (
-        ScyllaDBConfig,
-        {"MIN_CONNECTIONS_PER_HOST": 10, "MAX_CONNECTIONS_PER_HOST": 2},
-    ),
-    ("ScyllaDB", "a client certificate without a key"): (
-        ScyllaDBConfig,
-        {"TLS_ENABLED": True, "TLS_CERT_FILE": "/tmp/client.pem"},
-    ),
-    ("ScyllaDB", "a CA file with TLS disabled"): (ScyllaDBConfig, {"TLS_CA_FILE": "/tmp/ca.pem"}),
-    ("ScyllaDB", "an exponential reconnection base above the maximum"): (
-        ScyllaDBConfig,
-        {"RECONNECTION_POLICY": "EXPONENTIAL", "RECONNECTION_BASE_DELAY": 20.0, "RECONNECTION_MAX_DELAY": 5.0},
-    ),
-    ("ScyllaDB", "an exponential reconnection within bounds"): (
-        ScyllaDBConfig,
-        {"RECONNECTION_POLICY": "EXPONENTIAL", "RECONNECTION_BASE_DELAY": 1.0, "RECONNECTION_MAX_DELAY": 5.0},
-    ),
-    ("ScyllaDB", "TLS enabled with a CA file"): (ScyllaDBConfig, {"TLS_ENABLED": True, "TLS_CA_FILE": "/tmp/ca.pem"}),
-    ("ScyllaDB", "a grouped client certificate without a key"): (
-        ScyllaDBConfig,
-        {"TLS": {"IS_ENABLED": True, "CERT_FILE": "/tmp/client.pem"}},
-    ),
-    ("ScyllaDB", "a grouped CA file with TLS disabled"): (ScyllaDBConfig, {"TLS": {"CA_FILE": "/tmp/ca.pem"}}),
-    ("ScyllaDB", "a grouped exponential reconnection above the max"): (
-        ScyllaDBConfig,
-        {"RECONNECTION": {"POLICY": "EXPONENTIAL", "BASE_DELAY": 20.0, "MAX_DELAY": 5.0}},
-    ),
-    ("ScyllaDB", "a grouped replication without datacenters"): (
-        ScyllaDBConfig,
-        {"REPLICATION": {"STRATEGY": "NetworkTopologyStrategy", "CONFIG": {}}},
-    ),
-    ("ScyllaDB", "grouped TLS enabled with a CA file"): (
-        ScyllaDBConfig,
-        {"TLS": {"IS_ENABLED": True, "CA_FILE": "/tmp/ca.pem"}},
-    ),
+    ("ScyllaDB", "a client certificate without a key"): (ScyllaDBConfig, {"TLS": {"IS_ENABLED": True, "CERT_FILE": "/tmp/client.pem"}}),
+    ("ScyllaDB", "a CA file with TLS disabled"): (ScyllaDBConfig, {"TLS": {"CA_FILE": "/tmp/ca.pem"}}),
+    ("ScyllaDB", "an exponential reconnection base above the maximum"): (ScyllaDBConfig, {"RECONNECTION": {"POLICY": "EXPONENTIAL", "BASE_DELAY": 20.0, "MAX_DELAY": 5.0}}),
+    ("ScyllaDB", "an exponential reconnection within bounds"): (ScyllaDBConfig, {"RECONNECTION": {"POLICY": "EXPONENTIAL", "BASE_DELAY": 1.0, "MAX_DELAY": 5.0}}),
+    ("ScyllaDB", "TLS enabled with a CA file"): (ScyllaDBConfig, {"TLS": {"IS_ENABLED": True, "CA_FILE": "/tmp/ca.pem"}}),
+    ("ScyllaDB", "a grouped replication without datacenters"): (ScyllaDBConfig, {"REPLICATION": {"STRATEGY": "NetworkTopologyStrategy", "CONFIG": {}}}),
     ("Elasticsearch", "grouped username without a password"): (ElasticsearchConfig, {"AUTH": {"USER_NAME": "user"}}),
-    ("Elasticsearch", "grouped client cert without a key"): (
-        ElasticsearchConfig,
-        {"TLS": {"CLIENT_CERT": "/tmp/c.pem"}},
-    ),
-    ("Elasticsearch", "grouped CA file with verification disabled"): (
-        ElasticsearchConfig,
-        {"TLS": {"VERIFY_CERTS": False, "CA_CERTS": "/tmp/ca.pem"}},
-    ),
-    ("Elasticsearch", "only a username"): (ElasticsearchConfig, {"HTTP_USER_NAME": "user"}),
-    ("Elasticsearch", "only a password"): (ElasticsearchConfig, {"HTTP_PASSWORD": "secret"}),
-    ("Elasticsearch", "only an API key"): (ElasticsearchConfig, {"API_KEY": "id"}),
-    ("Elasticsearch", "only an API secret"): (ElasticsearchConfig, {"API_SECRET": "secret"}),
-    ("Elasticsearch", "a username and password"): (
-        ElasticsearchConfig,
-        {"HTTP_USER_NAME": "user", "HTTP_PASSWORD": "secret"},
-    ),
-    ("Elasticsearch", "a client key without a certificate"): (ElasticsearchConfig, {"CLIENT_KEY": "/tmp/c.key"}),
-    ("Elasticsearch", "a client certificate and key"): (
-        ElasticsearchConfig,
-        {"CLIENT_CERT": "/tmp/c.pem", "CLIENT_KEY": "/tmp/c.key"},
-    ),
+    ("Elasticsearch", "grouped client cert without a key"): (ElasticsearchConfig, {"TLS": {"CLIENT_CERT": "/tmp/c.pem"}}),
+    ("Elasticsearch", "grouped CA file with verification disabled"): (ElasticsearchConfig, {"TLS": {"VERIFY_CERTS": False, "CA_CERTS": "/tmp/ca.pem"}}),
+    ("Elasticsearch", "only a password"): (ElasticsearchConfig, {"AUTH": {"PASSWORD": "secret"}}),
+    ("Elasticsearch", "only an API key"): (ElasticsearchConfig, {"AUTH": {"API_KEY": "id"}}),
+    ("Elasticsearch", "only an API secret"): (ElasticsearchConfig, {"AUTH": {"API_SECRET": "secret"}}),
+    ("Elasticsearch", "a username and password"): (ElasticsearchConfig, {"AUTH": {"USER_NAME": "user", "PASSWORD": "secret"}}),
+    ("Elasticsearch", "a client key without a certificate"): (ElasticsearchConfig, {"TLS": {"CLIENT_KEY": "/tmp/c.key"}}),
+    ("Elasticsearch", "a client certificate and key"): (ElasticsearchConfig, {"TLS": {"CLIENT_CERT": "/tmp/c.pem", "CLIENT_KEY": "/tmp/c.key"}}),
     ("Elasticsearch", "an unknown node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "fastest"}),
     ("Elasticsearch", "the random node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "random"}),
-    ("OpenTelemetry", "a pushgateway exporter without a URL"): (
-        OpentelemetryConfig,
-        {"METRICS_EXPORTER": "pushgateway"},
-    ),
-    ("OpenTelemetry", "a pushgateway exporter with a grouped URL"): (
-        OpentelemetryConfig,
-        {"METRICS_EXPORTER": "pushgateway", "PUSHGATEWAY": {"URL": "http://pushgateway:9091"}},
-    ),
-    ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
-    ("Temporal", "a grouped client certificate without a key"): (
-        TemporalConfig,
-        {"TLS": {"CLIENT_CERT": "/tmp/client.pem"}},
-    ),
-    ("Temporal", "a grouped run timeout above the execution one"): (
-        TemporalConfig,
-        {"WORKFLOW": {"RUN_TIMEOUT": 7200, "EXECUTION_TIMEOUT": 3600}},
-    ),
-    ("Temporal", "a grouped keep alive timeout above the interval"): (
-        TemporalConfig,
-        {"KEEP_ALIVE": {"TIMEOUT_MS": 60000, "INTERVAL_MS": 30000}},
-    ),
-    ("Temporal", "a grouped client certificate with a key"): (
-        TemporalConfig,
-        {"TLS": {"CLIENT_CERT": "/tmp/client.pem", "CLIENT_KEY": "/tmp/client.key"}},
-    ),
-    ("Temporal", "only a CA certificate"): (TemporalConfig, {"TLS_CA_CERT": "/tmp/ca.pem"}),
-    ("Temporal", "a client key without a certificate"): (TemporalConfig, {"TLS_CLIENT_KEY": "/tmp/client.key"}),
-    ("Temporal", "a verification name without a CA"): (
-        TemporalConfig,
-        {"TLS_VERIFICATION_SERVER_NAME": "temporal.internal"},
-    ),
-    ("Temporal", "a verification name with a CA"): (
-        TemporalConfig,
-        {"TLS_VERIFICATION_SERVER_NAME": "temporal.internal", "TLS_CA_CERT": "/tmp/ca.pem"},
-    ),
-    ("Temporal", "a run timeout above the execution one"): (
-        TemporalConfig,
-        {"WORKFLOW_RUN_TIMEOUT": 7200, "WORKFLOW_EXECUTION_TIMEOUT": 3600},
-    ),
-    ("Temporal", "a task timeout above the run timeout"): (
-        TemporalConfig,
-        {"WORKFLOW_TASK_TIMEOUT": 60, "WORKFLOW_RUN_TIMEOUT": 30, "WORKFLOW_EXECUTION_TIMEOUT": 120},
-    ),
-    ("Temporal", "a keep alive timeout above the interval"): (
-        TemporalConfig,
-        {"KEEP_ALIVE_TIMEOUT_MS": 60000, "KEEP_ALIVE_INTERVAL_MS": 30000},
-    ),
+    ("OpenTelemetry", "a pushgateway exporter without a URL"): (OpentelemetryConfig, {"METRICS_EXPORTER": "pushgateway"}),
+    ("OpenTelemetry", "a pushgateway exporter with a grouped URL"): (OpentelemetryConfig, {"METRICS_EXPORTER": "pushgateway", "PUSHGATEWAY": {"URL": "http://pushgateway:9091"}}),
+    ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS": {"CLIENT_CERT": "/tmp/client.pem"}}),
+    ("Temporal", "a grouped run timeout above the execution one"): (TemporalConfig, {"WORKFLOW": {"RUN_TIMEOUT": 7200, "EXECUTION_TIMEOUT": 3600}}),
+    ("Temporal", "a grouped keep alive timeout above the interval"): (TemporalConfig, {"KEEP_ALIVE": {"TIMEOUT_MS": 60000, "INTERVAL_MS": 30000}}),
+    ("Temporal", "a grouped client certificate with a key"): (TemporalConfig, {"TLS": {"CLIENT_CERT": "/tmp/client.pem", "CLIENT_KEY": "/tmp/client.key"}}),
+    ("Temporal", "only a CA certificate"): (TemporalConfig, {"TLS": {"CA_CERT": "/tmp/ca.pem"}}),
+    ("Temporal", "a client key without a certificate"): (TemporalConfig, {"TLS": {"CLIENT_KEY": "/tmp/client.key"}}),
+    ("Temporal", "a verification name without a CA"): (TemporalConfig, {"TLS": {"VERIFICATION_SERVER_NAME": "temporal.internal"}}),
+    ("Temporal", "a verification name with a CA"): (TemporalConfig, {"TLS": {"VERIFICATION_SERVER_NAME": "temporal.internal", "CA_CERT": "/tmp/ca.pem"}}),
+    ("Temporal", "a task timeout above the run timeout"): (TemporalConfig, {"WORKFLOW": {"TASK_TIMEOUT": 60, "RUN_TIMEOUT": 30, "EXECUTION_TIMEOUT": 120}}),
 }
 
 
@@ -786,7 +673,9 @@ def step_when_default_temporal_config_built(context):
 
 @then("the default Temporal setting {field} should be {expected}")
 def step_then_temporal_default(context, field, expected):
-    actual = getattr(get_current_scenario_context(context).get("temporal_config"), field)
+    actual = get_current_scenario_context(context).get("temporal_config")
+    for part in field.split("."):
+        actual = getattr(actual, part)
     assert str(actual) == expected, f"Expected {field}={expected}, got {actual!r}"
 
 
@@ -836,13 +725,13 @@ def step_when_elasticsearch_bearer_conflict(context, other):
     from archipy.configs.config_template import ElasticsearchConfig
     from archipy.models.errors import InvalidArgumentError
 
-    updates = {"BEARER_AUTH": "token"}
+    auth = {"BEARER": "token"}
     if other == "API key":
-        updates.update(API_KEY="id", API_SECRET="secret")
+        auth.update(API_KEY="id", API_SECRET="secret")
     else:
-        updates.update(HTTP_USER_NAME="user", HTTP_PASSWORD="password")
+        auth.update(USER_NAME="user", PASSWORD="password")
     try:
-        ElasticsearchConfig(**updates)
+        ElasticsearchConfig(AUTH=auth)
     except InvalidArgumentError:
         get_current_scenario_context(context).store("es_config_rejected", True)
     else:
@@ -916,8 +805,8 @@ def _write_test_certificate(directory: Path) -> tuple[Path, Path]:
 _SCYLLADB_TLS_SETTINGS = {
     "TLS disabled": {},
     "a CA file": {},
-    "a CA file and no host name check": {"TLS_CHECK_HOSTNAME": False},
-    "verification disabled": {"TLS_VERIFY_MODE": "CERT_NONE"},
+    "a CA file and no host name check": {"CHECK_HOSTNAME": False},
+    "verification disabled": {"VERIFY_MODE": "CERT_NONE"},
     "a CA file and a client certificate": {},
 }
 
@@ -929,12 +818,12 @@ def step_when_scylladb_tls_context_built(context, tls):
     cert_path, key_path = _write_test_certificate(directory)
     settings = dict(_SCYLLADB_TLS_SETTINGS[tls])
     if tls != "TLS disabled":
-        settings["TLS_ENABLED"] = True
+        settings["IS_ENABLED"] = True
     if "CA file" in tls:
-        settings["TLS_CA_FILE"] = str(cert_path)
+        settings["CA_FILE"] = str(cert_path)
     if "client certificate" in tls:
-        settings.update(TLS_CERT_FILE=str(cert_path), TLS_KEY_FILE=str(key_path))
-    ssl_context = ScyllaDBConfig(**settings).build_ssl_context()
+        settings.update(CERT_FILE=str(cert_path), KEY_FILE=str(key_path))
+    ssl_context = ScyllaDBConfig(TLS=settings).build_ssl_context()
     get_current_scenario_context(context).store("scylladb_ssl_context", ssl_context)
 
 
@@ -958,11 +847,11 @@ def step_then_scylladb_tls_context(context, expected):
 
 @when("an Elasticsearch config is built with {credential} and {transport}")
 def step_when_elasticsearch_insecure_config(context, credential, transport):
-    updates = {"HTTP_USER_NAME": "user", "HTTP_PASSWORD": "secret"} if credential == "credentials" else {}
+    updates = {"AUTH": {"USER_NAME": "user", "PASSWORD": "secret"}} if credential == "credentials" else {}
     if transport == "an http host":
         updates["HOSTS"] = ["http://es:9200"]
     elif transport == "verification disabled":
-        updates["VERIFY_CERTS"] = False
+        updates["TLS"] = {"VERIFY_CERTS": False}
     messages: list[str] = []
 
     class _Capture(logging.Handler):
@@ -986,51 +875,7 @@ def step_then_elasticsearch_warning_count(context, count):
     assert len(messages) == count, messages
 
 
-class _FoldGroup(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    NAME: str | None = None
-
-
-class _FoldSection(BaseModel):
-    NAME: str | None = Field(default=None, deprecated=deprecated_flat_message("TEST", "NAME", "GROUP", "NAME"))
-    GROUP: _FoldGroup | None = None
-
-    @model_validator(mode="after")
-    def _fold(self):
-        fold_flat_fields(self, "GROUP", _FoldGroup, {"NAME": "NAME"})
-        return self
-
-
-@given('a test section with flat "{flat}" set to {flat_value} and group "{group}" set to {group_value}')
-def step_given_fold_section(context, flat, flat_value, group, group_value):
-    scenario_context = get_current_scenario_context(context)
-    scenario_context.store("fold_flat", {} if flat == "none" else {flat: json.loads(flat_value)})
-    scenario_context.store("fold_group", None if group == "none" else {group: json.loads(group_value)})
-
-
-@when("the test section is validated")
-def step_when_fold_validated(context):
-    scenario_context = get_current_scenario_context(context)
-    group = scenario_context.get("fold_group")
-    data = dict(scenario_context.get("fold_flat"))
-    if group is not None:
-        data["GROUP"] = group
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        section = _FoldSection(**data)
-    scenario_context.store("fold_section", section)
-    scenario_context.store("fold_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
-
-
-@then("the group value should be {expected}")
-def step_then_fold_value(context, expected):
-    section = get_current_scenario_context(context).get("fold_section")
-    actual = section.GROUP.NAME if section.GROUP else None
-    assert actual == json.loads(expected), actual
-
-
-@then("{count:d} deprecation warning should be raised")
-def step_then_fold_warnings(context, count):
-    caught = get_current_scenario_context(context).get("fold_warnings")
-    assert len(caught) == count, [str(w.message) for w in caught]
+@then('the "{section}" configuration has no "{field}" field')
+def step_then_config_schema_excludes_field(context, section, field):
+    config_type = type(getattr(BaseConfig.global_config(), section))
+    assert field not in config_type.model_fields

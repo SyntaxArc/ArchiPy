@@ -7,15 +7,14 @@ __lazy_modules__ = ["archipy.configs.base_config"]
 import asyncio
 import functools
 import inspect
-from typing import TYPE_CHECKING, Never, Protocol, TypedDict, cast
+from typing import TYPE_CHECKING, Protocol, TypedDict, cast
 
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.helpers.utils.otel_utils import OtelUtils
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Coroutine, Mapping
+    from collections.abc import Awaitable, Callable, Mapping
 
     from opentelemetry.context import Context
     from opentelemetry.trace import Span, SpanKind, Tracer
@@ -58,12 +57,6 @@ class _NamedFunction[**P, R](Protocol):
     __name__: str
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
-
-
-class _AsyncSpanDecorator(Protocol):
-    """A decorator that wraps a coroutine function in a span and keeps its signature."""
-
-    def __call__[**P, C: Coroutine[object, Never, object]](self, func: _NamedFunction[P, C], /) -> Callable[P, C]: ...
 
 
 class _SpanStartOptions(TypedDict, total=False):
@@ -461,47 +454,6 @@ def trace_span(
     return decorator
 
 
-def async_trace_span(
-    name: str | None = None,
-    *,
-    kind: SpanKind | None = None,
-    attributes: Mapping[str, object] | None = None,
-    capture_args: list[str] | None = None,
-) -> _AsyncSpanDecorator:
-    """Decorate an async function with an OpenTelemetry child span.
-
-    Deprecated:
-        Use :func:`trace_span`, which supports async functions directly.
-
-    Args:
-        name: Span name. Defaults to the function name.
-        kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
-        attributes: Optional static attributes set on the span.
-        capture_args: Parameter names whose call values are recorded as attributes.
-            Sensitive names (password, token, …) are redacted to ``***``.
-
-    Returns:
-        A decorator that wraps the target coroutine function in a span.
-
-    Raises:
-        InvalidArgumentError: If the decorated object is not a coroutine function.
-    """
-    warn_deprecated_name("async_trace_span", "trace_span")
-
-    def decorator[**P, C: Coroutine[object, Never, object]](func: _NamedFunction[P, C]) -> Callable[P, C]:
-        _require_coroutine_function(func, "async_trace_span")
-        return _traced_wrapper(
-            func,
-            name=name,
-            kind=kind,
-            attributes=attributes,
-            capture_args=capture_args,
-            root=False,
-        )
-
-    return decorator
-
-
 def trace_root(
     name: str | None = None,
     *,
@@ -526,50 +478,6 @@ def trace_root(
     """
 
     def decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
-        return _traced_wrapper(
-            func,
-            name=name,
-            kind=kind,
-            attributes=attributes,
-            capture_args=capture_args,
-            root=True,
-        )
-
-    return decorator
-
-
-def async_trace_root(
-    name: str | None = None,
-    *,
-    kind: SpanKind | None = None,
-    attributes: Mapping[str, object] | None = None,
-    capture_args: list[str] | None = None,
-) -> _AsyncSpanDecorator:
-    """Decorate an async function with a root OpenTelemetry span.
-
-    Deprecated:
-        Use :func:`trace_root`, which supports async functions directly.
-
-    Starts the span with a fresh context detached from any parent span
-    (``INVALID_SPAN`` context).
-
-    Args:
-        name: Span name. Defaults to the function name.
-        kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
-        attributes: Optional static attributes set on the span.
-        capture_args: Parameter names whose call values are recorded as attributes.
-            Sensitive names (password, token, …) are redacted to ``***``.
-
-    Returns:
-        A decorator that wraps the target coroutine function in a root span.
-
-    Raises:
-        InvalidArgumentError: If the decorated object is not a coroutine function.
-    """
-    warn_deprecated_name("async_trace_root", "trace_root")
-
-    def decorator[**P, C: Coroutine[object, Never, object]](func: _NamedFunction[P, C]) -> Callable[P, C]:
-        _require_coroutine_function(func, "async_trace_root")
         return _traced_wrapper(
             func,
             name=name,

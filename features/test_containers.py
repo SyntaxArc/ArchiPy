@@ -379,11 +379,9 @@ class RedisClusterTestContainer(metaclass=Singleton, thread_safe=True):
         self._containers: list[DockerContainer] = []
         self.cluster_config = RedisConfig(
             MODE=RedisMode.CLUSTER,
-            CLUSTER_NODES=list(_CLUSTER_NODE_ADDRESSES),
+            CLUSTER={"NODES": list(_CLUSTER_NODE_ADDRESSES), "REQUIRE_FULL_COVERAGE": True, "READ_FROM_REPLICAS": True},
             DECODE_RESPONSES=True,
             PASSWORD=None,
-            CLUSTER_REQUIRE_FULL_COVERAGE=True,
-            CLUSTER_READ_FROM_REPLICAS=True,
         )
 
     def _create_containers(self) -> list[DockerContainer]:
@@ -614,6 +612,13 @@ class _PatientKeycloakContainer(KeycloakContainer):
         super()._readiness_probe()
 
 
+def keycloak_test_issuer(server_url, realm):
+    """Return the issuer URL configured by the Keycloak test container."""
+    if os.environ.get("KEYCLOAK_SPLIT_HOSTNAME", "1") != "0":
+        server_url = KEYCLOAK_ADMIN_HOSTNAME if realm == "master" else KEYCLOAK_PUBLIC_HOSTNAME
+    return f"{server_url.rstrip('/')}/realms/{realm}"
+
+
 @ContainerManager.register("keycloak")
 class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
     def __init__(self, config: KeycloakConfig | None = None, image: str | None = None) -> None:
@@ -694,7 +699,9 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Update global config with actual container endpoint
         global_config = BaseConfig.global_config()
-        global_config.KEYCLOAK.SERVER_URL = f"http://{self.host}:{self.port}"
+        config = global_config.KEYCLOAK
+        config.SERVER_URL = f"http://{self.host}:{self.port}"
+        config.TOKEN_VALIDATION.EXPECTED_ISSUER = keycloak_test_issuer(config.SERVER_URL, config.REALM_NAME)
 
         logger.info("Keycloak container started on %s:%s", self.host, self.port)
 
@@ -763,8 +770,8 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
 
         self.host: str | None = None
         self.port: int | None = None
-        self.username: str | None = self.config.HTTP_USER_NAME
-        self.password: str | None = self.config.HTTP_PASSWORD.get_secret_value() if self.config.HTTP_PASSWORD else None
+        self.username: str | None = self.config.AUTH.USER_NAME
+        self.password: str | None = self.config.AUTH.PASSWORD.get_secret_value() if self.config.AUTH.PASSWORD else None
         self.cluster_name: str = "test-cluster"
 
         self._container: ElasticSearchContainer | None = _build_elasticsearch_container(self.image)
@@ -1523,7 +1530,6 @@ class MailpitTestContainer(metaclass=Singleton, thread_safe=True):
         container = (
             DockerContainer(self.image)
             .with_exposed_ports(self.SMTP_PORT, self.API_PORT)
-            .with_env("MP_SMTP_AUTH", f"{self.USERNAME}:{self.PASSWORD}")
             # Mailpit resolves the name of every SMTP client; with no DNS in the container each connection waits 20 s.
             .with_env("MP_SMTP_DISABLE_RDNS", "true")
             # Keep the /api/v1/info trace probe independent of GitHub's release API.
@@ -1536,12 +1542,10 @@ class MailpitTestContainer(metaclass=Singleton, thread_safe=True):
             _write_self_signed_certificate(cert_path)
             container = (
                 container.with_volume_mapping(str(cert_path), "/certs", "ro")
+                .with_env("MP_SMTP_AUTH", f"{self.USERNAME}:{self.PASSWORD}")
                 .with_env("MP_SMTP_TLS_CERT", "/certs/cert.pem")
                 .with_env("MP_SMTP_TLS_KEY", "/certs/key.pem")
             )
-        else:
-            # Without TLS Mailpit only offers AUTH on an insecure connection when told to.
-            container = container.with_env("MP_SMTP_AUTH_ALLOW_INSECURE", "1")
         return container
 
     def start(self) -> DockerContainer:

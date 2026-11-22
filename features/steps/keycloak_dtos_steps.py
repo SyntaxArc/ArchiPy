@@ -1,5 +1,4 @@
 import datetime
-import warnings
 from pathlib import Path
 from tempfile import mkdtemp
 
@@ -82,26 +81,18 @@ def step_role_response(context, name):
     get_current_scenario_context(context).store("response", role_dtos.KeycloakRoleDTO(name=name))
 
 
-@when("the response is read with {access}")
-def step_read_response(context, access):
-    sc = get_current_scenario_context(context)
-    response = sc.get("response")
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        value = response["name"] if access == "brackets" else response.get("name")
-    sc.store("value", value)
-    sc.store("warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+@then('the role name attribute is "{value}"')
+def step_role_name(context, value):
+    role = get_current_scenario_context(context).get("response")
+    assert role.name == value
+    assert role.to_payload()["name"] == value
 
 
-@then("a dict-style access deprecation warning is raised")
-def step_dict_warning(context):
-    caught = get_current_scenario_context(context).get("warnings")
-    assert len(caught) == 1 and "dict-style access" in str(caught[0].message), caught
-
-
-@then('the value read is "{value}"')
-def step_value_read(context, value):
-    assert get_current_scenario_context(context).get("value") == value
+@then("the role does not support dict-style access")
+def step_role_no_dict_access(context):
+    role = get_current_scenario_context(context).get("response")
+    assert not hasattr(role, "__getitem__")
+    assert not hasattr(role, "get")
 
 
 @given("a Keycloak KeycloakTokenClaimsDTO response without claims")
@@ -114,25 +105,19 @@ def step_response_falsy(context):
     assert not get_current_scenario_context(context).get("response")
 
 
-@when("a {kind} payload is converted for the Keycloak adapter")
-def step_convert_payload(context, kind):
-    sc = get_current_scenario_context(context)
-    value = group_dtos.KeycloakGroupRequestDTO(name="ops") if kind == "DTO" else {"name": "ops"}
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        sc.store("adapter_payload", to_request_payload(value))
-    sc.store("warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+@when("a dict payload is converted for the Keycloak adapter")
+def step_reject_dict_payload(context):
+    from archipy.models.errors import InvalidArgumentError
+
+    try:
+        to_request_payload({"name": "ops"})
+    except InvalidArgumentError as error:
+        get_current_scenario_context(context).store("validation_error", error)
 
 
-@then('the adapter payload is {{"name": "ops"}}')
-def step_adapter_payload(context):
-    assert get_current_scenario_context(context).get("adapter_payload") == {"name": "ops"}
-
-
-@then("the dict deprecation warning is {state}")
-def step_dict_deprecation_state(context, state):
-    caught = get_current_scenario_context(context).get("warnings")
-    assert bool(caught) == (state == "raised"), caught
+@then("the adapter rejects the payload as an invalid argument")
+def step_invalid_adapter_payload(context):
+    assert get_current_scenario_context(context).get("validation_error") is not None
 
 
 _MUTATION_BODIES = {
@@ -261,10 +246,8 @@ def step_connection_options_config(context):
     config = KeycloakConfig(
         SERVER_URL="https://keycloak.invalid",
         CLIENT_ID="client",
-        VERIFY_SSL=cert_file,
+        TLS={"VERIFY_SSL": cert_file, "CLIENT_CERT_FILE": cert_file, "CLIENT_KEY_FILE": key_file},
         TIMEOUT=2.5,
-        CLIENT_CERT_FILE=cert_file,
-        CLIENT_KEY_FILE=key_file,
         MAX_RETRIES=4,
         POOL_MAXSIZE=7,
         PROXIES={"https://": "http://proxy.invalid:3128"},
@@ -311,7 +294,7 @@ def step_connections_use_options(context):
 def step_config_key_without_cert(context):
     sc = get_current_scenario_context(context)
     try:
-        KeycloakConfig(CLIENT_KEY_FILE="/etc/ssl/client.key")
+        KeycloakConfig(TLS={"CLIENT_KEY_FILE": "/etc/ssl/client.key"})
     except ValidationError as e:
         sc.store("validation_error", e)
     else:
@@ -320,9 +303,9 @@ def step_config_key_without_cert(context):
 
 @when('a Keycloak config is built with VERIFY_SSL "{value}"')
 def step_config_verify_ssl(context, value):
-    get_current_scenario_context(context).store("keycloak_config", KeycloakConfig(VERIFY_SSL=value))
+    get_current_scenario_context(context).store("keycloak_config", KeycloakConfig(TLS={"VERIFY_SSL": value}))
 
 
 @then('the Keycloak config VERIFY_SSL is "{parsed}"')
 def step_config_verify_ssl_is(context, parsed):
-    assert str(get_current_scenario_context(context).get("keycloak_config").VERIFY_SSL) == parsed
+    assert str(get_current_scenario_context(context).get("keycloak_config").TLS.VERIFY_SSL) == parsed

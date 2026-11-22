@@ -1,7 +1,6 @@
 import asyncio
 import json
 import time
-import warnings
 from contextlib import ExitStack, contextmanager
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -20,6 +19,17 @@ from archipy.adapters.keycloak import auth as keycloak_auth
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
 from archipy.adapters.keycloak.auth import AuthContextManager
 from archipy.helpers.errors.fastapi import setup_exception_handlers
+from archipy.models.dtos.keycloak.auth_dtos import AuthenticatedUserDTO
+from archipy.models.dtos.keycloak.authz_dtos import (
+    KeycloakAuthzPolicyRequestDTO,
+    KeycloakAuthzResourceRequestDTO,
+    KeycloakAuthzScopeRequestDTO,
+)
+from archipy.models.dtos.keycloak.authz_policy_dtos import (
+    KeycloakAuthzPolicyRoleDTO,
+    KeycloakAuthzRolePolicyRequestDTO,
+)
+from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeRequestDTO
 from archipy.models.dtos.keycloak.organization_dtos import (
     KeycloakOrganizationDomainRequestDTO,
     KeycloakOrganizationRequestDTO,
@@ -28,8 +38,8 @@ from archipy.models.dtos.keycloak.protocol_mapper_config_dtos import (
     KeycloakOidcHardcodedClaimMapperConfigDTO,
     KeycloakOidcOrganizationMembershipMapperConfigDTO,
 )
-from archipy.models.dtos.keycloak.token_dtos import KeycloakOrganizationClaimDTO, KeycloakUserInfoDTO
-from archipy.models.dtos.keycloak_dtos import AuthenticatedUserDTO
+from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmRequestDTO
+from archipy.models.dtos.keycloak.token_dtos import KeycloakOrganizationClaimDTO
 from archipy.models.errors import BaseError
 
 
@@ -279,7 +289,7 @@ def step_keycloak_auth_clear_sessions(context, username):
 def step_keycloak_auth_delete_permission(context, scope, resource, client):
     sc = _ctx(context)
     adapter = _real_sync_adapter(sc)
-    internal_id = sc.get(f"client_{client}")["internal_client_id"]
+    internal_id = sc.get(f"client_{client}").internal_client_id
     permission_name = f"{resource}-{scope}-permission"
     permission_id = next(
         p["id"] for p in adapter.admin_adapter.get_client_authz_permissions(internal_id) if p["name"] == permission_name
@@ -368,41 +378,10 @@ def step_keycloak_auth_context_during(context, username):
     assert auth_context.username == username, f"expected {username}, got {auth_context.username}"
 
 
-@then('reading "{field}" from the request state warns and names "{replacement}"')
-def step_keycloak_auth_state_read_warns(context, field, replacement):
+@then("the request state has no Keycloak auth fields")
+def step_keycloak_auth_state_has_no_fields(context):
     state = _ctx(context).get("request").state
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        list(getattr(state, field))
-    deprecations = [w for w in caught if issubclass(w.category, DeprecationWarning)]
-    assert deprecations, "reading the request state did not warn"
-    message = str(deprecations[0].message)
-    assert f"request.state.{field}" in message and replacement in message, message
-    assert deprecations[0].filename.endswith("keycloak_auth_steps.py"), deprecations[0].filename
-
-
-@then("the value the keycloak auth dependency returned does not warn when it is read")
-def step_keycloak_auth_returned_value_silent(context):
-    result = _ctx(context).get("result")
-    assert isinstance(result, KeycloakUserInfoDTO)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        result.to_dict()
-    assert not [w for w in caught if issubclass(w.category, DeprecationWarning)]
-
-
-@then("the request state keeps the same content as the auth context")
-def step_keycloak_auth_state_matches_context(context):
-    sc = _ctx(context)
-    state = sc.get("request").state
-    during = sc.get("auth_context_during")
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        assert dict(state.user_info) == during.raw_user_info.to_dict()
-        assert set(state.user_roles) == set(during.roles)
-        assert list(state.actor_chain) == list(during.actor_chain)
-        assert dict(state.token_info) == during.token_info.to_dict()
-    assert during.token_info.sub == str(during.user_uuid)
+    assert not vars(state), vars(state)
 
 
 @then("the keycloak auth context is cleared after the dependency ends")
@@ -430,9 +409,9 @@ def step_keycloak_auth_error_missing_permission(context, perm):
     assert error.additional_data["missing_permissions"] == [perm]
 
 
-@then("the keycloak auth request state has an empty actor chain")
-def step_keycloak_auth_state_empty_chain(context):
-    assert _ctx(context).get("request").state.actor_chain == []
+@then("the keycloak auth context has an empty actor chain")
+def step_keycloak_auth_context_empty_chain(context):
+    assert not _ctx(context).get("auth_context_during").actor_chain
 
 
 # gRPC
@@ -696,7 +675,7 @@ def step_keycloak_auth_obtain_token(context, username, password):
 def step_keycloak_auth_userinfo_subject(context, subject, username):
     scenario = _ctx(context)
     adapter = _real_sync_adapter(scenario)
-    client_id = scenario.get("client_auth-client")["internal_client_id"]
+    client_id = scenario.get("client_auth-client").internal_client_id
     mapper = adapter.add_client_mapper_with_config(
         client_id,
         "malformed-userinfo-subject",
@@ -743,9 +722,7 @@ def step_keycloak_auth_malformed_identity_rejected(context):
 @given('the keycloak auth realm "{realm}" has an access token lifespan of {seconds:d} seconds')
 def step_keycloak_auth_token_lifespan(context, realm, seconds):
     adapter = _real_sync_adapter(_ctx(context))
-    realm_representation = dict(adapter.get_realm(realm))
-    realm_representation["accessTokenLifespan"] = seconds
-    adapter.update_realm(realm, **realm_representation)
+    adapter.update_realm(realm, config=KeycloakRealmRequestDTO(access_token_lifespan=seconds))
 
 
 @when("the keycloak auth access token lifespan has elapsed")
@@ -761,7 +738,7 @@ def step_keycloak_auth_wait_expiry(context):
 def step_keycloak_auth_uma_setup(context, client, resource, scopes, scope, role):
     sc = _ctx(context)
     adapter = _real_sync_adapter(sc)
-    internal_id = sc.get(f"client_{client}")["internal_client_id"]
+    internal_id = sc.get(f"client_{client}").internal_client_id
     admin = adapter.admin_adapter
 
     admin_client = admin.get_client(internal_id)
@@ -772,7 +749,11 @@ def step_keycloak_auth_uma_setup(context, client, resource, scopes, scope, role)
     resource_type = f"urn:{client}:resources:{resource}"
     adapter.create_client_authz_resource(
         internal_id,
-        {"name": resource, "type": resource_type, "scopes": [{"name": name} for name in _split(scopes)]},
+        KeycloakAuthzResourceRequestDTO(
+            name=resource,
+            type=resource_type,
+            scopes=[KeycloakAuthzScopeRequestDTO(name=name) for name in _split(scopes)],
+        ),
         skip_exists=True,
     )
     resource_id = next(r["_id"] for r in admin.get_client_authz_resources(internal_id) if r["name"] == resource)
@@ -782,28 +763,27 @@ def step_keycloak_auth_uma_setup(context, client, resource, scopes, scope, role)
     policy_name = f"{resource}-{role}-policy"
     adapter.create_client_authz_role_based_policy(
         internal_id,
-        {
-            "name": policy_name,
-            "type": "role",
-            "logic": "POSITIVE",
-            "decisionStrategy": "UNANIMOUS",
-            "roles": [{"id": role_id}],
-        },
+        KeycloakAuthzRolePolicyRequestDTO(
+            name=policy_name,
+            logic="POSITIVE",
+            decision_strategy="UNANIMOUS",
+            roles=[KeycloakAuthzPolicyRoleDTO(id=role_id)],
+        ),
         skip_exists=True,
     )
     policy_id = next(p["id"] for p in admin.get_client_authz_policies(internal_id) if p["name"] == policy_name)
     permission_name = f"{resource}-{scope}-permission"
     if not any(p["name"] == permission_name for p in admin.get_client_authz_permissions(internal_id)):
         adapter.create_client_authz_scope_permission(
-            {
-                "name": permission_name,
-                "type": "scope",
-                "logic": "POSITIVE",
-                "decisionStrategy": "UNANIMOUS",
-                "resources": [resource_id],
-                "scopes": [scope_id],
-                "policies": [policy_id],
-            },
+            KeycloakAuthzPolicyRequestDTO(
+                name=permission_name,
+                type="scope",
+                logic="POSITIVE",
+                decision_strategy="UNANIMOUS",
+                resources=[resource_id],
+                scopes=[scope_id],
+                policies=[policy_id],
+            ),
             internal_id,
         )
 
@@ -847,16 +827,18 @@ def step_keycloak_auth_result_user(context, username):
     assert info.user_uuid == _user_id(sc, username)
     assert info.preferred_username == username
     assert info.email == f"{username}@test.com"
-    assert sc.get("request").state.user_info == info.to_dict()
-    assert sc.get("request").state.token_info["sub"] == info.user_uuid
+    auth = sc.get("auth_context_during")
+    assert auth.raw_user_info == info
+    assert auth.token_info.sub == str(auth.user_uuid)
 
 
-@then('the keycloak auth request state user roles include "{roles}"')
-def step_keycloak_auth_state_roles_include(context, roles):
+@then('the keycloak auth context user roles include "{roles}"')
+def step_keycloak_auth_context_roles_include(context, roles):
     sc = _ctx(context)
     assert sc.get("error") is None, f"unexpected error {sc.get('error')!r}"
-    missing = set(_split(roles)) - set(sc.get("request").state.user_roles)
-    assert not missing, f"missing roles {missing}; got {sc.get('request').state.user_roles}"
+    actual_roles = sc.get("auth_context_during").roles
+    missing = set(_split(roles)) - set(actual_roles)
+    assert not missing, f"missing roles {missing}; got {actual_roles}"
 
 
 @then('the keycloak auth grpc handler ran as user "{username}" with roles including "{roles}"')
@@ -1023,7 +1005,7 @@ def step_organization_token_memberships(context, username, count):
         ),
     )
     client_id = adapter.get_client_id(adapter.configs.CLIENT_ID)
-    adapter.add_client_optional_client_scope(client_id, scope.id, {})
+    adapter.add_client_optional_client_scope(client_id, scope.id, KeycloakClientScopeRequestDTO())
 
 
 @given("the default organization requirement is {required}")

@@ -8,10 +8,8 @@ description: API reference for ArchiPy helper decorators.
 The `helpers/decorators` subpackage provides function and class decorators for cross-cutting concerns including caching,
 retry logic, deprecation, timing, tracing, and transaction management.
 
-Decorators are named without a `_decorator` suffix (`retry`, `timeout`, `ttl_cache`, ...) and detect `async def`
-functions automatically. The old names (`retry_decorator`, `async_trace_span`, ...) keep working and emit a
-`DeprecationWarning` and will be removed in 6.0.0; see the
-[Decorators tutorial](../../tutorials/helpers/decorators.md#deprecated-names).
+Import general-purpose decorators from `archipy.helpers.decorators`. The tracing and metrics decorators accept
+both synchronous and asynchronous functions.
 
 ## Cache
 
@@ -51,8 +49,7 @@ heading_level: 3
 
 ## Tracing
 
-OpenTelemetry span decorators for functions and classes (`trace_span`, `trace_root`, `trace_class`). The old
-`async_trace_span` and `async_trace_root` names are deprecated aliases that will be removed in 6.0.0.
+OpenTelemetry span decorators for functions and classes (`trace_span`, `trace_root`, `trace_class`).
 
 ::: archipy.helpers.decorators.tracing
 options:
@@ -62,7 +59,7 @@ heading_level: 3
 ## Metrics
 
 OpenTelemetry metrics decorators for duration histograms and call counters (`measure_duration`, `count_calls`). Both
-accept sync and async functions; the `async_*` names are deprecated aliases that will be removed in 6.0.0.
+accept synchronous and asynchronous functions.
 
 ::: archipy.helpers.decorators.metrics
 options:
@@ -80,9 +77,9 @@ heading_level: 3
 
 ## SQLAlchemy Atomic
 
-The SQLAlchemy atomic decorators moved to the adapters layer; see
-[Base SQLAlchemy](../adapters/base.md#atomic-transaction-decorators). The old
-`archipy.helpers.decorators` names still work and emit a `DeprecationWarning`; they will be removed in 6.0.0.
+
+Import the atomic decorators from `archipy.adapters.base.sqlalchemy.atomic`.
+[Base SQLAlchemy](../adapters/base.md#atomic-transaction-decorators) documents the database-specific variants.
 
 ## Deprecation Warnings
 

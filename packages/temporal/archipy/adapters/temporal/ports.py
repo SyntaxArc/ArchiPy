@@ -286,19 +286,13 @@ class TemporalPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def stop_schedule(self, schedule_id: str) -> None:
-        """Delete a schedule (deprecated name, use ``delete_schedule``)."""
-        raise NotImplementedError
-
     async def delete_schedule(self, schedule_id: str) -> None:
         """Delete a schedule permanently; ``pause_schedule`` stops it while keeping it.
-
-        Defaults to ``stop_schedule`` so existing implementations keep working.
 
         Args:
             schedule_id (str): The schedule ID.
         """
-        await self.stop_schedule(schedule_id)
+        raise NotImplementedError
 
 
 class WorkerPort:
@@ -318,7 +312,6 @@ class WorkerPort:
         task_queue: str,
         workflows: list[type] | None = None,
         activities: list[Callable[..., Any]] | None = None,
-        build_id: str | None = None,
         identity: str | None = None,
         max_concurrent_workflow_tasks: int | None = None,
         max_concurrent_activities: int | None = None,
@@ -331,7 +324,6 @@ class WorkerPort:
                 Defaults to None.
             activities (list[Callable], optional): List of activity callables to register.
                 Defaults to None.
-            build_id (str, optional): Build identifier for worker versioning.
                 Defaults to None.
             identity (str, optional): Unique worker identity. If None, auto-generated.
                 Defaults to None.

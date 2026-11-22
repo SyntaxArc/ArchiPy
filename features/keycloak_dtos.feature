@@ -53,30 +53,18 @@ Feature: Keycloak DTOs
       | KeycloakComponentRequestDTO | field name | provider_id | provider_id | ldap  |
       | KeycloakComponentRequestDTO | wire name  | providerId  | provider_id | ldap  |
 
-  Scenario Outline: Reading a response DTO like a dict warns
+  Scenario: Response DTOs expose attributes and serialize to dictionaries explicitly
     Given a Keycloak KeycloakRoleDTO response with name "admin"
-    When the response is read with <access>
-    Then a dict-style access deprecation warning is raised
-    And the value read is "admin"
-
-    Examples:
-      | access   |
-      | brackets |
-      | get      |
+    Then the role name attribute is "admin"
+    And the role does not support dict-style access
 
   Scenario: Empty claims are falsy
     Given a Keycloak KeycloakTokenClaimsDTO response without claims
     Then the response is falsy
 
-  Scenario Outline: Adapter request payloads accept a DTO or a deprecated dict
-    When a <kind> payload is converted for the Keycloak adapter
-    Then the adapter payload is {"name": "ops"}
-    And the dict deprecation warning is <warned>
-
-    Examples:
-      | kind | warned |
-      | DTO  | absent |
-      | dict | raised |
+  Scenario: Plain dictionaries are rejected as Keycloak adapter request payloads
+    When a dict payload is converted for the Keycloak adapter
+    Then the adapter rejects the payload as an invalid argument
 
   Scenario Outline: Mutation responses become a typed result
     When the Keycloak mutation body <body> is converted

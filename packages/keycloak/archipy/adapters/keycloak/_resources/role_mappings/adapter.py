@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -100,7 +99,7 @@ class KeycloakRoleMappingsMixin(SyncKeycloakMixinBase):
     def add_user_realm_role_mappings(
         self,
         user_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the role mappings of a user.
 
@@ -125,7 +124,7 @@ class KeycloakRoleMappingsMixin(SyncKeycloakMixinBase):
     def delete_user_realm_role_mappings(
         self,
         user_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the role mappings of a user.
 
@@ -211,7 +210,7 @@ class KeycloakRoleMappingsMixin(SyncKeycloakMixinBase):
         self,
         user_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the role mappings of a user.
 
@@ -238,7 +237,7 @@ class KeycloakRoleMappingsMixin(SyncKeycloakMixinBase):
         self,
         user_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the role mappings of a user.
 
@@ -421,7 +420,7 @@ class AsyncKeycloakRoleMappingsMixin(AsyncKeycloakMixinBase):
     async def add_user_realm_role_mappings(
         self,
         user_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the role mappings of a user.
 
@@ -446,7 +445,7 @@ class AsyncKeycloakRoleMappingsMixin(AsyncKeycloakMixinBase):
     async def delete_user_realm_role_mappings(
         self,
         user_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the role mappings of a user.
 
@@ -532,7 +531,7 @@ class AsyncKeycloakRoleMappingsMixin(AsyncKeycloakMixinBase):
         self,
         user_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the role mappings of a user.
 
@@ -559,7 +558,7 @@ class AsyncKeycloakRoleMappingsMixin(AsyncKeycloakMixinBase):
         self,
         user_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the role mappings of a user.
 

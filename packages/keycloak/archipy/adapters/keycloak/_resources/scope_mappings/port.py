@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.common_dtos import KeycloakAssignResultDTO, KeycloakDeleteResultDTO
@@ -37,7 +37,7 @@ class KeycloakScopeMappingsPort:
     def add_client_scope_realm_scope_mappings(
         self,
         client_scope_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the scope mappings of a client scope."""
         raise NotImplementedError
@@ -46,7 +46,7 @@ class KeycloakScopeMappingsPort:
     def delete_client_scope_realm_scope_mappings(
         self,
         client_scope_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the scope mappings of a client scope."""
         raise NotImplementedError
@@ -79,7 +79,7 @@ class KeycloakScopeMappingsPort:
         self,
         client_scope_id: str,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the scope mappings of a client scope."""
         raise NotImplementedError
@@ -89,7 +89,7 @@ class KeycloakScopeMappingsPort:
         self,
         client_scope_id: str,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the scope mappings of a client scope."""
         raise NotImplementedError
@@ -118,7 +118,7 @@ class KeycloakScopeMappingsPort:
     def add_client_realm_scope_mappings(
         self,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the scope mappings of a client."""
         raise NotImplementedError
@@ -127,7 +127,7 @@ class KeycloakScopeMappingsPort:
     def delete_client_realm_scope_mappings(
         self,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the scope mappings of a client."""
         raise NotImplementedError
@@ -160,7 +160,7 @@ class KeycloakScopeMappingsPort:
         self,
         client_uuid: str,
         owner_client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the scope mappings of a client."""
         raise NotImplementedError
@@ -170,7 +170,7 @@ class KeycloakScopeMappingsPort:
         self,
         client_uuid: str,
         owner_client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the scope mappings of a client."""
         raise NotImplementedError
@@ -203,7 +203,7 @@ class AsyncKeycloakScopeMappingsPort:
     async def add_client_scope_realm_scope_mappings(
         self,
         client_scope_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the scope mappings of a client scope."""
         raise NotImplementedError
@@ -212,7 +212,7 @@ class AsyncKeycloakScopeMappingsPort:
     async def delete_client_scope_realm_scope_mappings(
         self,
         client_scope_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the scope mappings of a client scope."""
         raise NotImplementedError
@@ -249,7 +249,7 @@ class AsyncKeycloakScopeMappingsPort:
         self,
         client_scope_id: str,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the scope mappings of a client scope."""
         raise NotImplementedError
@@ -259,7 +259,7 @@ class AsyncKeycloakScopeMappingsPort:
         self,
         client_scope_id: str,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the scope mappings of a client scope."""
         raise NotImplementedError
@@ -288,7 +288,7 @@ class AsyncKeycloakScopeMappingsPort:
     async def add_client_realm_scope_mappings(
         self,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the scope mappings of a client."""
         raise NotImplementedError
@@ -297,7 +297,7 @@ class AsyncKeycloakScopeMappingsPort:
     async def delete_client_realm_scope_mappings(
         self,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the scope mappings of a client."""
         raise NotImplementedError
@@ -330,7 +330,7 @@ class AsyncKeycloakScopeMappingsPort:
         self,
         client_uuid: str,
         owner_client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the scope mappings of a client."""
         raise NotImplementedError
@@ -340,7 +340,7 @@ class AsyncKeycloakScopeMappingsPort:
         self,
         client_uuid: str,
         owner_client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the scope mappings of a client."""
         raise NotImplementedError

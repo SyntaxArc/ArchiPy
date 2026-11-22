@@ -233,9 +233,7 @@ fetch_user_data.clear_cache()
 
 These decorators automatically manage database transactions.
 
-!!! note "Moved to the adapters layer"
-    They now live in `archipy.adapters.base.sqlalchemy.atomic`. Importing them from `archipy.helpers.decorators` still
-    works and emits a `DeprecationWarning`. The old import path will be removed in 6.0.0.
+Import the decorators from `archipy.adapters.base.sqlalchemy.atomic`.
 
 ```python
 import logging
@@ -452,26 +450,4 @@ See [Interceptor Tutorials — Rate Limiting](interceptors.md#rate-limiting-inte
   API
 - [Helper Tutorials](index.md) - Overview of all helper tutorials
 
-## Deprecated names
-
-Decorators dropped their `_decorator` suffix and now detect `async def` functions themselves, so the separate
-`async_*` variants are no longer needed. The old names still work and emit a `DeprecationWarning` that names the
-replacement. They will be removed in 6.0.0.
-
-| Deprecated                                                                 | Use instead                                            |
-|----------------------------------------------------------------------------|--------------------------------------------------------|
-| `retry_decorator`                                                          | `retry`                                                |
-| `timeout_decorator`                                                        | `timeout`                                              |
-| `timing_decorator`                                                         | `timing`                                               |
-| `singleton_decorator`                                                      | `singleton`                                            |
-| `ttl_cache_decorator`                                                      | `ttl_cache`                                            |
-| `grpc_rate_limit_decorator`                                                | `grpc_rate_limit`                                      |
-| `sqlalchemy_atomic_decorator(db_type, is_async=...)`                       | `sqlalchemy_atomic(db_type)`                           |
-| `postgres_/mysql_/sqlite_/starrocks_sqlalchemy_atomic_decorator`           | `postgres_/mysql_/sqlite_/starrocks_sqlalchemy_atomic` |
-| `async_postgres_/async_mysql_/async_sqlite_/async_starrocks_..._decorator` | `postgres_/mysql_/sqlite_/starrocks_sqlalchemy_atomic` |
-| `async_measure_duration`, `async_count_calls`                              | `measure_duration`, `count_calls`                      |
-| `async_trace_span`, `async_trace_root`                                     | `trace_span`, `trace_root`                             |
-
-Import everything from `archipy.helpers.decorators`. The old submodule paths (for example
-`archipy.helpers.decorators.retry`) keep exporting the deprecated names until 6.0.0, which removes them with the other
-deprecated names above.
+See the [6.0 upgrade guide](../../community/deprecations.md#decorators) for the decorator names removed in 6.0.

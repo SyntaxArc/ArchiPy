@@ -332,7 +332,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
         self,
         organization_id: str,
         idp_alias: str,
-        link: KeycloakOrganizationIdentityProviderLinkRequestDTO | dict[str, Any],
+        link: KeycloakOrganizationIdentityProviderLinkRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update how an identity provider is linked to an organization.
 
@@ -783,7 +783,7 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
         self,
         organization_id: str,
         idp_alias: str,
-        link: KeycloakOrganizationIdentityProviderLinkRequestDTO | dict[str, Any],
+        link: KeycloakOrganizationIdentityProviderLinkRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update how an identity provider is linked to an organization.
 

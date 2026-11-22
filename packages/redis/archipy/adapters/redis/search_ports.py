@@ -61,14 +61,12 @@ class RedisSearchHandlePort:
         fields: dict[str, str | int | float],
         vector_field: str | None = None,
         vector: list[float] | None = None,
-        *,
-        replace: bool = True,
     ) -> bool:
         """Upsert a HASH document and index it."""
         raise NotImplementedError
 
     @abstractmethod
-    def upsert_hash_dto(self, document: HashDocumentUpsertDTO, *, replace: bool = True) -> bool:
+    def upsert_hash_dto(self, document: HashDocumentUpsertDTO) -> bool:
         """Upsert a HASH document from a DTO."""
         raise NotImplementedError
 
@@ -164,14 +162,12 @@ class AsyncRedisSearchHandlePort:
         fields: dict[str, str | int | float],
         vector_field: str | None = None,
         vector: list[float] | None = None,
-        *,
-        replace: bool = True,
     ) -> bool:
         """Upsert a HASH document and index it asynchronously."""
         raise NotImplementedError
 
     @abstractmethod
-    async def upsert_hash_dto(self, document: HashDocumentUpsertDTO, *, replace: bool = True) -> bool:
+    async def upsert_hash_dto(self, document: HashDocumentUpsertDTO) -> bool:
         """Upsert a HASH document from a DTO asynchronously."""
         raise NotImplementedError
 

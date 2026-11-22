@@ -1,53 +1,9 @@
 """Base classes for Keycloak representation DTOs."""
 
-import warnings
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-
-_REMOVAL_VERSION = "6.0.0"
-
-
-class DictCompatMixin(BaseModel):
-    """Read-only dict-style access for DTOs that replaced plain ``dict`` return values.
-
-    Every access emits a ``DeprecationWarning``. Keys are the camelCase Keycloak field names and
-    fields that are unset (``None``) are absent, matching the dicts these DTOs replaced.
-    """
-
-    def _compat_dict(self, access: str) -> dict[str, Any]:
-        warnings.warn(
-            f"dict-style access ({access}) on {type(self).__name__} is deprecated and will be removed in "
-            f"{_REMOVAL_VERSION}; use attribute access instead.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
-        return self.model_dump(by_alias=True, exclude_none=True)
-
-    def __getitem__(self, key: str) -> Any:  # noqa: ANN401
-        """Return the value stored under ``key``."""
-        return self._compat_dict("[]")[key]
-
-    def __contains__(self, key: object) -> bool:
-        """Return whether ``key`` is a set field."""
-        return key in self._compat_dict("in")
-
-    def get(self, key: str, default: Any = None) -> Any:  # noqa: ANN401
-        """Return the value stored under ``key`` or ``default``."""
-        return self._compat_dict("get()").get(key, default)
-
-    def keys(self) -> Any:  # noqa: ANN401
-        """Return the set field names."""
-        return self._compat_dict("keys()").keys()
-
-    def values(self) -> Any:  # noqa: ANN401
-        """Return the set field values."""
-        return self._compat_dict("values()").values()
-
-    def items(self) -> Any:  # noqa: ANN401
-        """Return the set ``(name, value)`` pairs."""
-        return self._compat_dict("items()").items()
 
 
 class KeycloakBaseDTO(BaseModel):
@@ -82,7 +38,7 @@ class KeycloakRequestDTO(KeycloakBaseDTO):
     model_config = ConfigDict(extra="forbid")
 
 
-class KeycloakResponseDTO(DictCompatMixin, KeycloakBaseDTO):
+class KeycloakResponseDTO(KeycloakBaseDTO):
     """Base for representations returned by Keycloak.
 
     Unknown fields (added by newer Keycloak versions) are kept in ``model_extra`` instead of failing validation.

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.certificate_dtos import (
@@ -30,7 +30,7 @@ class KeycloakClientCertificatesPort:
         self,
         client_uuid: str,
         attribute: str,
-        config: KeycloakKeyStoreConfigRequestDTO | dict[str, Any],
+        config: KeycloakKeyStoreConfigRequestDTO,
     ) -> bytes:
         """Download the client attribute's key and certificate as a key store."""
         raise NotImplementedError
@@ -40,7 +40,7 @@ class KeycloakClientCertificatesPort:
         self,
         client_uuid: str,
         attribute: str,
-        config: KeycloakKeyStoreConfigRequestDTO | dict[str, Any],
+        config: KeycloakKeyStoreConfigRequestDTO,
     ) -> bytes:
         """Generate a new key pair for a client attribute and download it as a key store."""
         raise NotImplementedError
@@ -64,7 +64,7 @@ class AsyncKeycloakClientCertificatesPort:
         self,
         client_uuid: str,
         attribute: str,
-        config: KeycloakKeyStoreConfigRequestDTO | dict[str, Any],
+        config: KeycloakKeyStoreConfigRequestDTO,
     ) -> bytes:
         """Download the client attribute's key and certificate as a key store."""
         raise NotImplementedError
@@ -74,7 +74,7 @@ class AsyncKeycloakClientCertificatesPort:
         self,
         client_uuid: str,
         attribute: str,
-        config: KeycloakKeyStoreConfigRequestDTO | dict[str, Any],
+        config: KeycloakKeyStoreConfigRequestDTO,
     ) -> bytes:
         """Generate a new key pair for a client attribute and download it as a key store."""
         raise NotImplementedError

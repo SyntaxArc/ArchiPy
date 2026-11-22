@@ -236,7 +236,6 @@ async def start_test_worker(
     task_queue: str,
     workflows: list[type] | None = None,
     activities: list | None = None,
-    build_id: str | None = None,
     max_concurrent_activities: int | None = None,
     deployment_config: WorkerDeploymentConfig | None = None,
 ) -> WorkerHandle:
@@ -247,7 +246,6 @@ async def start_test_worker(
         task_queue (str): Task queue name for the worker.
         workflows (list[type], optional): List of workflow classes. Defaults to None.
         activities (list, optional): List of activity functions. Defaults to None.
-        build_id (str, optional): Build identifier for versioning. Defaults to None.
         max_concurrent_activities (int, optional): Activity slot limit for the worker. Defaults to None.
 
     Returns:
@@ -295,7 +293,6 @@ async def start_test_worker(
         task_queue=task_queue,
         workflows=workflows,
         activities=activities,
-        build_id=build_id,
         deployment_config=deployment_config,
         max_concurrent_activities=max_concurrent_activities,
     )
@@ -726,11 +723,6 @@ def step_start_worker(context, task_queue):
     context.logger.info(f"Started worker for task queue {task_queue}")
 
 
-@when('I start a worker for task queue "{task_queue}" with build_id "{build_id}"')
-def step_start_worker_with_build_id(context, task_queue, build_id):
-    """Start a worker with specific build ID."""
-    run_async(context, start_test_worker(context, task_queue, build_id=build_id))
-    context.logger.info(f"Started worker for task queue {task_queue} with build_id {build_id}")
 
 
 @when("I stop the worker")
@@ -1989,7 +1981,6 @@ def step_run_span_has_messaging_attributes(context, span_prefix, task_queue, ope
     assert run_spans, f"No {span_prefix} span among {[span.name for span in spans]}"
     expected = {
         "messaging.system": "temporal",
-        "messaging.operation": operation,
         "messaging.operation.type": operation,
         "messaging.destination.name": task_queue,
     }
@@ -2654,15 +2645,6 @@ def step_schedule_list_contains(context, schedule_id):
     assert schedule_id in [schedule.id for schedule in schedules], [schedule.id for schedule in schedules]
 
 
-@when('I call the deprecated stop_schedule for "{schedule_id}"')
-def step_call_deprecated_stop_schedule(context, schedule_id):
-    import warnings
-
-    adapter = get_temporal_adapter(context)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        run_async(context, adapter.stop_schedule(schedule_id))
-    get_current_scenario_context(context).store("caught_warnings", caught)
 
 
 @then("a DeprecationWarning should have been emitted")

@@ -234,47 +234,6 @@ def step_then_error_class_doc(context):
 
 # ---- renamed decorators ----
 
-_OLD_NAME_CALLS = {
-    "retry_decorator": lambda fn: fn(max_retries=2),
-    "timeout_decorator": lambda fn: fn(1),
-    "timing_decorator": lambda fn: fn(lambda: None),
-    "singleton_decorator": lambda fn: fn(),
-    "ttl_cache_decorator": lambda fn: fn(ttl_seconds=1),
-    "grpc_rate_limit_decorator": lambda fn: fn(calls_count=1, seconds=1),
-    "sqlalchemy_atomic_decorator": lambda fn: fn("sqlite"),
-}
-
-
-def _call_old_name(fn, name):
-    call = _OLD_NAME_CALLS.get(name, lambda f: f())
-    return call(fn)
-
-
-@when('the old decorator name "{old_name}" is applied')
-def step_when_old_name_applied(context, old_name):
-    from archipy.helpers import decorators
-
-    sc = get_current_scenario_context(context)
-    fn = getattr(decorators, old_name)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        sc.store("old_name_result", _call_old_name(fn, old_name))
-    sc.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
-
-
-@then('exactly one DeprecationWarning should name "{replacement}"')
-def step_then_one_warning_names(context, replacement):
-    caught = get_current_scenario_context(context).get("deprecation_warnings")
-    assert len(caught) == 1, f"Got {[str(w.message) for w in caught]}"
-    assert f"use {replacement} instead" in str(caught[0].message), str(caught[0].message)
-
-
-@then("the DeprecationWarning should point at the calling code")
-def step_then_warning_points_at_caller(context):
-    caught = get_current_scenario_context(context).get("deprecation_warnings")
-    assert caught[0].filename.endswith("deprecation_decorators_steps.py"), caught[0].filename
-
-
 @when('the new decorator name "{new_name}" is imported from the decorators package')
 def step_when_new_name_imported(context, new_name):
     from archipy.helpers import decorators
@@ -305,54 +264,3 @@ def step_then_function_not_module(context):
 def step_then_no_deprecation_warning(context):
     caught = get_current_scenario_context(context).get("deprecation_warnings")
     assert caught == [], f"Got {[str(w.message) for w in caught]}"
-
-
-@when('"{name}" is imported from the old module path "{module}"')
-def step_when_imported_from_old_path(context, name, module):
-    imported = importlib.import_module(f"archipy.helpers.decorators.{module}")
-    get_current_scenario_context(context).store("old_path_object", getattr(imported, name))
-
-
-@then("the old module path should resolve to a callable")
-def step_then_old_path_callable(context):
-    assert callable(get_current_scenario_context(context).get("old_path_object"))
-
-
-# Keycloak auth guards moved to archipy.adapters.keycloak.auth
-
-
-@when('the deprecated KeycloakUtils method "{name}" is called')
-def step_when_deprecated_auth_function_called(context, name):
-    from archipy.helpers.utils import keycloak_utils
-
-    sc = get_current_scenario_context(context)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        function = getattr(keycloak_utils.KeycloakUtils, name)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        sc.store("result", function())
-    sc.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
-
-
-@when('"{name}" is read from the old Keycloak utils module')
-def step_when_read_from_old_keycloak_utils(context, name):
-    from archipy.helpers.utils import keycloak_utils
-
-    sc = get_current_scenario_context(context)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        sc.store("result", getattr(keycloak_utils, name))
-    sc.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
-
-
-@then("the Keycloak auth result is callable")
-def step_then_keycloak_auth_module_result_callable(context):
-    assert callable(get_current_scenario_context(context).get("result"))
-
-
-@then("the legacy KeycloakUtils exposes fastapi_auth, async_fastapi_auth, grpc_auth and async_grpc_auth")
-def step_then_legacy_namespace_methods(context):
-    legacy = get_current_scenario_context(context).get("result")
-    for name in ("fastapi_auth", "async_fastapi_auth", "grpc_auth", "async_grpc_auth"):
-        assert callable(getattr(legacy, name)), name

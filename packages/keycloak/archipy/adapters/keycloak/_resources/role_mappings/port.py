@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.common_dtos import KeycloakAssignResultDTO, KeycloakDeleteResultDTO
@@ -37,7 +37,7 @@ class KeycloakRoleMappingsPort:
     def add_user_realm_role_mappings(
         self,
         user_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the role mappings of a user."""
         raise NotImplementedError
@@ -46,7 +46,7 @@ class KeycloakRoleMappingsPort:
     def delete_user_realm_role_mappings(
         self,
         user_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the role mappings of a user."""
         raise NotImplementedError
@@ -71,7 +71,7 @@ class KeycloakRoleMappingsPort:
         self,
         user_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the role mappings of a user."""
         raise NotImplementedError
@@ -81,7 +81,7 @@ class KeycloakRoleMappingsPort:
         self,
         user_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the role mappings of a user."""
         raise NotImplementedError
@@ -134,7 +134,7 @@ class AsyncKeycloakRoleMappingsPort:
     async def add_user_realm_role_mappings(
         self,
         user_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the role mappings of a user."""
         raise NotImplementedError
@@ -143,7 +143,7 @@ class AsyncKeycloakRoleMappingsPort:
     async def delete_user_realm_role_mappings(
         self,
         user_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the role mappings of a user."""
         raise NotImplementedError
@@ -168,7 +168,7 @@ class AsyncKeycloakRoleMappingsPort:
         self,
         user_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the role mappings of a user."""
         raise NotImplementedError
@@ -178,7 +178,7 @@ class AsyncKeycloakRoleMappingsPort:
         self,
         user_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the role mappings of a user."""
         raise NotImplementedError

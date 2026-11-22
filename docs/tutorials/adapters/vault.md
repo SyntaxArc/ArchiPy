@@ -27,11 +27,11 @@ Configure the Vault adapter via environment variables or a `VaultConfig` object.
 
 !!! warning
     Keep `VAULT__TOKEN` and other credentials out of source control. For AppRole, userpass and JWT, prefer the `*_FILE`
-    variants (for example `VAULT__APPROLE_SECRET_ID_FILE`) over inline secrets.
+    variants (for example `VAULT__APPROLE__SECRET_ID_FILE`) over inline secrets.
 
 !!! note
-    `VAULT__SECRET_CACHE_TTL=0` disables caching of `read_secret()` results. `VAULT__CONNECT_TIMEOUT` and
-    `VAULT__READ_TIMEOUT` default to `5.0` and `10.0` seconds.
+    `VAULT__SECRET_CACHE_TTL=0` disables caching of `read_secret()` results. `VAULT__HTTP__CONNECT_TIMEOUT` and
+    `VAULT__HTTP__READ_TIMEOUT` default to `5.0` and `10.0` seconds.
 
 ```bash
 VAULT__ENABLED=true
@@ -40,14 +40,14 @@ VAULT__NAMESPACE=  # Vault Enterprise namespace (optional)
 VAULT__AUTH_METHOD=token
 VAULT__TOKEN=s.xxxxx
 VAULT__MOUNT_POINT=secret
-VAULT__VERIFY_SSL=true
-# VAULT__CA_CERT_PATH=/etc/ssl/certs/vault-ca.pem
-# VAULT__CLIENT_CERT_PATH=/etc/ssl/certs/client.pem
-# VAULT__CLIENT_KEY_PATH=/etc/ssl/private/client.key
-VAULT__CONNECT_TIMEOUT=5.0
-VAULT__READ_TIMEOUT=10.0
+VAULT__TLS__VERIFY_SSL=true
+# VAULT__TLS__CA_CERT_PATH=/etc/ssl/certs/vault-ca.pem
+# VAULT__TLS__CLIENT_CERT_PATH=/etc/ssl/certs/client.pem
+# VAULT__TLS__CLIENT_KEY_PATH=/etc/ssl/private/client.key
+VAULT__HTTP__CONNECT_TIMEOUT=5.0
+VAULT__HTTP__READ_TIMEOUT=10.0
 VAULT__SECRET_CACHE_TTL=0
-VAULT__AUTO_RENEW_TOKEN=false
+VAULT__TOKEN_RENEWAL__AUTO_RENEW_TOKEN=false
 ```
 
 Supported `VAULT__AUTH_METHOD` values (hvac backends):
@@ -58,16 +58,16 @@ AppRole example:
 
 ```bash
 VAULT__AUTH_METHOD=approle
-VAULT__APPROLE_ROLE_ID=...
-VAULT__APPROLE_SECRET_ID_FILE=/run/secrets/approle_secret_id
+VAULT__APPROLE__ROLE_ID=...
+VAULT__APPROLE__SECRET_ID_FILE=/run/secrets/approle_secret_id
 ```
 
 Kubernetes example:
 
 ```bash
 VAULT__AUTH_METHOD=kubernetes
-VAULT__KUBERNETES_ROLE=my-app
-VAULT__KUBERNETES_JWT_PATH=/var/run/secrets/kubernetes.io/serviceaccount/token
+VAULT__KUBERNETES__ROLE=my-app
+VAULT__KUBERNETES__JWT_PATH=/var/run/secrets/kubernetes.io/serviceaccount/token
 ```
 
 Userpass / LDAP / Okta example:
@@ -82,18 +82,18 @@ JWT example:
 
 ```bash
 VAULT__AUTH_METHOD=jwt
-VAULT__JWT_ROLE=my-role
-VAULT__JWT_FILE=/run/secrets/vault.jwt
+VAULT__JWT_AUTH__ROLE=my-role
+VAULT__JWT_AUTH__JWT_FILE=/run/secrets/vault.jwt
 ```
 
 AWS IAM example:
 
 ```bash
 VAULT__AUTH_METHOD=aws
-VAULT__AWS_ACCESS_KEY=...
-VAULT__AWS_SECRET_KEY=...
-VAULT__AWS_ROLE=my-role
-VAULT__AWS_REGION=us-east-1
+VAULT__AWS__ACCESS_KEY=...
+VAULT__AWS__SECRET_KEY=...
+VAULT__AWS__ROLE=my-role
+VAULT__AWS__REGION=us-east-1
 ```
 
 GitHub / cert / cloud JWT (azure, gcp) follow the same pattern — see `VaultConfig`
@@ -110,7 +110,7 @@ config = VaultConfig(
     AUTH_METHOD="token",
     TOKEN="s.xxxxx",  # noqa: S106
     MOUNT_POINT="secret",
-    VERIFY_SSL=True,
+    TLS={"VERIFY_SSL": True},
     # CA_CERT_PATH="/etc/ssl/certs/vault-ca.pem",
     # CLIENT_CERT_PATH="/etc/ssl/certs/client.pem",
     # CLIENT_KEY_PATH="/etc/ssl/private/client.key",
@@ -211,8 +211,8 @@ settings-source details.
 
 ### Token Renewal and Re-login
 
-With `VAULT__AUTO_RENEW_TOKEN=true` the adapter looks the token up once, caches its expiry locally
-and renews it with `renew_self` when the remaining TTL drops to `VAULT__RENEW_THRESHOLD_SECONDS`.
+With `VAULT__TOKEN_RENEWAL__AUTO_RENEW_TOKEN=true` the adapter looks the token up once, caches its expiry locally
+and renews it with `renew_self` when the remaining TTL drops to `VAULT__TOKEN_RENEWAL__RENEW_THRESHOLD_SECONDS`.
 Tokens that never expire (`ttl == 0`, such as root or periodic tokens) and non-renewable tokens are
 left alone, and a failed renewal is logged without failing the call. For auth methods other than
 `token` (AppRole, Kubernetes, ...), a call rejected with 403 triggers one new login and one replay
@@ -220,7 +220,7 @@ of the call; with a static `token` there is nothing to log in again with.
 
 ### Retries and Outages
 
-`VAULT__RETRIES_MAX_ATTEMPTS` retries failed connections for every call. Read errors and
+`VAULT__HTTP__RETRIES_MAX_ATTEMPTS` retries failed connections for every call. Read errors and
 `500`/`502`/`503`/`504` responses are retried only for idempotent reads (`GET`, `HEAD`, `LIST`),
 so a write, delete or lease operation is never replayed. When Vault stays unavailable the adapter
 raises `UnavailableError` with a fixed message (the Vault address and path are logged, not
@@ -229,7 +229,7 @@ returned in the error).
 ### Good to Know
 
 - `read_secret` returns a copy of the payload, so changing the result never alters the cached value.
-- `VAULT__VERIFY_SSL` accepts `1/true/yes/on` and `0/false/no/off` (case-insensitive). Any other value raises a
+- `VAULT__TLS__VERIFY_SSL` accepts `1/true/yes/on` and `0/false/no/off` (case-insensitive). Any other value raises a
   `ConfigurationError` instead of silently turning verification off.
 - Credential fields of `VaultConfig` (`TOKEN`, `APPROLE_SECRET_ID`, `PASSWORD`, the JWT and AWS secrets) are
   excluded from `repr()`. Error reasons are generic; the underlying detail is logged.

@@ -2823,7 +2823,7 @@ def step_given_count_cache_enabled(context, ttl):
     from archipy.configs.config_template import SQLAlchemyConfig
 
     scenario_context = get_current_scenario_context(context)
-    cache_config = SQLAlchemyConfig(COUNT_CACHE_ENABLED=True, COUNT_CACHE_TTL_SECONDS=ttl)
+    cache_config = SQLAlchemyConfig(COUNT_CACHE={"IS_ENABLED": True, "TTL_SECONDS": ttl})
     scenario_context.store("count_cache_ttl", ttl)
     if scenario_context.adapter is not None:
         scenario_context.adapter._cached_count = _build_count_cache(cache_config)  # noqa: SLF001
