@@ -350,7 +350,7 @@ from types import SimpleNamespace
 
 from archipy.helpers.utils.password_utils import PasswordUtils
 from archipy.models.errors import InvalidPasswordError
-from archipy.models.runtime_settings import register_settings_provider
+from archipy.models.runtime_settings import get_settings, register_settings_provider
 from archipy.models.types.language_type import LanguageType
 
 settings = SimpleNamespace(LANGUAGE=LanguageType.EN)
@@ -365,6 +365,10 @@ else:
     raise AssertionError("Expected hash_password to require global settings")
 
 assert InvalidPasswordError().lang == LanguageType.EN, "Loading BaseConfig replaced the custom settings provider"
+
+replacement_settings = SimpleNamespace(LANGUAGE=LanguageType.FA)
+register_settings_provider(lambda: replacement_settings)
+assert get_settings() is replacement_settings
 """
     _check_imports(script)
 
