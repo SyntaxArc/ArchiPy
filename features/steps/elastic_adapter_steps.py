@@ -977,7 +977,6 @@ def step_es_config_field(context: Context, field: str, value: str) -> None:
         "SSL_VERSION": lambda text: ssl.TLSVersion[text],
         "OPAQUE_ID": str,
         "HEADERS": lambda text: dict(pair.split("=", 1) for pair in text.split(",")),
-        "MAP_ERRORS": lambda text: text == "true",
         "IGNORE_STATUS": lambda text: tuple(int(code) for code in text.split(",")),
     }
     updates[_ES_GROUPED_FIELDS.get(field, field)] = parsers[field](value)
@@ -992,16 +991,10 @@ async def step_create_adapter_from_config(context: Context, mode: str) -> None:
     """Build an adapter from the overridden config."""
     scenario_context = _get_scenario_context(context)
     config = _apply_es_updates(BaseConfig.global_config().ELASTIC, scenario_context.get("es_config_updates", {}))
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        if _is_async_scenario(context):
-            scenario_context.async_adapter = AsyncElasticsearchAdapter(config)
-        else:
-            scenario_context.adapter = ElasticsearchAdapter(config)
-    scenario_context.store(
-        "creation_warnings",
-        [w for w in caught if issubclass(w.category, DeprecationWarning) and "MAP_ERRORS" in str(w.message)],
-    )
+    if _is_async_scenario(context):
+        scenario_context.async_adapter = AsyncElasticsearchAdapter(config)
+    else:
+        scenario_context.adapter = ElasticsearchAdapter(config)
 
 
 @then('the client should apply "{field}" as "{value}"')
@@ -1082,11 +1075,6 @@ def step_raised_error_kind(context: Context, kind: str) -> None:
         assert isinstance(error.__cause__, ClientNotFoundError), "Original error must be chained"
 
 
-@then("the adapter creation should {outcome} the ArchiPy error mapping deprecation warning")
-def step_creation_warning(context: Context, outcome: str) -> None:
-    """Verify whether adapter creation warned about the opt-in error mapping."""
-    caught = _get_scenario_context(context).get("creation_warnings")
-    assert bool(caught) == (outcome == "emit"), f"Unexpected warnings: {caught}"
 
 
 @when("I {operation} through an adapter that records retry options")

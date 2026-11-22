@@ -8,8 +8,6 @@ import time
 from functools import wraps
 from typing import TYPE_CHECKING, cast
 
-from archipy.helpers._deprecation import deprecated_alias
-
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
@@ -78,6 +76,3 @@ def timing[**P, R](func: Callable[P, R]) -> Callable[P, R]:
             logger.debug("%s took %.4f seconds to execute.", func_name, time.perf_counter() - start_time)
 
     return wrapper
-
-
-timing_decorator = deprecated_alias("timing_decorator", timing)

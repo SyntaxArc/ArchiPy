@@ -250,22 +250,29 @@ Feature: Keycloak Management Testing
       | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @realms
-  Scenario Outline: Keycloak rejects unknown fields in <kind> payloads
-    Given a configured <adapter_type> Keycloak adapter via <via>
-    And I create a realm named "test-realm" with display name "Test Realm" using <adapter_type> adapter
-    When I send a <kind> payload with the unknown field "typoField" to Keycloak using <adapter_type> adapter
+  Scenario Outline: The <adapter_type> adapter rejects plain <kind> dictionaries
+    Given a configured <adapter_type> Keycloak adapter via direct
+    When I send a <kind> dictionary to the Keycloak adapter
+    Then the Keycloak adapter rejects the payload argument
+
+    Examples:
+      | adapter_type | kind  |
+      | sync         | group |
+      | sync         | user  |
+      | async        | group |
+      | async        | user  |
+
+  @realms
+  Scenario Outline: Keycloak rejects unknown fields in realm updates
+    Given a configured sync Keycloak adapter via <via>
+    And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
+    When I update the realm with the unknown field "typoField"
     Then Keycloak rejects the payload as invalid and names the field "typoField"
 
     Examples:
-      | adapter_type | kind  | via    |
-      | sync         | group | direct |
-      | sync         | user  | direct |
-      | sync         | realm | direct |
-      | async        | group | direct |
-      | sync         | group | envoy  |
-      | sync         | user  | envoy  |
-      | sync         | realm | envoy  |
-      | async        | group | envoy  |
+      | via    |
+      | direct |
+      | envoy  |
 
   @users
   Scenario Outline: User counts, credentials, groups, federated identities, sessions and profile

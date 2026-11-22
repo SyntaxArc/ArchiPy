@@ -147,17 +147,17 @@ Feature: Kafka Clients and Spans Testing
     Then the delivery failure should be passed to the on_delivery callback
     And the logs should mention topic "failed-delivery-topic" but not "secret-payload"
 
-  Scenario Outline: A <mode> producer with missing keys sent as <setting> delivers a keyless message with <key_state>
-    Given a test topic named "test-topic-keyless-<mode>-<code>"
-    When a <mode> producer with missing keys sent as <setting> produces a message without a key to topic "test-topic-keyless-<mode>-<code>"
-    Then the message on topic "test-topic-keyless-<mode>-<code>" should have <key_state> and the deprecation warning should be <warned>
+  Scenario Outline: A <mode> producer distinguishes missing keys from empty keys
+    Given a test topic named "test-topic-keyless-<mode>-<case>"
+    When a <mode> producer sends a message with <key_state> to topic "test-topic-keyless-<mode>-<case>"
+    Then the message on topic "test-topic-keyless-<mode>-<case>" should have <key_state>
 
     Examples:
-      | mode  | setting      | code   | key_state    | warned     |
-      | sync  | an empty key | legacy | an empty key | raised     |
-      | sync  | no key       | none   | no key       | not raised |
-      | async | an empty key | legacy | an empty key | raised     |
-      | async | no key       | none   | no key       | not raised |
+      | mode  | case  | key_state    |
+      | sync  | none  | no key       |
+      | sync  | empty | an empty key |
+      | async | none  | no key       |
+      | async | empty | an empty key |
 
   Scenario Outline: A Kafka configuration with protocol <protocol>, mechanism <mechanism> and username <username> logs <outcome>
     When the Kafka settings are assembled with protocol <protocol>, mechanism <mechanism> and username <username> while warnings are collected

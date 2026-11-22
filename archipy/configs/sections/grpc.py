@@ -5,7 +5,6 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.models.errors import InvalidArgumentError
 
 
@@ -214,83 +213,6 @@ class GrpcConfig(BaseModel):
         default_factory=GrpcStubTlsConfig,
         description="Client channel TLS and mTLS settings",
     )
-
-    TLS_ENABLED: bool = Field(
-        default=False,
-        description=(
-            "When True, ``AppUtils.add_grpc_port`` binds a TLS port with ``grpc.ssl_server_credentials`` instead of "
-            "an insecure port. Requires ``TLS_CERT_FILE`` and ``TLS_KEY_FILE``."
-        ),
-        deprecated=deprecated_flat_message("GRPC", "TLS_ENABLED", "TLS", "IS_ENABLED"),
-    )
-    TLS_CERT_FILE: str | None = Field(
-        default=None,
-        description="Path to the PEM server certificate chain",
-        deprecated=deprecated_flat_message("GRPC", "TLS_CERT_FILE", "TLS", "CERT_FILE"),
-    )
-    TLS_KEY_FILE: str | None = Field(
-        default=None,
-        description="Path to the PEM server private key",
-        deprecated=deprecated_flat_message("GRPC", "TLS_KEY_FILE", "TLS", "KEY_FILE"),
-    )
-    TLS_CA_FILE: str | None = Field(
-        default=None,
-        description="Path to the PEM CA bundle used to verify client certificates (mTLS)",
-        deprecated=deprecated_flat_message("GRPC", "TLS_CA_FILE", "TLS", "CA_FILE"),
-    )
-    TLS_REQUIRE_CLIENT_AUTH: bool = Field(
-        default=False,
-        description="When True, reject clients without a valid certificate. Requires ``TLS_CA_FILE``.",
-        deprecated=deprecated_flat_message("GRPC", "TLS_REQUIRE_CLIENT_AUTH", "TLS", "REQUIRE_CLIENT_AUTH"),
-    )
-    STUB_TLS_ENABLED: bool = Field(
-        default=False,
-        description="When True, ``AppUtils.create_grpc_channel`` opens a TLS channel instead of a plaintext one.",
-        deprecated=deprecated_flat_message("GRPC", "STUB_TLS_ENABLED", "STUB_TLS", "IS_ENABLED"),
-    )
-    STUB_TLS_CA_FILE: str | None = Field(
-        default=None,
-        description="Path to the PEM CA bundle that verifies the server. None uses the gRPC default roots.",
-        deprecated=deprecated_flat_message("GRPC", "STUB_TLS_CA_FILE", "STUB_TLS", "CA_FILE"),
-    )
-    STUB_TLS_CERT_FILE: str | None = Field(
-        default=None,
-        description="Path to the PEM client certificate chain for mTLS. Requires ``STUB_TLS_KEY_FILE``.",
-        deprecated=deprecated_flat_message("GRPC", "STUB_TLS_CERT_FILE", "STUB_TLS", "CERT_FILE"),
-    )
-    STUB_TLS_KEY_FILE: str | None = Field(
-        default=None,
-        description="Path to the PEM client private key for mTLS. Requires ``STUB_TLS_CERT_FILE``.",
-        deprecated=deprecated_flat_message("GRPC", "STUB_TLS_KEY_FILE", "STUB_TLS", "KEY_FILE"),
-    )
-
-    @model_validator(mode="after")
-    def fold_deprecated_flat_fields(self) -> Self:
-        """Copy deprecated flat settings into their groups."""
-        fold_flat_fields(
-            self,
-            "TLS",
-            GrpcTlsConfig,
-            {
-                "TLS_ENABLED": "IS_ENABLED",
-                "TLS_CERT_FILE": "CERT_FILE",
-                "TLS_KEY_FILE": "KEY_FILE",
-                "TLS_CA_FILE": "CA_FILE",
-                "TLS_REQUIRE_CLIENT_AUTH": "REQUIRE_CLIENT_AUTH",
-            },
-        )
-        fold_flat_fields(
-            self,
-            "STUB_TLS",
-            GrpcStubTlsConfig,
-            {
-                "STUB_TLS_ENABLED": "IS_ENABLED",
-                "STUB_TLS_CA_FILE": "CA_FILE",
-                "STUB_TLS_CERT_FILE": "CERT_FILE",
-                "STUB_TLS_KEY_FILE": "KEY_FILE",
-            },
-        )
-        return self
 
     @model_validator(mode="after")
     def resolve_thread_worker_count(self) -> Self:

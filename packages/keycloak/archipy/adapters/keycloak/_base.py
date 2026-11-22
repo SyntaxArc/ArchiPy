@@ -22,7 +22,6 @@ from keycloak.exceptions import (
     raise_error_from_response,
 )
 
-from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.models.dtos.keycloak.base import KeycloakBaseDTO, KeycloakResponseDTO
 from archipy.models.dtos.keycloak.common_dtos import KeycloakCreateResultDTO, KeycloakMutationResultDTO
 from archipy.models.dtos.keycloak.token_dtos import KeycloakOidcResponseDTO, KeycloakUserInfoDTO
@@ -32,6 +31,7 @@ from archipy.models.errors import (
     ConflictError,
     InsufficientPermissionsError,
     InternalError,
+    InvalidArgumentError,
     InvalidCredentialsError,
     KeycloakConnectionTimeoutError,
     KeycloakServiceUnavailableError,
@@ -152,21 +152,11 @@ def admin_body(body: object | None) -> str:
     return "" if body is None else json.dumps(body)
 
 
-def to_request_payload(value: KeycloakBaseDTO | dict[str, Any]) -> dict[str, Any]:
-    """Return the camelCase payload python-keycloak expects for a request body.
-
-    Plain dicts are still accepted but deprecated; they are passed through unchanged.
-
-    Args:
-        value: A Keycloak DTO or a raw payload dict.
-
-    Returns:
-        The payload dict.
-    """
-    if isinstance(value, KeycloakBaseDTO):
-        return value.to_payload()
-    warn_deprecated_name("Passing a dict payload", "a Keycloak request DTO", stacklevel=4)
-    return value
+def to_request_payload(value: KeycloakBaseDTO) -> dict[str, Any]:
+    """Serialize a Keycloak representation to the camelCase request body."""
+    if not isinstance(value, KeycloakBaseDTO):
+        raise InvalidArgumentError(argument_name="payload", additional_data={"reason": "Expected a Keycloak DTO"})
+    return value.to_payload()
 
 
 def to_claims_dict(value: KeycloakOidcResponseDTO | Mapping[str, Any] | None) -> dict[str, Any]:

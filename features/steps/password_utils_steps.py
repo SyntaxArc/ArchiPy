@@ -196,7 +196,7 @@ def step_when_verified_with_changed_iterations(context, iterations):
 
 def _legacy_hash(password, iterations):
     auth = BaseConfig.global_config().AUTH
-    salt = os.urandom(auth.SALT_LENGTH)
+    salt = os.urandom(auth.PASSWORD_POLICY.SALT_LENGTH)
     return b64encode(salt + hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)).decode("utf-8")
 
 
@@ -232,7 +232,7 @@ def step_when_auth_config_history_size(context, size):
 
     scenario_context = get_current_scenario_context(context)
     try:
-        AuthConfig(PASSWORD_HISTORY_SIZE=size)
+        AuthConfig(PASSWORD_POLICY={"HISTORY_SIZE": size})
         scenario_context.store("config_error", None)
     except ValidationError as e:
         scenario_context.store("config_error", e)

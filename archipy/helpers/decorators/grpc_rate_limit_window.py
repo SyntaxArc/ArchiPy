@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from archipy.helpers._deprecation import deprecated_alias
 from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
 
 if TYPE_CHECKING:
@@ -54,6 +53,3 @@ def grpc_rate_limit[**P, R](
         return func
 
     return decorator
-
-
-grpc_rate_limit_decorator = deprecated_alias("grpc_rate_limit_decorator", grpc_rate_limit)

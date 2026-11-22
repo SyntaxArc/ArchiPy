@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakCreateResultDTO,
@@ -37,7 +37,7 @@ class KeycloakProtocolMappersPort:
     def add_mapper_to_client_scope(
         self,
         client_scope_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add a protocol mapper to a client scope."""
         raise NotImplementedError
@@ -52,7 +52,7 @@ class KeycloakProtocolMappersPort:
         self,
         client_scope_id: str,
         protocol_mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a protocol mapper in a client scope."""
         raise NotImplementedError
@@ -70,7 +70,7 @@ class KeycloakProtocolMappersPort:
     def add_mapper_to_client(
         self,
         client_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add a protocol mapper to a client."""
         raise NotImplementedError
@@ -85,7 +85,7 @@ class KeycloakProtocolMappersPort:
         self,
         client_id: str,
         mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a protocol mapper on a client."""
         raise NotImplementedError
@@ -104,7 +104,7 @@ class KeycloakProtocolMappersPort:
     def add_client_scope_protocol_mappers(
         self,
         client_scope_id: str,
-        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+        mappers: list[KeycloakProtocolMapperRequestDTO],
     ) -> KeycloakCreateResultDTO:
         """Add several protocol mappers to a client scope in one call."""
         raise NotImplementedError
@@ -127,7 +127,7 @@ class KeycloakProtocolMappersPort:
     def add_client_protocol_mappers(
         self,
         client_uuid: str,
-        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+        mappers: list[KeycloakProtocolMapperRequestDTO],
     ) -> KeycloakCreateResultDTO:
         """Add several protocol mappers to a client in one call."""
         raise NotImplementedError
@@ -205,7 +205,7 @@ class AsyncKeycloakProtocolMappersPort:
     async def add_mapper_to_client_scope(
         self,
         client_scope_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add a protocol mapper to a client scope."""
         raise NotImplementedError
@@ -220,7 +220,7 @@ class AsyncKeycloakProtocolMappersPort:
         self,
         client_scope_id: str,
         protocol_mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a protocol mapper in a client scope."""
         raise NotImplementedError
@@ -238,7 +238,7 @@ class AsyncKeycloakProtocolMappersPort:
     async def add_mapper_to_client(
         self,
         client_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add a protocol mapper to a client."""
         raise NotImplementedError
@@ -253,7 +253,7 @@ class AsyncKeycloakProtocolMappersPort:
         self,
         client_id: str,
         mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a protocol mapper on a client."""
         raise NotImplementedError
@@ -272,7 +272,7 @@ class AsyncKeycloakProtocolMappersPort:
     async def add_client_scope_protocol_mappers(
         self,
         client_scope_id: str,
-        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+        mappers: list[KeycloakProtocolMapperRequestDTO],
     ) -> KeycloakCreateResultDTO:
         """Add several protocol mappers to a client scope in one call."""
         raise NotImplementedError
@@ -295,7 +295,7 @@ class AsyncKeycloakProtocolMappersPort:
     async def add_client_protocol_mappers(
         self,
         client_uuid: str,
-        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+        mappers: list[KeycloakProtocolMapperRequestDTO],
     ) -> KeycloakCreateResultDTO:
         """Add several protocol mappers to a client in one call."""
         raise NotImplementedError

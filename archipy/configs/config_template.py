@@ -65,7 +65,6 @@ from archipy.configs.sections.sqlalchemy import (
     _extract_postgres_host_port_from_url,  # noqa: F401
 )
 from archipy.configs.sections.temporal import (
-    TLS_CERT_PARTS_REQUIRED,
     TemporalConfig,
 )
 from archipy.configs.sections.uvicorn import UvicornConfig
@@ -74,7 +73,6 @@ from archipy.configs.sections.vault import (
 )
 
 __all__ = [
-    "TLS_CERT_PARTS_REQUIRED",
     "AuthConfig",
     "DatetimeConfig",
     "ElasticsearchConfig",

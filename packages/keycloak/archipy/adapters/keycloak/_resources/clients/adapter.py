@@ -238,7 +238,7 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
     def update_client(
         self,
         client_uuid: str,
-        payload: KeycloakClientRequestDTO | dict[str, Any],
+        payload: KeycloakClientRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client.
 
@@ -609,7 +609,7 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
     def update_client_management_permissions(
         self,
         client_uuid: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a client.
 
@@ -995,7 +995,7 @@ class AsyncKeycloakClientsMixin(AsyncKeycloakMixinBase):
     async def update_client(
         self,
         client_uuid: str,
-        payload: KeycloakClientRequestDTO | dict[str, Any],
+        payload: KeycloakClientRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client.
 
@@ -1370,7 +1370,7 @@ class AsyncKeycloakClientsMixin(AsyncKeycloakMixinBase):
     async def update_client_management_permissions(
         self,
         client_uuid: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a client.
 

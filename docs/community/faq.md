@@ -251,8 +251,8 @@ class AppConfig(BaseConfig):
 | `@timing`                                  | Execution time logging          |
 | `@method_deprecation_warning`              | Deprecation warning             |
 
-All are imported from `archipy.helpers.decorators` and work for sync and `async def` functions. The older
-`*_decorator` and `async_*` names still work but emit a `DeprecationWarning`; they will be removed in 6.0.0.
+Import atomic decorators from `archipy.adapters.base.sqlalchemy.atomic` and the other decorators from
+`archipy.helpers.decorators`.
 
 See the [Decorators tutorial](../tutorials/helpers/decorators.md) for examples.
 

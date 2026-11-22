@@ -36,7 +36,7 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
 
     def create_group(
         self,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
         parent: str | None = None,
         skip_exists: bool = False,
     ) -> str | None:
@@ -53,7 +53,7 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
     def update_group(
         self,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a group."""
         return to_mutation_result(
@@ -128,7 +128,7 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def get_subgroups(self, group: KeycloakGroupDTO | dict[str, Any], path: str) -> KeycloakGroupDTO | None:
+    def get_subgroups(self, group: KeycloakGroupDTO, path: str) -> KeycloakGroupDTO | None:
         """Get subgroups for a group at the given path."""
         return to_dto_or_none(
             KeycloakGroupDTO,
@@ -347,7 +347,7 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
     def update_group_management_permissions(
         self,
         group_id: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a group.
 
@@ -375,7 +375,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
 
     async def create_group(
         self,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
         parent: str | None = None,
         skip_exists: bool = False,
     ) -> str | None:
@@ -392,7 +392,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
     async def update_group(
         self,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a group."""
         return to_mutation_result(
@@ -471,7 +471,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def get_subgroups(self, group: KeycloakGroupDTO | dict[str, Any], path: str) -> KeycloakGroupDTO | None:
+    async def get_subgroups(self, group: KeycloakGroupDTO, path: str) -> KeycloakGroupDTO | None:
         """Get subgroups for a group at the given path."""
         return to_dto_or_none(
             KeycloakGroupDTO,
@@ -690,7 +690,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
     async def update_group_management_permissions(
         self,
         group_id: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a group.
 

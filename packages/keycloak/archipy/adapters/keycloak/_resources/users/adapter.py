@@ -117,7 +117,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_by_email")
 
-    def create_user(self, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> str | None:
+    def create_user(self, user_data: KeycloakUserRequestDTO) -> str | None:
         """Create a new user in Keycloak.
 
         Args:
@@ -141,7 +141,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         else:
             return user_id
 
-    def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> None:
+    def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO) -> None:
         """Update user details.
 
         Args:
@@ -318,7 +318,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
 
     def update_user_profile_config(
         self,
-        config: KeycloakUserProfileConfigRequestDTO | dict[str, Any],
+        config: KeycloakUserProfileConfigRequestDTO,
     ) -> KeycloakUserProfileConfigDTO:
         """Replace the realm's user profile configuration.
 
@@ -584,7 +584,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         self,
         user_id: str,
         provider: str,
-        payload: KeycloakFederatedIdentityRequestDTO | dict[str, Any],
+        payload: KeycloakFederatedIdentityRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Link a user to an identity provider account.
 
@@ -842,7 +842,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_by_email")
 
-    async def create_user(self, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> str | None:
+    async def create_user(self, user_data: KeycloakUserRequestDTO) -> str | None:
         """Create a new user in Keycloak.
 
         Args:
@@ -865,7 +865,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
         else:
             return user_id
 
-    async def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> None:
+    async def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO) -> None:
         """Update user details.
 
         Args:
@@ -1043,7 +1043,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
 
     async def update_user_profile_config(
         self,
-        config: KeycloakUserProfileConfigRequestDTO | dict[str, Any],
+        config: KeycloakUserProfileConfigRequestDTO,
     ) -> KeycloakUserProfileConfigDTO:
         """Replace the realm's user profile configuration.
 
@@ -1309,7 +1309,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
         self,
         user_id: str,
         provider: str,
-        payload: KeycloakFederatedIdentityRequestDTO | dict[str, Any],
+        payload: KeycloakFederatedIdentityRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Link a user to an identity provider account.
 

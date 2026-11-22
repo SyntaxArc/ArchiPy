@@ -20,14 +20,13 @@ from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
-from archipy.adapters.keycloak.deprecated_state import deprecated_dict, deprecated_list, deprecated_set
+from archipy.models.dtos.keycloak.auth_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.dtos.keycloak.owner_dto import OwnerDTO
 from archipy.models.dtos.keycloak.token_dtos import (
     KeycloakOrganizationClaimDTO,
     KeycloakTokenClaimsDTO,
     KeycloakUserInfoDTO,
 )
-from archipy.models.dtos.keycloak_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.errors import (
     BaseError,
     ConfigurationError,
@@ -735,17 +734,12 @@ def fastapi_auth(
 ) -> Callable[..., Any]:
     """FastAPI dependency for Keycloak authentication and resource-based authorization.
 
-    The dependency is always asynchronous: FastAPI awaits it on the event loop, whether the endpoint is a ``def``
-    or an ``async def`` function. It returns the UserInfo dict and sets :class:`AuthContextManager` for the request,
-    like :func:`grpc_auth` does, so code below the endpoint reads the caller with
-    ``AuthContextManager.get_auth_context()``; the context is cleared when the request ends.
+    FastAPI awaits the dependency for both synchronous and asynchronous endpoints. It yields a
+    ``KeycloakUserInfoDTO`` and sets :class:`AuthContextManager` for the duration of the request.
+    Code below the endpoint can read the caller with ``AuthContextManager.get_auth_context()``.
 
     Organization details are available as ``auth_context.organizations`` and ``auth_context.selected_organization``.
     A selected organization is optional unless required by the guard or Keycloak configuration.
-
-    ``request.state.user_info``, ``token_info``, ``actor_chain`` and ``user_roles`` are still filled, but they are
-    deprecated: each is a dict, list or set that emits a ``DeprecationWarning`` when read and names the matching
-    attribute of the auth context (``raw_user_info``, ``token_info``, ``actor_chain``, ``roles``).
 
     Args:
         resource_type_param: The parameter name in the path (e.g., 'user_uuid', 'employee_uuid')
@@ -755,7 +749,8 @@ def fastapi_auth(
         required_permissions: List of (resource, scope) tuples to check
         admin_roles: Set of roles that grant administrative access to all resources
         lang: Language for error messages
-        require_organization: Require a selected organization. None uses KeycloakConfig.REQUIRE_ORGANIZATION (False).
+        require_organization: Require a selected organization. Defaults to the configured
+            ``KEYCLOAK.TOKEN_VALIDATION.REQUIRE_ORGANIZATION`` value.
 
     Raises:
         UnauthenticatedError: If no valid Authorization header is provided
@@ -806,16 +801,6 @@ def fastapi_auth(
             else require_organization
         )
 
-        # Still filled for existing code, but each read warns: AuthContextManager carries the same data.
-        context_access = "AuthContextManager.get_auth_context()"
-        request.state.user_info = deprecated_dict(user_info.to_dict(), "user_info", f"{context_access}.raw_user_info")
-        request.state.token_info = deprecated_dict(token_info.to_dict(), "token_info", f"{context_access}.token_info")
-        request.state.actor_chain = deprecated_list(
-            _parse_actor_chain(token_info),
-            "actor_chain",
-            f"{context_access}.actor_chain",
-        )
-        request.state.user_roles = deprecated_set(user_roles, "user_roles", f"{context_access}.roles")
         # UserInfo without ``sub`` cannot name a caller; keep serving it, as before, without an auth context.
         auth_token = (
             AuthContextManager.set_auth_context(
@@ -922,7 +907,8 @@ def grpc_auth(
         resource_attribute_name: Attribute name to extract resource UUID from context for ownership checking
         admin_roles: Set of admin roles that bypass resource ownership checks
         lang: Language for error messages
-        require_organization: Require a selected organization. None uses KeycloakConfig.REQUIRE_ORGANIZATION (False).
+        require_organization: Require a selected organization. Defaults to the configured
+            ``KEYCLOAK.TOKEN_VALIDATION.REQUIRE_ORGANIZATION`` value.
 
     Returns:
         Decorated function with authentication and authorization

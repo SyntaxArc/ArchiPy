@@ -24,28 +24,27 @@ Configure the Keycloak adapter via environment variables or a `KeycloakConfig` o
 
 !!! warning
     Keep `KEYCLOAK__CLIENT_SECRET_KEY` out of source control. Load it from the environment or a secrets store, and keep
-    `KEYCLOAK__VERIFY_SSL=true` outside local development.
+    `KEYCLOAK__TLS__VERIFY_SSL=true` outside local development.
 
 ```bash
 KEYCLOAK__SERVER_URL=https://keycloak.example.com
 KEYCLOAK__REALM_NAME=my-realm
 KEYCLOAK__CLIENT_ID=my-client
 KEYCLOAK__CLIENT_SECRET_KEY=client-secret
-KEYCLOAK__VERIFY_SSL=true  # true, false, or the path of a CA bundle for a private CA
+KEYCLOAK__TLS__VERIFY_SSL=true  # true, false, or the path of a CA bundle for a private CA
 KEYCLOAK__TIMEOUT=10  # seconds, fractions allowed (2.5)
-KEYCLOAK__REQUIRE_ORGANIZATION=false  # guards allow personal and wildcard organization contexts by default
-KEYCLOAK__TOKEN_LEEWAY_SECONDS=0  # clock-skew tolerance when validating token expiry
-KEYCLOAK__EXPECTED_ISSUER=https://keycloak.example.com/realms/my-realm  # enforce the iss claim (and typ=Bearer) of locally verified tokens
-KEYCLOAK__EXPECTED_AUDIENCE=my-client  # enforce the aud claim (and typ=Bearer) of locally verified tokens
+KEYCLOAK__TOKEN_VALIDATION__REQUIRE_ORGANIZATION=false  # guards allow personal and wildcard organization contexts by default
+KEYCLOAK__TOKEN_VALIDATION__LEEWAY_SECONDS=0  # clock-skew tolerance when validating token expiry
+KEYCLOAK__TOKEN_VALIDATION__EXPECTED_ISSUER=https://keycloak.example.com/realms/my-realm  # enforce the iss claim (and typ=Bearer) of locally verified tokens
+KEYCLOAK__TOKEN_VALIDATION__EXPECTED_AUDIENCE=my-client  # require this audience in locally verified tokens
 KEYCLOAK__REMOTE_CACHE_TTL_SECONDS=0  # opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)
 ```
 
-!!! warning "Token claim checks"
-    Local verification (`validate_token`, `get_token_info`, role checks) always checks the signature and expiry. Set
-    `KEYCLOAK__EXPECTED_ISSUER` and/or `KEYCLOAK__EXPECTED_AUDIENCE` to also require the `iss` / `aud` claims and
-    `typ == "Bearer"`; mismatching tokens are rejected (`validate_token` returns `False`, `get_token_info` raises
-    `InvalidTokenError`). Without these settings a mismatch only emits a `DeprecationWarning`, and enforcement becomes
-    the default in 6.0.
+Local verification checks the token signature, expiry, issuer, and `typ == "Bearer"`. The issuer defaults to
+`{SERVER_URL}/realms/{REALM_NAME}`. Set `KEYCLOAK__TOKEN_VALIDATION__EXPECTED_ISSUER` if Keycloak issues tokens under a
+different URL, such as a public hostname in front of an internal connection. Set
+`KEYCLOAK__TOKEN_VALIDATION__EXPECTED_AUDIENCE` to enforce the `aud` claim. A rejected token makes `validate_token`
+return `False` and `get_token_info` raise `InvalidTokenError`.
 
 ### Connection Options
 
@@ -64,9 +63,9 @@ previous behaviour.
 | `CUSTOM_HEADERS`   | none    | Extra headers sent with every request                                            |
 
 ```bash
-KEYCLOAK__VERIFY_SSL=/etc/ssl/private-ca.pem
-KEYCLOAK__CLIENT_CERT_FILE=/etc/ssl/client.pem
-KEYCLOAK__CLIENT_KEY_FILE=/etc/ssl/client.key
+KEYCLOAK__TLS__VERIFY_SSL=/etc/ssl/private-ca.pem
+KEYCLOAK__TLS__CLIENT_CERT_FILE=/etc/ssl/client.pem
+KEYCLOAK__TLS__CLIENT_KEY_FILE=/etc/ssl/client.key
 KEYCLOAK__PROXIES='{"https://": "http://proxy:3128"}'
 KEYCLOAK__CUSTOM_HEADERS='{"X-Tenant": "acme"}'
 ```
@@ -86,7 +85,7 @@ config = KeycloakConfig(
     REALM_NAME="my-realm",
     CLIENT_ID="my-client",
     CLIENT_SECRET_KEY="client-secret",  # noqa: S105
-    VERIFY_SSL=True,
+    TLS={"VERIFY_SSL": True},
     TIMEOUT=10,
 )
 ```
@@ -573,10 +572,6 @@ group = keycloak.get_group(group_id)
 logger.info("Group %s at %s", group.name, group.path)
 ```
 
-!!! warning "Deprecated: dicts"
-    Passing a `dict` payload and reading results with `result["key"]` or `result.get("key")` still work but emit a
-    `DeprecationWarning`. Both are removed in 6.0.0. See [Create Results and Ids](#create-results-and-ids).
-
 ### Resources Overview
 
 Both adapters expose one method group per Keycloak resource area. Every method exists on `KeycloakAdapter` and, as a
@@ -744,10 +739,6 @@ if result.id is None:
     logger.info("Provider skipped: %s", result.msg)
 ```
 
-!!! warning "Deprecated: dicts"
-    Dict payloads and dict-style reads (`result["id"]`, `result.get("id")`) still work but emit a `DeprecationWarning`.
-    They are removed in 6.0.0. Use the request DTOs and the attributes of the response DTOs.
-
 ### Error Mapping
 
 The adapter maps Keycloak failures to ArchiPy errors, chained with `from`. A `404` raises `ResourceNotFoundError`,
@@ -823,7 +814,7 @@ client or logs in to Keycloak.
 - For production use, prefer the authorization code flow over direct username/password authentication.
 - The auth guards' role checks read `realm_access` and `resource_access` from the UserInfo response. Stock Keycloak
   omits them there, so enable "Add to userinfo" on the realm roles and client roles mappers of the `roles` client scope.
-- Token expiry is checked locally with `KEYCLOAK__TOKEN_LEEWAY_SECONDS` (default `0`) of clock-skew tolerance; raise it
+- Token expiry is checked locally with `KEYCLOAK__TOKEN_VALIDATION__LEEWAY_SECONDS` (default `0`) of clock-skew tolerance; raise it
   only if your servers' clocks drift.
 - The auth guards call Keycloak for UserInfo (and UMA permissions) on every request. Set
   `KEYCLOAK__REMOTE_CACHE_TTL_SECONDS` to a few seconds to cache those lookups per access token. A revoked token or a
@@ -851,7 +842,7 @@ token" and "Add to ID token" off to keep tokens minimal. UserInfo carries the or
 - Multiple organization IDs without the wildcard scope are denied.
 - Invalid organization field types or UUIDs fail UserInfo DTO validation.
 
-Organizations are optional by default. Set `KEYCLOAK__REQUIRE_ORGANIZATION=true` to require a selected organization
+Organizations are optional by default. Set `KEYCLOAK__TOKEN_VALIDATION__REQUIRE_ORGANIZATION=true` to require a selected organization
 across both guards. Pass `require_organization=True` or `False` to override this setting for a specific guard;
 omitting the argument inherits the configuration. Requiring an organization rejects personal and wildcard contexts.
 The verified token's `scope` claim distinguishes

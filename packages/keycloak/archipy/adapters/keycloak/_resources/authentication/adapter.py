@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -65,7 +64,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def create_authentication_flow(
         self,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakCreateResultDTO:
         """Create a new authentication flow."""
@@ -85,7 +84,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def copy_authentication_flow(
         self,
-        payload: KeycloakAuthenticationFlowCopyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowCopyRequestDTO,
         flow_alias: str,
     ) -> KeycloakCreateResultDTO:
         """Copy an existing authentication flow."""
@@ -157,7 +156,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def create_authentication_flow_execution(
         self,
-        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO,
         flow_alias: str,
     ) -> KeycloakCreateResultDTO:
         """Create an execution in an authentication flow."""
@@ -177,7 +176,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def update_authentication_flow_executions(
         self,
-        payload: KeycloakAuthenticationExecutionInfoRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationExecutionInfoRequestDTO,
         flow_alias: str,
     ) -> KeycloakUpdateResultDTO:
         """Update executions in an authentication flow."""
@@ -194,7 +193,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def create_authentication_flow_subflow(
         self,
-        payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationSubflowCreateRequestDTO,
         flow_alias: str,
         skip_exists: bool = False,
     ) -> KeycloakCreateResultDTO:
@@ -234,7 +233,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
     def update_authentication_flow(
         self,
         flow_id: str,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an authentication flow."""
         return to_mutation_result(
@@ -282,7 +281,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def update_authenticator_config(
         self,
-        payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticatorConfigRequestDTO,
         config_id: str,
     ) -> KeycloakUpdateResultDTO:
         """Update authenticator configuration."""
@@ -310,7 +309,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
     def create_execution_config(
         self,
         execution_id: str,
-        payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticatorConfigRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create configuration for an authentication flow execution."""
         return with_created_id(
@@ -405,7 +404,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 
     def create_execution(
         self,
-        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationExecutionRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add an execution to a flow by its representation.
 
@@ -476,7 +475,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def create_authentication_flow(
         self,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakCreateResultDTO:
         """Create a new authentication flow."""
@@ -496,7 +495,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def copy_authentication_flow(
         self,
-        payload: KeycloakAuthenticationFlowCopyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowCopyRequestDTO,
         flow_alias: str,
     ) -> KeycloakCreateResultDTO:
         """Copy an existing authentication flow."""
@@ -568,7 +567,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def create_authentication_flow_execution(
         self,
-        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO,
         flow_alias: str,
     ) -> KeycloakCreateResultDTO:
         """Create an execution in an authentication flow."""
@@ -588,7 +587,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def update_authentication_flow_executions(
         self,
-        payload: KeycloakAuthenticationExecutionInfoRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationExecutionInfoRequestDTO,
         flow_alias: str,
     ) -> KeycloakUpdateResultDTO:
         """Update executions in an authentication flow."""
@@ -605,7 +604,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def create_authentication_flow_subflow(
         self,
-        payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationSubflowCreateRequestDTO,
         flow_alias: str,
         skip_exists: bool = False,
     ) -> KeycloakCreateResultDTO:
@@ -645,7 +644,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
     async def update_authentication_flow(
         self,
         flow_id: str,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an authentication flow."""
         return to_mutation_result(
@@ -696,7 +695,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def update_authenticator_config(
         self,
-        payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticatorConfigRequestDTO,
         config_id: str,
     ) -> KeycloakUpdateResultDTO:
         """Update authenticator configuration."""
@@ -724,7 +723,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
     async def create_execution_config(
         self,
         execution_id: str,
-        payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticatorConfigRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create configuration for an authentication flow execution."""
         return await with_created_id_async(
@@ -817,7 +816,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def create_execution(
         self,
-        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationExecutionRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add an execution to a flow by its representation.
 

@@ -1266,35 +1266,26 @@ def step_logs_hide_payload(context, topic_name, payload):
     assert payload not in logs, f"Payload leaked into logs: {logs}"
 
 
-@when('a {mode} producer with missing keys sent as {setting} produces a message without a key to topic "{topic_name}"')
-def step_produce_without_key(context, mode, setting, topic_name):
-    """Produce a keyless message, noting whether the legacy empty key raised a DeprecationWarning."""
-    import warnings
-
-    config = _get_kafka_config(context).model_copy(
-        update={"EMPTY_KEY_FOR_MISSING_KEY": setting == "an empty key"},
-    )
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        if mode == "sync":
-            producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
-            producer.produce("keyless")
+@when('a {mode} producer sends a message with {key_state} to topic "{topic_name}"')
+async def step_produce_with_optional_key(context, mode, key_state, topic_name):
+    config = _get_kafka_config(context)
+    key = "" if key_state == "an empty key" else None
+    if mode == "sync":
+        producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+        try:
+            producer.produce("keyless", key=key)
+        finally:
             producer.close()
-        else:
-
-            async def run():
-                producer = AsyncKafkaProducerAdapter(topic_name, kafka_configs=config)
-                await producer.produce("keyless")
-                await producer.close()
-
-            asyncio.run(run())
-    scenario_context = get_current_scenario_context(context)
-    scenario_context.store("kafka_deprecation_warned", any(issubclass(w.category, DeprecationWarning) for w in caught))
+    else:
+        producer = AsyncKafkaProducerAdapter(topic_name, kafka_configs=config)
+        try:
+            await producer.produce("keyless", key=key)
+        finally:
+            await producer.close()
 
 
-@then('the message on topic "{topic_name}" should have {key_state} and the deprecation warning should be {warned}')
-def step_keyless_message_key(context, topic_name, key_state, warned):
-    """Read the keyless message and check the key and the deprecation warning."""
+@then('the message on topic "{topic_name}" should have {key_state}')
+def step_keyless_message_key(context, topic_name, key_state):
     config = _get_kafka_config(context)
     consumer = KafkaConsumerAdapter(f"keyless-group-{topic_name}", topic_list=[topic_name], kafka_configs=config)
     try:
@@ -1304,8 +1295,6 @@ def step_keyless_message_key(context, topic_name, key_state, warned):
     assert message is not None, "No message received"
     expected_key = None if key_state == "no key" else b""
     assert message.key() == expected_key, f"Expected key {expected_key!r}, got {message.key()!r}"
-    expected_warning = warned == "raised"
-    assert get_current_scenario_context(context).get("kafka_deprecation_warned") is expected_warning
 
 
 @when(
@@ -1636,16 +1625,14 @@ def step_producer_lists_topic(context, mode, topic_name):
 
 def _sasl_ssl_config(setting):
     """Build a SASL_SSL configuration, leaving hostname verification at its default unless a value is given."""
-    values = {
-        "SECURITY_PROTOCOL": "SASL_SSL",
-        "SASL_MECHANISM": "PLAIN",
-        "USERNAME": "user",
-        "PASSWORD": "pass",
-        "SSL_CA_FILE": "/etc/ssl/certs/kafka-ca.pem",
-    }
+    ssl = {"CA_FILE": "/etc/ssl/certs/kafka-ca.pem"}
     if setting != "default":
-        values["SSL_ENDPOINT_IDENTIFICATION_ALGORITHM"] = setting
-    return KafkaConfig(**values)
+        ssl["ENDPOINT_IDENTIFICATION_ALGORITHM"] = setting
+    return KafkaConfig(
+        SECURITY_PROTOCOL="SASL_SSL",
+        SASL={"MECHANISM": "PLAIN", "USERNAME": "user", "PASSWORD": "pass"},
+        SSL=ssl,
+    )
 
 
 @when("Kafka client settings are built for a {role} with hostname verification {setting}")
@@ -1679,13 +1666,12 @@ def _optional(value):
 
 def _security_values(protocol, mechanism, username, extra):
     """Build KafkaConfig keyword arguments, leaving out every setting given as '-'."""
-    values = {"SECURITY_PROTOCOL": protocol, **extra}
+    sasl = {}
     if _optional(mechanism):
-        values["SASL_MECHANISM"] = mechanism
+        sasl["MECHANISM"] = mechanism
     if _optional(username):
-        values["USERNAME"] = username
-        values["PASSWORD"] = "pass"
-    return values
+        sasl.update(USERNAME=username, PASSWORD="pass")
+    return {"SECURITY_PROTOCOL": protocol, "SASL": sasl, "SSL": extra}
 
 
 @when(
@@ -1694,7 +1680,7 @@ def _security_values(protocol, mechanism, username, extra):
 )
 def step_build_protocol_settings(context, protocol, mechanism, username, ca, cert, key):
     """Build the librdkafka settings for a protocol and the security options that are set."""
-    files = {"SSL_CA_FILE": ca, "SSL_CERT_FILE": cert, "SSL_KEY_FILE": key}
+    files = {"CA_FILE": ca, "CERT_FILE": cert, "KEY_FILE": key}
     extra = {name: value for name, value in files.items() if _optional(value)}
     config = KafkaConfig(**_security_values(protocol, mechanism, username, extra))
     settings = {}

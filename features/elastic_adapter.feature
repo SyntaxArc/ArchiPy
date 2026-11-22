@@ -227,24 +227,20 @@ Feature: Elasticsearch Operations Testing
       | mode           |
       | asynchronously |
 
-  Scenario Outline: Map missing document errors only when enabled <mode>
-    Given an Elasticsearch config with "MAP_ERRORS" set to "<map_errors>"
-    And index "test-index" exists
+  Scenario Outline: Missing documents raise ArchiPy errors <mode>
+    Given index "test-index" exists
     When I create the Elasticsearch adapter from that config <mode>
     And I get a missing document through that adapter
-    Then the Elasticsearch error kind should be "<error>"
-    And the adapter creation should <warning> the ArchiPy error mapping deprecation warning
+    Then the Elasticsearch error kind should be "ArchiPy NotFoundError"
 
     Examples: sync
-      | mode          | map_errors | error                 | warning  |
-      | synchronously | true       | ArchiPy NotFoundError | not emit |
-      | synchronously | false      | client NotFoundError  | emit     |
+      | mode          |
+      | synchronously |
 
     @async
     Examples: async
-      | mode           | map_errors | error                 | warning  |
-      | asynchronously | true       | ArchiPy NotFoundError | not emit |
-      | asynchronously | false      | client NotFoundError  | emit     |
+      | mode           |
+      | asynchronously |
 
   Scenario Outline: Disable retries only for non-idempotent calls <mode>
     Given a valid Elasticsearch client connection

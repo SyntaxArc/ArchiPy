@@ -53,11 +53,11 @@ Managed Redis often requires TLS and an ACL user. The settings apply to standalo
 ```bash
 REDIS__USERNAME=app-user
 REDIS__PASSWORD=your-password
-REDIS__SSL=true
-REDIS__SSL_CA_CERTS=/certs/ca.pem
-REDIS__SSL_CERTFILE=/certs/client.pem   # mTLS only, requires SSL_KEYFILE
-REDIS__SSL_KEYFILE=/certs/client.key
-REDIS__SSL_CHECK_HOSTNAME=true
+REDIS__TLS__IS_ENABLED=true
+REDIS__TLS__CA_CERTS=/certs/ca.pem
+REDIS__TLS__CERTFILE=/certs/client.pem   # mTLS only, requires SSL_KEYFILE
+REDIS__TLS__KEYFILE=/certs/client.key
+REDIS__TLS__CHECK_HOSTNAME=true
 ```
 
 `SSL_CERTFILE` and `SSL_KEYFILE` must be set together. `SSL_CA_CERTS` and `SSL_CERTFILE` require `SSL=true`.
@@ -71,13 +71,13 @@ versions ignored them, so a sentinel setup with a non-zero `DATABASE` now select
 All settings are optional; unset ones keep the redis-py defaults. They apply to standalone, cluster and sentinel modes.
 
 ```bash
-REDIS__RETRY_ATTEMPTS=3          # retries per command with exponential backoff
-REDIS__RETRY_BACKOFF_BASE=0.008  # base delay in seconds
-REDIS__RETRY_BACKOFF_CAP=0.512   # maximum delay in seconds
-REDIS__RETRY_ON_TIMEOUT=true     # also retry on socket timeouts
+REDIS__RETRY__ATTEMPTS=3          # retries per command with exponential backoff
+REDIS__RETRY__BACKOFF_BASE=0.008  # base delay in seconds
+REDIS__RETRY__BACKOFF_CAP=0.512   # maximum delay in seconds
+REDIS__RETRY__ON_TIMEOUT=true     # also retry on socket timeouts
 REDIS__SOCKET_KEEPALIVE=true     # detect dead peers behind NAT
 REDIS__CLIENT_NAME=my-service    # shown in CLIENT LIST
-REDIS__SENTINEL_USERNAME=sentinel-user  # sentinel ACL user, used with SENTINEL_PASSWORD
+REDIS__SENTINEL__USERNAME=sentinel-user  # sentinel ACL user, used with SENTINEL_PASSWORD
 ```
 
 `RETRY_ON_TIMEOUT` adds `TimeoutError` to the retried errors. The backoff settings take effect once `RETRY_ATTEMPTS` is set.
@@ -594,7 +594,7 @@ cluster_schema = IndexSchemaDTO(
 redis = RedisAdapter(
     redis_config=RedisConfig(
         MODE=RedisMode.CLUSTER,
-        CLUSTER_NODES=["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"],
+        CLUSTER={"NODES": ["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"]},
     ),
 )
 handle = redis.search_index("cluster-products")
@@ -638,8 +638,7 @@ handle.upsert_hash_dto(
 logger.info("HASH documents indexed")
 ```
 
-`upsert_hash` writes all fields with one atomic `HSET` and merges them into the existing hash. The `replace` argument
-is ignored; passing `replace=False` emits a `DeprecationWarning`.
+`upsert_hash` merges the supplied fields into the existing hash with one atomic `HSET`.
 
 JSON documents store the full payload at a JSON path (default `$`):
 

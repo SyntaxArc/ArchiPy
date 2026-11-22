@@ -20,7 +20,7 @@ class KeycloakComponentsPort:
     """Sync Keycloak port interface for component operations."""
 
     @abstractmethod
-    def create_component(self, payload: KeycloakComponentRequestDTO | dict[str, Any]) -> str:
+    def create_component(self, payload: KeycloakComponentRequestDTO) -> str:
         """Create a Keycloak component.
 
         Args:
@@ -59,7 +59,7 @@ class KeycloakComponentsPort:
     def update_component(
         self,
         component_id: str,
-        payload: KeycloakComponentRequestDTO | dict[str, Any],
+        payload: KeycloakComponentRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a component.
 
@@ -94,7 +94,7 @@ class AsyncKeycloakComponentsPort:
     """Async Keycloak port interface for component operations."""
 
     @abstractmethod
-    async def create_component(self, payload: KeycloakComponentRequestDTO | dict[str, Any]) -> str:
+    async def create_component(self, payload: KeycloakComponentRequestDTO) -> str:
         """Create a Keycloak component.
 
         Args:
@@ -133,7 +133,7 @@ class AsyncKeycloakComponentsPort:
     async def update_component(
         self,
         component_id: str,
-        payload: KeycloakComponentRequestDTO | dict[str, Any],
+        payload: KeycloakComponentRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a component.
 

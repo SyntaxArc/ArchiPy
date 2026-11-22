@@ -6,7 +6,6 @@ import ssl
 import tempfile
 import threading
 import time
-import warnings
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from unittest import mock
@@ -118,6 +117,7 @@ def _configure_mailpit(context, name):
         SMTP_PORT=mailpit.smtp_port,
         USERNAME=mailpit.USERNAME,
         PASSWORD=mailpit.PASSWORD,
+        TLS={"CA_FILE": mailpit.ca_file},
     )
 
 
@@ -706,7 +706,9 @@ def step_no_span_exposes(context, secret):
 
 @given('the SMTP transport security is "{mode}"')
 def step_given_transport_security(context, mode):
-    BaseConfig.global_config().EMAIL.TLS.MODE = mode
+    config = BaseConfig.global_config().EMAIL
+    config.TLS.MODE = mode
+    config.TLS.CA_FILE = None
 
 
 @given('the SMTP transport security is "{mode}" verified with the Mailpit CA')
@@ -716,11 +718,12 @@ def step_given_transport_security_mailpit_ca(context, mode):
     config.TLS.CA_FILE = _mailpit("mailpit").ca_file
 
 
-@given('the SMTP transport security is "{mode}" without certificate verification')
-def step_given_transport_security_unverified(context, mode):
+@given('the SMTP transport security is "{mode}" without credentials')
+def step_given_transport_security_no_credentials(context, mode):
     config = BaseConfig.global_config().EMAIL
     config.TLS.MODE = mode
-    config.TLS.VERIFY = False
+    config.USERNAME = None
+    config.PASSWORD = None
 
 
 @given('the SMTP transport security is "{mode}" verified with the local SMTPS CA')
@@ -791,19 +794,10 @@ def step_given_local_identity(context, hostname, address):
 def step_when_create_adapter(context):
     scenario_context = get_current_scenario_context(context)
     scenario_context.store("error", None)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        try:
-            scenario_context.store("email_adapter", EmailAdapter())
-        except Exception as exception:
-            scenario_context.store("error", exception)
-    scenario_context.store("warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
-
-
-@then('an email deprecation warning mentions "{text}"')
-def step_then_deprecation_warning(context, text):
-    caught = get_current_scenario_context(context).get("warnings")
-    assert any(text in str(w.message) for w in caught), [str(w.message) for w in caught]
+    try:
+        scenario_context.store("email_adapter", EmailAdapter())
+    except ConfigurationError as exception:
+        scenario_context.store("error", exception)
 
 
 @then('a configuration error is raised for "{operation}"')
@@ -843,7 +837,9 @@ def step_when_build_config(context, field, value):
     scenario_context = get_current_scenario_context(context)
     scenario_context.store("error", None)
     try:
-        EmailConfig(**{field: value})
+        group, separator, name = field.partition(".")
+        values = {group: {name: value}} if separator else {field: value}
+        EmailConfig(**values)
     except ValidationError as exception:
         scenario_context.store("error", exception)
 
@@ -852,9 +848,14 @@ def step_when_build_config(context, field, value):
 def step_then_config_rejected(context, field):
     error = get_current_scenario_context(context).get("error")
     assert isinstance(error, ValidationError), repr(error)
-    assert field in {location for item in error.errors() for location in item["loc"]}, str(error)
+    assert any(tuple(item["loc"][-len(field.split(".")):]) == tuple(field.split(".")) for item in error.errors()), str(error)
 
 
 @given('the SMTP sender address "{address}"')
 def step_given_sender_address(context, address):
     BaseConfig.global_config().EMAIL.FROM_ADDRESS = address
+
+
+@when("I build an email config with TLS setting {field} set to {value}")
+def step_when_build_tls_config(context, field, value):
+    step_when_build_config(context, f"TLS.{field}", json.loads(value))

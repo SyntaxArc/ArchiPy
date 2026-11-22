@@ -36,10 +36,10 @@ POSTGRES_SQLALCHEMY__PASSWORD=secret
 POSTGRES_SQLALCHEMY__POSTGRES_DSN=postgresql+psycopg://myuser:secret@localhost:5432/mydb
 
 # Connection pool
-POSTGRES_SQLALCHEMY__POOL_SIZE=20
-POSTGRES_SQLALCHEMY__POOL_MAX_OVERFLOW=5
-POSTGRES_SQLALCHEMY__POOL_TIMEOUT=30
-POSTGRES_SQLALCHEMY__POOL_RECYCLE_SECONDS=600
+POSTGRES_SQLALCHEMY__POOL__SIZE=20
+POSTGRES_SQLALCHEMY__POOL__MAX_OVERFLOW=5
+POSTGRES_SQLALCHEMY__POOL__TIMEOUT=30
+POSTGRES_SQLALCHEMY__POOL__RECYCLE_SECONDS=600
 
 # SQL logging (useful for debugging)
 POSTGRES_SQLALCHEMY__ECHO=false
@@ -102,12 +102,7 @@ try:
         USERNAME="myuser",
         PASSWORD="secret",
         # Pool settings
-        POOL_SIZE=20,
-        POOL_MAX_OVERFLOW=5,
-        POOL_TIMEOUT=30,
-        POOL_RECYCLE_SECONDS=600,
-        POOL_USE_LIFO=True,
-        POOL_PRE_PING=True,
+        POOL={"SIZE": 20, "MAX_OVERFLOW": 5, "TIMEOUT": 30, "RECYCLE_SECONDS": 600, "USE_LIFO": True, "PRE_PING": True},
         # Isolation level
         ISOLATION_LEVEL="REPEATABLE READ",
     )
@@ -911,12 +906,12 @@ api_config = PostgresSQLAlchemyConfig(
     DATABASE="mydb",
     USERNAME="myuser",
     PASSWORD="secret",
-    POOL_SIZE=20,  # Keep 20 persistent connections open
-    POOL_MAX_OVERFLOW=10,  # Allow up to 10 additional overflow connections
-    POOL_TIMEOUT=5,  # Fail fast if pool is exhausted (5 s)
-    POOL_RECYCLE_SECONDS=300,  # Recycle connections every 5 min (avoids stale TCP)
-    POOL_PRE_PING=True,  # Validate connections before use
-    POOL_USE_LIFO=True,  # LIFO: reuse warm connections, keep cold ones idle
+    POOL={"SIZE": 20, "MAX_OVERFLOW": 10, "TIMEOUT": 5, "RECYCLE_SECONDS": 300, "PRE_PING": True, "USE_LIFO": True},  # Keep 20 persistent connections open
+      # Allow up to 10 additional overflow connections
+      # Fail fast if pool is exhausted (5 s)
+      # Recycle connections every 5 min (avoids stale TCP)
+      # Validate connections before use
+      # LIFO: reuse warm connections, keep cold ones idle
 )
 
 # Batch/worker process — smaller pool
@@ -926,9 +921,7 @@ worker_config = PostgresSQLAlchemyConfig(
     DATABASE="mydb",
     USERNAME="myuser",
     PASSWORD="secret",
-    POOL_SIZE=5,
-    POOL_MAX_OVERFLOW=2,
-    POOL_TIMEOUT=30,
+    POOL={"SIZE": 5, "MAX_OVERFLOW": 2, "TIMEOUT": 30},
 )
 ```
 
@@ -958,7 +951,7 @@ loaded attributes readable after the commit.
 
 ### Pool exhaustion (`QueuePool limit exceeded`)
 
-- Increase `POOL_SIZE` and/or `POOL_MAX_OVERFLOW`.
+- Increase `POOL.SIZE` and/or `POOL.MAX_OVERFLOW`.
 - Reduce transaction scope — avoid holding sessions open during slow external calls.
 - Reduce `POOL_TIMEOUT` to fail fast and surface exhaustion early rather than queuing indefinitely.
 

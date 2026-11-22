@@ -9,15 +9,14 @@ import inspect
 import logging
 import threading
 import time
-from typing import TYPE_CHECKING, Never, Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast
 
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.helpers.utils.otel_utils import OtelUtils
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Coroutine, Mapping
+    from collections.abc import Awaitable, Callable, Mapping
 
     from opentelemetry.metrics import Counter, Histogram
     from opentelemetry.util.types import AttributeValue
@@ -32,12 +31,6 @@ class _MetricDecorator(Protocol):
     """A decorator that records a metric around a function and keeps its signature."""
 
     def __call__[**P, R](self, func: Callable[P, R], /) -> Callable[P, R]: ...
-
-
-class _AsyncMetricDecorator(Protocol):
-    """A decorator that records a metric around a coroutine function and keeps its signature."""
-
-    def __call__[**P, C: Coroutine[object, Never, object]](self, func: Callable[P, C], /) -> Callable[P, C]: ...
 
 
 def _active_metrics_config() -> BaseConfig | None:
@@ -358,37 +351,6 @@ def measure_duration(
     return decorator
 
 
-def async_measure_duration(
-    name: str | None = None,
-    *,
-    unit: str = "s",
-    attributes: Mapping[str, AttributeValue] | None = None,
-) -> _AsyncMetricDecorator:
-    """Decorate an async function to record execution duration as a histogram.
-
-    Deprecated:
-        Use :func:`measure_duration`, which supports async functions directly.
-
-    Args:
-        name: Histogram instrument name. Defaults to module-qualified duration name.
-        unit: Unit of the recorded duration. Defaults to ``"s"``.
-        attributes: Optional static attributes merged into each recording.
-
-    Returns:
-        A decorator that records duration around the target coroutine function.
-
-    Raises:
-        InvalidArgumentError: If the decorated object is not a coroutine function.
-    """
-    warn_deprecated_name("async_measure_duration", "measure_duration")
-
-    def decorator[**P, C: Coroutine[object, Never, object]](func: Callable[P, C]) -> Callable[P, C]:
-        _require_coroutine_function(func, "async_measure_duration")
-        return _duration_wrapper(func, name, unit, attributes)
-
-    return decorator
-
-
 def count_calls(
     name: str | None = None,
     *,
@@ -412,35 +374,6 @@ def count_calls(
     """
 
     def decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
-        return _counter_wrapper(func, name, attributes)
-
-    return decorator
-
-
-def async_count_calls(
-    name: str | None = None,
-    *,
-    attributes: Mapping[str, AttributeValue] | None = None,
-) -> _AsyncMetricDecorator:
-    """Decorate an async function to increment a call counter.
-
-    Deprecated:
-        Use :func:`count_calls`, which supports async functions directly.
-
-    Args:
-        name: Counter instrument name. Defaults to module-qualified calls name.
-        attributes: Optional static attributes merged into each recording.
-
-    Returns:
-        A decorator that counts invocations of the target coroutine function.
-
-    Raises:
-        InvalidArgumentError: If the decorated object is not a coroutine function.
-    """
-    warn_deprecated_name("async_count_calls", "count_calls")
-
-    def decorator[**P, C: Coroutine[object, Never, object]](func: Callable[P, C]) -> Callable[P, C]:
-        _require_coroutine_function(func, "async_count_calls")
         return _counter_wrapper(func, name, attributes)
 
     return decorator

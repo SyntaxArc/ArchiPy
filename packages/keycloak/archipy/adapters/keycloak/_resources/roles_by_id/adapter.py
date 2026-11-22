@@ -52,7 +52,7 @@ class KeycloakRolesByIdMixin(SyncKeycloakMixinBase):
     def update_role_by_id(
         self,
         role_id: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a role by its id.
 
@@ -117,7 +117,7 @@ class KeycloakRolesByIdMixin(SyncKeycloakMixinBase):
     def add_role_composites_by_id(
         self,
         role_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite role.
 
@@ -142,7 +142,7 @@ class KeycloakRolesByIdMixin(SyncKeycloakMixinBase):
     def delete_role_composites_by_id(
         self,
         role_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite role.
 
@@ -225,7 +225,7 @@ class KeycloakRolesByIdMixin(SyncKeycloakMixinBase):
     def update_role_management_permissions_by_id(
         self,
         role_id: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a role.
 
@@ -273,7 +273,7 @@ class AsyncKeycloakRolesByIdMixin(AsyncKeycloakMixinBase):
     async def update_role_by_id(
         self,
         role_id: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a role by its id.
 
@@ -342,7 +342,7 @@ class AsyncKeycloakRolesByIdMixin(AsyncKeycloakMixinBase):
     async def add_role_composites_by_id(
         self,
         role_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite role.
 
@@ -367,7 +367,7 @@ class AsyncKeycloakRolesByIdMixin(AsyncKeycloakMixinBase):
     async def delete_role_composites_by_id(
         self,
         role_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite role.
 
@@ -450,7 +450,7 @@ class AsyncKeycloakRolesByIdMixin(AsyncKeycloakMixinBase):
     async def update_role_management_permissions_by_id(
         self,
         role_id: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a role.
 

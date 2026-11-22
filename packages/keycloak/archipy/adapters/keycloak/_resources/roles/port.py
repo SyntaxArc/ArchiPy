@@ -135,7 +135,7 @@ class KeycloakRolesPort:
     def update_realm_role(
         self,
         role_name: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a realm role."""
         raise NotImplementedError
@@ -169,7 +169,7 @@ class KeycloakRolesPort:
     def add_realm_role_composites(
         self,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite realm role."""
         raise NotImplementedError
@@ -178,7 +178,7 @@ class KeycloakRolesPort:
     def delete_realm_role_composites(
         self,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite realm role."""
         raise NotImplementedError
@@ -192,7 +192,7 @@ class KeycloakRolesPort:
     def update_realm_role_management_permissions(
         self,
         role_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a realm role."""
         raise NotImplementedError
@@ -207,7 +207,7 @@ class KeycloakRolesPort:
         self,
         client_uuid: str,
         role_name: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client role."""
         raise NotImplementedError
@@ -267,7 +267,7 @@ class KeycloakRolesPort:
         self,
         client_uuid: str,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite client role."""
         raise NotImplementedError
@@ -277,7 +277,7 @@ class KeycloakRolesPort:
         self,
         client_uuid: str,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite client role."""
         raise NotImplementedError
@@ -296,7 +296,7 @@ class KeycloakRolesPort:
         self,
         client_uuid: str,
         role_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a client role."""
         raise NotImplementedError
@@ -415,7 +415,7 @@ class AsyncKeycloakRolesPort:
     async def update_realm_role(
         self,
         role_name: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a realm role."""
         raise NotImplementedError
@@ -457,7 +457,7 @@ class AsyncKeycloakRolesPort:
     async def add_realm_role_composites(
         self,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite realm role."""
         raise NotImplementedError
@@ -466,7 +466,7 @@ class AsyncKeycloakRolesPort:
     async def delete_realm_role_composites(
         self,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite realm role."""
         raise NotImplementedError
@@ -480,7 +480,7 @@ class AsyncKeycloakRolesPort:
     async def update_realm_role_management_permissions(
         self,
         role_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a realm role."""
         raise NotImplementedError
@@ -499,7 +499,7 @@ class AsyncKeycloakRolesPort:
         self,
         client_uuid: str,
         role_name: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a client role."""
         raise NotImplementedError
@@ -559,7 +559,7 @@ class AsyncKeycloakRolesPort:
         self,
         client_uuid: str,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite client role."""
         raise NotImplementedError
@@ -569,7 +569,7 @@ class AsyncKeycloakRolesPort:
         self,
         client_uuid: str,
         role_name: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite client role."""
         raise NotImplementedError
@@ -588,7 +588,7 @@ class AsyncKeycloakRolesPort:
         self,
         client_uuid: str,
         role_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a client role."""
         raise NotImplementedError

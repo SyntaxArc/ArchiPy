@@ -34,7 +34,7 @@ class KeycloakIdentityProvidersPort:
     @abstractmethod
     def create_identity_provider(
         self,
-        payload: KeycloakIdentityProviderRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create an identity provider."""
         raise NotImplementedError
@@ -48,7 +48,7 @@ class KeycloakIdentityProvidersPort:
     def update_identity_provider(
         self,
         alias: str,
-        payload: KeycloakIdentityProviderRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an identity provider."""
         raise NotImplementedError
@@ -72,7 +72,7 @@ class KeycloakIdentityProvidersPort:
     def update_identity_provider_management_permissions(
         self,
         alias: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of an identity provider."""
         raise NotImplementedError
@@ -91,7 +91,7 @@ class KeycloakIdentityProvidersPort:
     def create_identity_provider_mapper(
         self,
         alias: str,
-        payload: KeycloakIdentityProviderMapperRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a mapper of an identity provider."""
         raise NotImplementedError
@@ -106,7 +106,7 @@ class KeycloakIdentityProvidersPort:
         self,
         alias: str,
         mapper_id: str,
-        payload: KeycloakIdentityProviderMapperRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a mapper of an identity provider."""
         raise NotImplementedError
@@ -143,7 +143,7 @@ class AsyncKeycloakIdentityProvidersPort:
     @abstractmethod
     async def create_identity_provider(
         self,
-        payload: KeycloakIdentityProviderRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create an identity provider."""
         raise NotImplementedError
@@ -157,7 +157,7 @@ class AsyncKeycloakIdentityProvidersPort:
     async def update_identity_provider(
         self,
         alias: str,
-        payload: KeycloakIdentityProviderRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an identity provider."""
         raise NotImplementedError
@@ -181,7 +181,7 @@ class AsyncKeycloakIdentityProvidersPort:
     async def update_identity_provider_management_permissions(
         self,
         alias: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of an identity provider."""
         raise NotImplementedError
@@ -200,7 +200,7 @@ class AsyncKeycloakIdentityProvidersPort:
     async def create_identity_provider_mapper(
         self,
         alias: str,
-        payload: KeycloakIdentityProviderMapperRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a mapper of an identity provider."""
         raise NotImplementedError
@@ -215,7 +215,7 @@ class AsyncKeycloakIdentityProvidersPort:
         self,
         alias: str,
         mapper_id: str,
-        payload: KeycloakIdentityProviderMapperRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a mapper of an identity provider."""
         raise NotImplementedError

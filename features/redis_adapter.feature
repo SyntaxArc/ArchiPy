@@ -1505,16 +1505,11 @@ Feature: Redis Testing
       | TLS disabled                        | without SSL        |
       | TLS enabled without hostname checks | TLS.CHECK_HOSTNAME |
 
-  Scenario Outline: upsert_hash writes one atomic HSET and deprecates replace False
+  Scenario: Upserting a hash document preserves fields outside the update
     Given a configured container
-    And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
-    When I upsert the hash document "<prefix>:1" with replace <replace>
-    Then the hash document "<prefix>:1" should be stored and the deprecation warning should be <warned>
-
-    Examples: Replace flags
-      | index_name  | prefix | replace | warned |
-      | upsert-true | upt    | True    | absent |
-      | upsert-off  | upf    | False   | raised |
+    And search index "upsert-merge" exists with prefix "upm:" for HASH documents
+    When I upsert a hash document "upm:1" twice with different fields
+    Then the hash document "upm:1" contains both fields
 
   Scenario Outline: Server errors surface as CacheError and stay redis-py errors
     Given a configured <adapter_type>

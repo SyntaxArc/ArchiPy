@@ -123,11 +123,6 @@ def expensive_lookup(key: str) -> str:
 - On methods, `self` is passed to the function but is not part of the key, so two instances share entries.
 - The cache lives in the process. It is not shared between workers and is lost on restart.
 
-## Deprecated Names
-
-`ttl_cache_decorator` is a deprecated alias that emits a `DeprecationWarning`; the module path
-`archipy.helpers.decorators.cache` is a kept legacy import path. Use `ttl_cache` from `archipy.helpers.decorators`.
-
 ## Tests
 
 The behavior above is covered by the `features/cache_decorator.feature` scenarios (basic caching, TTL expiry, maxsize,

@@ -116,7 +116,7 @@ class KeycloakRealmsPort:
     def update_realm_events_config(
         self,
         realm_name: str,
-        config: KeycloakRealmEventsConfigRequestDTO | dict[str, Any],
+        config: KeycloakRealmEventsConfigRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update the event settings of a realm."""
         raise NotImplementedError
@@ -134,7 +134,7 @@ class KeycloakRealmsPort:
     def update_realm_client_policies(
         self,
         realm_name: str,
-        policies: KeycloakClientPoliciesRequestDTO | dict[str, Any],
+        policies: KeycloakClientPoliciesRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Replace the client policies of a realm."""
         raise NotImplementedError
@@ -152,7 +152,7 @@ class KeycloakRealmsPort:
     def update_realm_client_profiles(
         self,
         realm_name: str,
-        profiles: KeycloakClientProfilesRequestDTO | dict[str, Any],
+        profiles: KeycloakClientProfilesRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Replace the client profiles of a realm."""
         raise NotImplementedError
@@ -166,7 +166,7 @@ class KeycloakRealmsPort:
     def update_realm_client_types(
         self,
         realm_name: str,
-        client_types: KeycloakClientTypesRequestDTO | dict[str, Any],
+        client_types: KeycloakClientTypesRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Replace the client types of a realm."""
         raise NotImplementedError
@@ -255,7 +255,7 @@ class KeycloakRealmsPort:
     def partial_import_realm(
         self,
         realm_name: str,
-        payload: KeycloakPartialImportRequestDTO | dict[str, Any],
+        payload: KeycloakPartialImportRequestDTO,
     ) -> KeycloakPartialImportResultDTO:
         """Import users, clients, groups, roles and identity providers into a realm."""
         raise NotImplementedError
@@ -284,7 +284,7 @@ class KeycloakRealmsPort:
     def update_realm_users_management_permissions(
         self,
         realm_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of the realm's users."""
         raise NotImplementedError
@@ -365,7 +365,7 @@ class AsyncKeycloakRealmsPort:
     async def update_realm_events_config(
         self,
         realm_name: str,
-        config: KeycloakRealmEventsConfigRequestDTO | dict[str, Any],
+        config: KeycloakRealmEventsConfigRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update the event settings of a realm."""
         raise NotImplementedError
@@ -383,7 +383,7 @@ class AsyncKeycloakRealmsPort:
     async def update_realm_client_policies(
         self,
         realm_name: str,
-        policies: KeycloakClientPoliciesRequestDTO | dict[str, Any],
+        policies: KeycloakClientPoliciesRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Replace the client policies of a realm."""
         raise NotImplementedError
@@ -401,7 +401,7 @@ class AsyncKeycloakRealmsPort:
     async def update_realm_client_profiles(
         self,
         realm_name: str,
-        profiles: KeycloakClientProfilesRequestDTO | dict[str, Any],
+        profiles: KeycloakClientProfilesRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Replace the client profiles of a realm."""
         raise NotImplementedError
@@ -415,7 +415,7 @@ class AsyncKeycloakRealmsPort:
     async def update_realm_client_types(
         self,
         realm_name: str,
-        client_types: KeycloakClientTypesRequestDTO | dict[str, Any],
+        client_types: KeycloakClientTypesRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Replace the client types of a realm."""
         raise NotImplementedError
@@ -504,7 +504,7 @@ class AsyncKeycloakRealmsPort:
     async def partial_import_realm(
         self,
         realm_name: str,
-        payload: KeycloakPartialImportRequestDTO | dict[str, Any],
+        payload: KeycloakPartialImportRequestDTO,
     ) -> KeycloakPartialImportResultDTO:
         """Import users, clients, groups, roles and identity providers into a realm."""
         raise NotImplementedError
@@ -533,7 +533,7 @@ class AsyncKeycloakRealmsPort:
     async def update_realm_users_management_permissions(
         self,
         realm_name: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of the realm's users."""
         raise NotImplementedError

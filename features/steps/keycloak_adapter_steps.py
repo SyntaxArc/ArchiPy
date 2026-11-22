@@ -11,7 +11,7 @@ from behave import given, step, then, when
 from behave.runner import Context
 from keycloak.exceptions import KeycloakGetError
 from features.scenario_context import ScenarioContext
-from features.test_containers import ContainerManager
+from features.test_containers import ContainerManager, keycloak_test_issuer
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
@@ -212,6 +212,11 @@ async def step_create_client_with_service_accounts(
         context.logger.exception("Client creation failed")
 
 
+def _configure_realm(config, realm):
+    config.REALM_NAME = realm
+    config.TOKEN_VALIDATION.EXPECTED_ISSUER = keycloak_test_issuer(config.SERVER_URL, realm)
+
+
 async def update_adapter_config(
     adapter: AsyncKeycloakAdapter | KeycloakAdapter,
     client_name: str,
@@ -221,7 +226,7 @@ async def update_adapter_config(
 ) -> None:
     try:
         original_realm = adapter.configs.REALM_NAME
-        adapter.configs.REALM_NAME = realm_name
+        _configure_realm(adapter.configs, realm_name)
         adapter._admin_adapter = None
         adapter._admin_token_expiry = 0
         if adapter.configs.ADMIN.IS_ENABLED and (
@@ -229,9 +234,9 @@ async def update_adapter_config(
         ):
             adapter._initialize_admin_client()
         client_result = scenario_context.get(f"client_{client_name}")
-        if not client_result or "internal_client_id" not in client_result:
+        if not client_result or not client_result.internal_client_id:
             raise ValueError(f"Client result not found or missing ID for client {client_name}")
-        client_id = client_result["internal_client_id"]
+        client_id = client_result.internal_client_id
         # For confidential clients, we need to get the client secret
         adapter.configs.CLIENT_ID = client_name
 
@@ -272,7 +277,7 @@ async def _ensure_introspection_audience_mapper(
     logger: logging.Logger,
 ) -> None:
     """Add audience mapper so the introspecting client is included in token ``aud`` (Keycloak 26.6.2+)."""
-    adapter.configs.REALM_NAME = realm_name
+    _configure_realm(adapter.configs, realm_name)
     adapter._admin_adapter = None
     adapter._admin_token_expiry = 0
     if adapter.configs.ADMIN.IS_ENABLED:
@@ -342,7 +347,7 @@ async def step_create_client_and_update_adapter(
 
             # Ensure the adapter is properly configured for the new client
             # Reinitialize the adapter with the updated configuration
-            adapter.configs.REALM_NAME = realm_name
+            _configure_realm(adapter.configs, realm_name)
             adapter.configs.CLIENT_ID = client_name
             # Force reinitialization of the OpenID client
             adapter._admin_adapter = None
@@ -351,10 +356,10 @@ async def step_create_client_and_update_adapter(
                 adapter._initialize_admin_client()
 
             # Extract the internal client ID from the result
-            if not client_result or "internal_client_id" not in client_result:
+            if not client_result or not client_result.internal_client_id:
                 raise ValueError(f"Client result not found or missing ID for client {client_name}")
 
-            client_id = client_result["internal_client_id"]  # This is the internal UUID
+            client_id = client_result.internal_client_id  # This is the internal UUID
 
             # Get the client secret using the internal client ID with retry logic
             import asyncio
@@ -363,7 +368,7 @@ async def step_create_client_and_update_adapter(
             for attempt in range(max_retries):
                 try:
                     # Ensure admin adapter is properly configured for the correct realm
-                    adapter.configs.REALM_NAME = realm_name
+                    _configure_realm(adapter.configs, realm_name)
                     adapter._admin_adapter = None
                     adapter._admin_token_expiry = 0
                     if adapter.configs.ADMIN.IS_ENABLED:
@@ -384,9 +389,9 @@ async def step_create_client_and_update_adapter(
             new_config = KeycloakConfig()
             new_config.SERVER_URL = adapter.configs.SERVER_URL
             new_config.CLIENT_ID = client_name  # Use client name for configuration
-            new_config.REALM_NAME = realm_name
+            _configure_realm(new_config, realm_name)
             new_config.CLIENT_SECRET_KEY = SecretStr(client_secret)
-            new_config.VERIFY_SSL = adapter.configs.VERIFY_SSL
+            new_config.TLS = adapter.configs.TLS.model_copy()
             new_config.TIMEOUT = adapter.configs.TIMEOUT
             new_config.ADMIN.USERNAME = adapter.configs.ADMIN.USERNAME
             new_config.ADMIN.PASSWORD = adapter.configs.ADMIN.PASSWORD
@@ -422,14 +427,14 @@ async def step_create_client_and_update_adapter(
             scenario_context.store(f"client_{client_name}", client_result)
 
             # Extract the internal client ID from the result
-            if not client_result or "internal_client_id" not in client_result:
+            if not client_result or not client_result.internal_client_id:
                 raise ValueError(f"Client result not found or missing ID for client {client_name}")
 
-            client_id = client_result["internal_client_id"]  # This is the internal UUID
+            client_id = client_result.internal_client_id  # This is the internal UUID
 
             # Update the adapter configuration
             adapter.configs.CLIENT_ID = client_name
-            adapter.configs.REALM_NAME = realm_name
+            _configure_realm(adapter.configs, realm_name)
 
             # Get the client secret for confidential client with retry logic
             import time
@@ -438,7 +443,7 @@ async def step_create_client_and_update_adapter(
             for attempt in range(max_retries):
                 try:
                     # Ensure admin adapter is properly configured for the correct realm
-                    adapter.configs.REALM_NAME = realm_name
+                    _configure_realm(adapter.configs, realm_name)
                     adapter._admin_adapter = None
                     adapter._admin_token_expiry = 0
                     if adapter.configs.ADMIN.IS_ENABLED:
@@ -725,7 +730,7 @@ def step_rotate_realm_signing_key(context: Context, realm_name: str) -> None:
         password=config.ADMIN.PASSWORD.get_secret_value() if config.ADMIN.PASSWORD else None,
         realm_name=realm_name,
         user_realm_name=config.ADMIN.REALM_NAME,
-        verify=config.VERIFY_SSL,
+        verify=config.TLS.VERIFY_SSL,
     )
     admin.create_component(
         {
@@ -1344,7 +1349,7 @@ def step_client_credentials_token_succeeds(context: Context, adapter_type: str) 
     scenario_context = get_current_scenario_context(context)
     token_response = scenario_context.get("latest_token_response")
     assert token_response is not None, f"{adapter_type.capitalize()} client credentials token request failed"
-    assert "access_token" in token_response, "Access token missing from client credentials response"
+    assert token_response.access_token, "Access token missing from client credentials response"
     context.logger.info(f"{adapter_type.capitalize()} client credentials token request verified")
 
 
@@ -1380,8 +1385,8 @@ def step_token_info_contains_claims(context: Context) -> None:
     """Verify that the token info contains user claims."""
     scenario_context = get_current_scenario_context(context)
     result = scenario_context.get("token_info_result")
-    assert "sub" in result, "Token info missing 'sub' claim"
-    assert "preferred_username" in result, "Token info missing 'preferred_username' claim"
+    assert result.sub, "Token info missing 'sub' claim"
+    assert result.preferred_username, "Token info missing 'preferred_username' claim"
     context.logger.info("Verified token info contains user claims")
 
 
@@ -1512,9 +1517,9 @@ def step_integration_verification(context: Context, adapter_type: str) -> None:
     user_info = scenario_context.get("latest_user_info")
 
     if token_response:
-        assert "access_token" in token_response, "Integration failed: no access token"
+        assert token_response.access_token, "Integration failed: no access token"
     if user_info:
-        assert "sub" in user_info, "Integration failed: no user subject"
+        assert user_info.user_uuid, "Integration failed: no user subject"
 
     context.logger.info(f"{adapter_type.capitalize()} adapter integration with Keycloak verified")
 
@@ -1725,8 +1730,8 @@ def step_sync_token_response_contains_tokens(context: Context) -> None:
     scenario_context = get_current_scenario_context(context)
     token_response = scenario_context.get("latest_token_response")
     assert token_response is not None, "No token response found"
-    assert "access_token" in token_response, "Access token missing from response"
-    assert "refresh_token" in token_response, "Refresh token missing from response"
+    assert token_response.access_token, "Access token missing from response"
+    assert token_response.refresh_token, "Refresh token missing from response"
     context.logger.info("Verified sync token response contains access_token and refresh_token")
 
 
@@ -1754,8 +1759,8 @@ def step_sync_user_info_contains_fields(context: Context) -> None:
     scenario_context = get_current_scenario_context(context)
     user_info = scenario_context.get("latest_user_info")
     assert user_info is not None, "No user info found"
-    assert "sub" in user_info, "User info missing 'sub' field"
-    assert "preferred_username" in user_info, "User info missing 'preferred_username' field"
+    assert user_info.user_uuid, "User info missing 'sub' field"
+    assert user_info.preferred_username, "User info missing 'preferred_username' field"
     context.logger.info("Verified sync user info contains sub and preferred_username")
 
 
@@ -1834,7 +1839,7 @@ def step_sync_token_response_contains_access_token(context: Context) -> None:
     scenario_context = get_current_scenario_context(context)
     token_response = scenario_context.get("latest_token_response")
     assert token_response is not None, "No token response found"
-    assert "access_token" in token_response, "Access token missing from response"
+    assert token_response.access_token, "Access token missing from response"
     context.logger.info("Verified sync token response contains access_token")
 
 
@@ -1844,7 +1849,7 @@ def step_async_token_response_contains_access_token(context: Context) -> None:
     scenario_context = get_current_scenario_context(context)
     token_response = scenario_context.get("latest_token_response")
     assert token_response is not None, "No token response found"
-    assert "access_token" in token_response, "Access token missing from response"
+    assert token_response.access_token, "Access token missing from response"
     context.logger.info("Verified async token response contains access_token")
 
 
@@ -1893,8 +1898,8 @@ def step_async_token_response_contains_tokens(context: Context) -> None:
     scenario_context = get_current_scenario_context(context)
     token_response = scenario_context.get("latest_token_response")
     assert token_response is not None, "No token response found"
-    assert "access_token" in token_response, "Access token missing from response"
-    assert "refresh_token" in token_response, "Refresh token missing from response"
+    assert token_response.access_token, "Access token missing from response"
+    assert token_response.refresh_token, "Refresh token missing from response"
     context.logger.info("Verified async token response contains access_token and refresh_token")
 
 
@@ -1922,8 +1927,8 @@ def step_async_user_info_contains_fields(context: Context) -> None:
     scenario_context = get_current_scenario_context(context)
     user_info = scenario_context.get("latest_user_info")
     assert user_info is not None, "No user info found"
-    assert "sub" in user_info, "User info missing 'sub' field"
-    assert "preferred_username" in user_info, "User info missing 'preferred_username' field"
+    assert user_info.user_uuid, "User info missing 'sub' field"
+    assert user_info.preferred_username, "User info missing 'preferred_username' field"
     context.logger.info("Verified async user info contains sub and preferred_username")
 
 
@@ -3812,7 +3817,7 @@ async def step_add_coverage_default_client_scope(context: Context, client_name: 
             "add_client_default_client_scope",
             internal_client_id,
             scope_id,
-            {},
+            KeycloakClientScopeRequestDTO(),
         )
         scenario_context.store(_op_error_key("add_client_default_client_scope"), None)
     except Exception as exc:
@@ -3882,7 +3887,7 @@ async def step_add_coverage_optional_client_scope(context: Context, client_name:
         if not internal_client_id:
             internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
             scenario_context.store("coverage_internal_client_id", internal_client_id)
-        await _adapter_call(adapter, is_async, "add_client_optional_client_scope", internal_client_id, scope_id, {})
+        await _adapter_call(adapter, is_async, "add_client_optional_client_scope", internal_client_id, scope_id, KeycloakClientScopeRequestDTO())
         scenario_context.store(_op_error_key("add_client_optional_client_scope"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("add_client_optional_client_scope"), str(exc))
@@ -4230,6 +4235,7 @@ def _async_adapter_for(realm_name: str, client_name: str) -> AsyncKeycloakAdapte
             "ADMIN": BaseConfig.global_config().KEYCLOAK.ADMIN.model_copy(update={"IS_ENABLED": False}),
         },
     )
+    _configure_realm(config, realm_name)
     return AsyncKeycloakAdapter(config)
 
 
@@ -4334,11 +4340,13 @@ def _no_admin_adapter(
 ) -> AsyncKeycloakAdapter | KeycloakAdapter:
     """Build a sync or async adapter without admin mode, overriding config fields."""
     base = BaseConfig.global_config().KEYCLOAK
+    issuer = keycloak_test_issuer(base.SERVER_URL, overrides.get("REALM_NAME", base.REALM_NAME))
+    claims = {"EXPECTED_ISSUER": issuer, **(token_validation or {})}
     config = base.model_copy(
         update={
             "CLIENT_SECRET_KEY": None,
             "ADMIN": base.ADMIN.model_copy(update={"IS_ENABLED": False}),
-            "TOKEN_VALIDATION": base.TOKEN_VALIDATION.model_copy(update=token_validation),
+            "TOKEN_VALIDATION": base.TOKEN_VALIDATION.model_copy(update=claims),
             **overrides,
         },
     )
@@ -4513,25 +4521,24 @@ async def step_adapter_enforces_correct_issuer(
 @then('forged claims with token type "{token_type}" are {outcome} by the claim check')
 def step_forged_claims_checked(context: Context, token_type: str, outcome: str) -> None:
     """A signed non-access token cannot be minted by the container, so feed forged claims to the claim check."""
-    import warnings
-
     from archipy.adapters.keycloak._protocols.oidc.adapter import _check_token_claims
 
     base = BaseConfig.global_config().KEYCLOAK
-    claims = {"iss": f"{base.SERVER_URL}/realms/{base.REALM_NAME}", "typ": token_type}
-    enforcing = base.model_copy(
-        update={"TOKEN_VALIDATION": base.TOKEN_VALIDATION.model_copy(update={"EXPECTED_ISSUER": claims["iss"]})},
-    )
+    config = KeycloakConfig(SERVER_URL=base.SERVER_URL, REALM_NAME=base.REALM_NAME)
+    issuer = f"{config.SERVER_URL.rstrip('/')}/realms/{config.REALM_NAME}"
+    claims = {"iss": issuer, "typ": token_type}
     try:
-        _check_token_claims(claims, enforcing)
+        _check_token_claims(claims, config)
     except BaseError as error:
         assert outcome == "rejected" and error.code == "INVALID_TOKEN", error
+        assert error.additional_data["claims"] == ["typ"]
     else:
-        assert outcome == "accepted", "forged claims passed the enforcing claim check"
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        _check_token_claims(claims, base)
-    warned = any(issubclass(w.category, DeprecationWarning) and "EXPECTED_ISSUER" in str(w.message) for w in caught)
-    assert warned == (outcome == "rejected"), (
-        "the default (warn-only) mode must warn exactly when enforcement would reject"
-    )
+        assert outcome == "accepted"
+
+    try:
+        _check_token_claims({"iss": "https://wrong-issuer.example/realms/example", "typ": "Bearer"}, config)
+    except BaseError as error:
+        assert error.code == "INVALID_TOKEN"
+        assert error.additional_data["claims"] == ["iss"]
+    else:
+        raise AssertionError("Token issuer mismatch was accepted")

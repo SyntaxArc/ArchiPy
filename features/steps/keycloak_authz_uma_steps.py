@@ -1,5 +1,3 @@
-import warnings
-
 from behave import then, when
 from behave.runner import Context
 from features.steps.keycloak_adapter_steps import _adapter_call, _adapter_parts
@@ -17,6 +15,7 @@ from archipy.models.dtos.keycloak.authz_policy_dtos import (
     KeycloakAuthzRolePolicyRequestDTO,
 )
 from archipy.models.dtos.keycloak.uma_dtos import KeycloakUmaPolicyRequestDTO, KeycloakUmaResourceRequestDTO
+from archipy.models.errors import InvalidArgumentError
 
 
 async def _client_uuid(adapter, is_async: bool, client_name: str) -> str:
@@ -279,23 +278,33 @@ async def step_uma_deleted(context: Context, name: str, adapter_type: str) -> No
 # --- unknown request fields ---
 
 
-@when('I send a {kind} payload with the unknown field "{field}" to Keycloak using {adapter_type} adapter')
-async def step_send_unknown_field(context: Context, kind: str, field: str, adapter_type: str) -> None:
+@when("I send a {kind} dictionary to the Keycloak adapter")
+async def step_send_dict_payload(context, kind):
     adapter, is_async, sc = _adapter_parts(context)
-    calls = {
-        "group": ("create_group", ({"name": "typo-group", field: "x"},)),
-        "user": ("create_user", ({"username": "typo-user", field: "x"},)),
-        "realm": ("update_realm", ("test-realm",)),
-    }
-    method, args = calls[kind]
-    kwargs = {field: "x"} if kind == "realm" else {}
-    sc.store("unknown_field_error", None)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
-        try:
-            await _adapter_call(adapter, is_async, method, *args, **kwargs)
-        except Exception as e:  # noqa: BLE001 - the scenario asserts on whichever error Keycloak's rejection maps to
-            sc.store("unknown_field_error", e)
+    method, payload = {
+        "group": ("create_group", {"name": "test-group"}),
+        "user": ("create_user", {"username": "test-user"}),
+    }[kind]
+    try:
+        await _adapter_call(adapter, is_async, method, payload)
+    except InvalidArgumentError as error:
+        sc.store("dict_payload_error", error)
+
+
+@then("the Keycloak adapter rejects the payload argument")
+def step_verify_dict_payload_rejected(context):
+    error = get_current_scenario_context(context).get("dict_payload_error")
+    assert isinstance(error, InvalidArgumentError)
+    assert error.additional_data["argument"] == "payload"
+
+
+@when('I update the realm with the unknown field "{field}"')
+def step_send_unknown_realm_field(context, field):
+    adapter, _, sc = _adapter_parts(context)
+    try:
+        adapter.update_realm("test-realm", **{field: "x"})
+    except Exception as error:
+        sc.store("unknown_field_error", error)
 
 
 @then('Keycloak rejects the payload as invalid and names the field "{field}"')

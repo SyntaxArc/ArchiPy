@@ -29,35 +29,42 @@ KAFKA__ACKS=all
 KAFKA__AUTO_OFFSET_RESET=earliest
 ```
 
+The `KAFKA.SSL` group configures TLS using librdkafka options named `ssl.*`.
+
 ### Direct Configuration
 
 !!! warning
-    With `SECURITY_PROTOCOL` set to `SASL_PLAINTEXT` or `SASL_SSL`, `SASL_MECHANISM` is required, and `USERNAME` and
-    `PASSWORD` are required for `PLAIN`, `SCRAM-SHA-256` and `SCRAM-SHA-512`. `GSSAPI` and `OAUTHBEARER` need no
+    With `SECURITY_PROTOCOL` set to `SASL_PLAINTEXT` or `SASL_SSL`, `SASL.MECHANISM` is required, and `SASL.USERNAME` and
+    `SASL.PASSWORD` are required for `PLAIN`, `SCRAM-SHA-256` and `SCRAM-SHA-512`. `GSSAPI` and `OAUTHBEARER` need no
     username or password. Load the password from the environment or a secrets store, not from source code.
 
     Each security setting is applied when it is set, based on `SECURITY_PROTOCOL`: SASL settings for the `SASL_*`
-    protocols, and `SSL_CA_FILE`, `SSL_CERT_FILE`, `SSL_KEY_FILE` for `SSL` and `SASL_SSL`. mTLS without SASL works
-    with `SECURITY_PROTOCOL="SSL"` and a certificate and key; leave `SSL_CA_FILE` unset to use the system CA store.
+    protocols, and `SSL.CA_FILE`, `SSL.CERT_FILE`, `SSL.KEY_FILE` for `SSL` and `SASL_SSL`. mTLS without SASL works
+    with `SECURITY_PROTOCOL="SSL"` and a certificate and key; leave `SSL.CA_FILE` unset to use the system CA store.
 
 ```python
+import os
+
 from archipy.configs.config_template import KafkaConfig
 
 config = KafkaConfig(
     BROKERS_LIST=["kafka1:9092", "kafka2:9092"],
     CLIENT_ID="my-app",
     SECURITY_PROTOCOL="SASL_SSL",
-    SASL_MECHANISM="PLAIN",
-    USERNAME="kafka-user",
+    SASL={
+        "MECHANISM": "PLAIN",
+        "USERNAME": "kafka-user",
+        "PASSWORD": os.environ["KAFKA__SASL__PASSWORD"],
+    },
 )
 ```
 
 !!! warning "Broker hostname verification is on by default"
     With `SECURITY_PROTOCOL` set to `SSL` or `SASL_SSL`, the adapters verify that each broker certificate matches the broker
-    hostname (`SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="https"`, the default). Earlier releases turned this check off.
+    hostname (`SSL.ENDPOINT_IDENTIFICATION_ALGORITHM="https"`, the default). Earlier releases turned this check off.
     Brokers reached by IP address, or whose certificate SAN does not list the address you connect to, now fail the TLS
     handshake. Fix the certificates if you can. To keep the old behavior, set
-    `SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="none"` (or `KAFKA__SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=none`); a warning
+    `SSL.ENDPOINT_IDENTIFICATION_ALGORITHM="none"` (or `KAFKA__SSL__ENDPOINT_IDENTIFICATION_ALGORITHM=none`); a warning
     is logged because this leaves connections open to man-in-the-middle attacks.
 
 ### Connection, Identity and Timeout Settings
@@ -180,7 +187,7 @@ else:
     Other combinations raise a `ConfigurationError` when the config is validated.
 
 !!! note
-    `SECURITY_PROTOCOL` and `SASL_MECHANISM` are case-insensitive (`ssl` equals `SSL`). `SECURITY_PROTOCOL` must be
+    `SECURITY_PROTOCOL` and `SASL.MECHANISM` are case-insensitive (`ssl` equals `SSL`). `SECURITY_PROTOCOL` must be
     `PLAINTEXT`, `SSL`, `SASL_PLAINTEXT` or `SASL_SSL`; any other value raises a `ConfigurationError`.
 
 ```python
@@ -209,8 +216,7 @@ except InternalError as e:
 else:
     logger.info("Message enqueued successfully")
 
-# Publish with a message key (for partition affinity). Without a key the message is currently sent with an empty
-# key (b""), which emits a DeprecationWarning; set KAFKA.EMPTY_KEY_FOR_MISSING_KEY=False to send no key (None).
+# Publish with a message key for partition affinity. Omitting the key sends a keyless message.
 try:
     producer.produce("Hello, Kafka with key!", key="user-123")
 except InternalError as e:

@@ -69,7 +69,7 @@ class KeycloakIdentityProvidersMixin(SyncKeycloakMixinBase):
 
     def create_identity_provider(
         self,
-        payload: KeycloakIdentityProviderRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create an identity provider.
 
@@ -119,7 +119,7 @@ class KeycloakIdentityProvidersMixin(SyncKeycloakMixinBase):
     def update_identity_provider(
         self,
         alias: str,
-        payload: KeycloakIdentityProviderRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an identity provider.
 
@@ -202,7 +202,7 @@ class KeycloakIdentityProvidersMixin(SyncKeycloakMixinBase):
     def update_identity_provider_management_permissions(
         self,
         alias: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of an identity provider.
 
@@ -262,7 +262,7 @@ class KeycloakIdentityProvidersMixin(SyncKeycloakMixinBase):
     def create_identity_provider_mapper(
         self,
         alias: str,
-        payload: KeycloakIdentityProviderMapperRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a mapper of an identity provider.
 
@@ -315,7 +315,7 @@ class KeycloakIdentityProvidersMixin(SyncKeycloakMixinBase):
         self,
         alias: str,
         mapper_id: str,
-        payload: KeycloakIdentityProviderMapperRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a mapper of an identity provider.
 
@@ -443,7 +443,7 @@ class AsyncKeycloakIdentityProvidersMixin(AsyncKeycloakMixinBase):
 
     async def create_identity_provider(
         self,
-        payload: KeycloakIdentityProviderRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create an identity provider.
 
@@ -493,7 +493,7 @@ class AsyncKeycloakIdentityProvidersMixin(AsyncKeycloakMixinBase):
     async def update_identity_provider(
         self,
         alias: str,
-        payload: KeycloakIdentityProviderRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an identity provider.
 
@@ -576,7 +576,7 @@ class AsyncKeycloakIdentityProvidersMixin(AsyncKeycloakMixinBase):
     async def update_identity_provider_management_permissions(
         self,
         alias: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of an identity provider.
 
@@ -636,7 +636,7 @@ class AsyncKeycloakIdentityProvidersMixin(AsyncKeycloakMixinBase):
     async def create_identity_provider_mapper(
         self,
         alias: str,
-        payload: KeycloakIdentityProviderMapperRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a mapper of an identity provider.
 
@@ -689,7 +689,7 @@ class AsyncKeycloakIdentityProvidersMixin(AsyncKeycloakMixinBase):
         self,
         alias: str,
         mapper_id: str,
-        payload: KeycloakIdentityProviderMapperRequestDTO | dict[str, Any],
+        payload: KeycloakIdentityProviderMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a mapper of an identity provider.
 

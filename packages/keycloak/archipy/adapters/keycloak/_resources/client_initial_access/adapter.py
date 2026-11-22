@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -47,7 +46,7 @@ class KeycloakClientInitialAccessMixin(SyncKeycloakMixinBase):
 
     def create_client_initial_access(
         self,
-        payload: KeycloakClientInitialAccessCreateRequestDTO | dict[str, Any],
+        payload: KeycloakClientInitialAccessCreateRequestDTO,
     ) -> KeycloakClientInitialAccessDTO:
         """Create a client initial access token.
 
@@ -115,7 +114,7 @@ class AsyncKeycloakClientInitialAccessMixin(AsyncKeycloakMixinBase):
 
     async def create_client_initial_access(
         self,
-        payload: KeycloakClientInitialAccessCreateRequestDTO | dict[str, Any],
+        payload: KeycloakClientInitialAccessCreateRequestDTO,
     ) -> KeycloakClientInitialAccessDTO:
         """Create a client initial access token.
 

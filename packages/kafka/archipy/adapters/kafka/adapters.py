@@ -7,7 +7,6 @@ __lazy_modules__ = ["archipy.configs.base_config"]
 import asyncio
 import contextlib
 import logging
-import warnings
 from typing import TYPE_CHECKING, NoReturn, override
 
 import confluent_kafka
@@ -151,37 +150,6 @@ def _apply_transactional_config(config: dict[str, str | int | float], configs: K
     config["transactional.id"] = configs.TRANSACTIONAL_ID
     delivery_timeout = configs.MESSAGE_TIMEOUT_MS or configs.DELIVERY_TIMEOUT_MS
     config["transaction.timeout.ms"] = configs.TRANSACTION_TIMEOUT_MS or max(60000, delivery_timeout)
-
-
-def _resolve_message_key(
-    configs: KafkaConfig,
-    key: str | None,
-    encode: Callable[[str | bytes], bytes],
-) -> bytes | None:
-    """Return the key to send for a message.
-
-    A missing key is sent as ``None`` (no key) when ``EMPTY_KEY_FOR_MISSING_KEY`` is False. The legacy behavior,
-    still the default, sends empty bytes and is deprecated.
-
-    Args:
-        configs: Kafka configuration.
-        key: The key given by the caller, or None.
-        encode: Function that converts the key to bytes.
-
-    Returns:
-        bytes | None: The key to pass to the client.
-    """
-    if key is not None:
-        return encode(key)
-    if not configs.EMPTY_KEY_FOR_MISSING_KEY:
-        return None
-    warnings.warn(
-        "Messages without a key are sent with an empty key (b''). Set KAFKA.EMPTY_KEY_FOR_MISSING_KEY=False to "
-        "send them without a key; that will become the default in a future release.",
-        DeprecationWarning,
-        stacklevel=4,
-    )
-    return b""
 
 
 def _effective_delivery_timeout_seconds(configs: KafkaConfig) -> float:
@@ -923,7 +891,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         try:
             callback = self._build_delivery_callback(on_delivery)
             processed_message = self._pre_process_message(message)
-            processed_key = _resolve_message_key(self._configs, key, self._pre_process_message)
+            processed_key = self._pre_process_message(key) if key is not None else None
             try:
                 self._adapter.produce(
                     topic=self._topic_name,
@@ -1210,7 +1178,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         try:
             adapter = await self._get_adapter()
             processed_message = self._pre_process_message(message)
-            processed_key = _resolve_message_key(self._configs, key, self._pre_process_message)
+            processed_key = self._pre_process_message(key) if key is not None else None
             await adapter.produce(
                 topic=self._topic_name,
                 value=processed_message,
