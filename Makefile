@@ -243,7 +243,11 @@ docs-build: ## Build the static documentation site
 .PHONY: docs-check
 docs-check: ## Run a clean, strict documentation build
 	@echo "${BLUE}Checking documentation...${NC}"
-	$(UV) run --group docs zensical build --clean --strict
+	$(UV) run --group docs python scripts/check_docs.py
+
+.PHONY: docs-smoke
+docs-smoke: ## Run the published quickstart and upgrade examples using Redis
+	$(UV) run --group docs --extra redis python scripts/smoke_docs.py
 
 .PHONY: docs-build-full
 docs-build-full: docs-check ## Build the production site

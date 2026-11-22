@@ -11,6 +11,7 @@ on:
       - 'archipy/**'
       - 'packages/**'
       - 'zensical.toml'
+      - 'scripts/check_docs.py'
       - 'pyproject.toml'
       - 'uv.lock'
       - '.python-version'
@@ -18,6 +19,7 @@ on:
   pull_request:
     paths:
       - 'zensical.toml'
+      - 'scripts/check_docs.py'
       - '.python-version'
       - '.github/workflows/deploy-docs.yml'
 
@@ -38,7 +40,7 @@ jobs:
         run: uv sync --locked --group docs
 
       - name: Build documentation
-        run: uv run --no-sync zensical build --clean --strict
+        run: uv run --no-sync python scripts/check_docs.py
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

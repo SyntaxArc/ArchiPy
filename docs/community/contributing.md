@@ -311,6 +311,14 @@ Run the clean, strict build used by CI:
 make docs-check
 ```
 
+Run the published quickstart and upgrade examples with a local Redis test instance:
+
+```bash
+make docs-smoke
+```
+
+Set `REDIS__MASTER_HOST` and `REDIS__PORT` to use a test instance on a different address.
+
 GitHub Pages deploys when documentation or API sources change on `master`. Read the Docs builds from the same configuration.
 
 ### Documentation Improvement Guidelines

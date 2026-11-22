@@ -19,18 +19,18 @@ validation, user management, and role-based access control.
 Abstract port interface defining the Keycloak adapter contract.
 
 ::: archipy.adapters.keycloak.ports
-options:
-show_root_toc_entry: false
-heading_level: 3
+    options:
+      heading_level: 3
+      show_source: false
 
 ## Adapters
 
 Concrete Keycloak adapter wrapping the Keycloak REST API for authentication and authorization operations.
 
 ::: archipy.adapters.keycloak.adapters
-options:
-show_root_toc_entry: false
-heading_level: 3
+    options:
+      heading_level: 3
+      show_source: false
 
 ## Auth Guards
 
@@ -49,6 +49,6 @@ Ambiguous organization ownership raises `PermissionDeniedError`; it never falls 
 See [resource ownership](../../tutorials/adapters/keycloak.md#resource-ownership) for the contract and UUID migration notes.
 
 ::: archipy.adapters.keycloak.auth
-options:
-show_root_toc_entry: false
-heading_level: 3
+    options:
+      heading_level: 3
+      show_source: false

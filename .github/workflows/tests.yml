@@ -182,6 +182,8 @@ jobs:
             - '!LICENSE'
             - '!overrides/**'
             - '!zensical.toml'
+            - '!scripts/check_docs.py'
+            - '!scripts/smoke_docs.py'
             - '!.github/ISSUE_TEMPLATE/**'
             - '!.github/workflows/{close-stale-issues,deploy-docs,dependency-review,docs-check,instrumentor-compat,labeler,link-check,pr-merged-issue-comment,publish,ruff-lint,ty-lint}.yml'
             - '!.github/labeler.yml'
