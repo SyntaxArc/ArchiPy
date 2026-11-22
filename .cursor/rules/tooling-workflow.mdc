@@ -13,12 +13,17 @@ Always use **`uv`** — never `pip install` directly.
 # Install all deps (including dev + all extras)
 uv sync --all-extras --all-groups
 
+# After switching branches or pulling a lockfile change, sync to the lockfile
+uv sync --locked --all-extras --all-groups
+
 # Add a new dependency
 uv add <package>
 
 # Add a dev dependency
 uv add --group dev <package>
 ```
+
+Tests and `ty` resolve against `uv.lock`; a stale environment can fail with version-mismatch errors (for example an older FastAPI without `max_body_size`).
 
 ## Common Make Targets
 
