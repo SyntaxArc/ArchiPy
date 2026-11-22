@@ -39,6 +39,15 @@ Feature: Optional dependencies
   Scenario: The Keycloak ports defer the SDK on Python 3.15
     Then importing the public Keycloak ports honors the interpreter's import timing
 
+  Scenario: The base configuration defers error transports on Python 3.15
+    Then importing the base configuration honors the interpreter's import timing
+
+  Scenario: The error package defers optional transports on Python 3.15
+    Then importing the error package honors the interpreter's import timing
+
+  Scenario: Core helpers defer settings and error transports on Python 3.15
+    Then importing core helpers honors the interpreter's import timing
+
   Scenario Outline: Construct a <package> client with explicit settings
     Then the "<package>" adapter can defer global configuration when given explicit settings
 

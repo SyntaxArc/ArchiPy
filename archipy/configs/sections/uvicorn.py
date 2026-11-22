@@ -1,5 +1,8 @@
 """Uvicorn server configuration."""
 
+# Error classes are used only by validators, which run when a config is built, not when it is imported.
+__lazy_modules__ = ["archipy.models.errors"]
+
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator

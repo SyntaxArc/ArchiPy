@@ -111,6 +111,92 @@ assert {name!r} in exports and {implementation!r} in exports
     assert result.returncode == 0, result.stderr
 
 
+@then("importing the base configuration honors the interpreter's import timing")
+def step_base_config_import_timing(context):
+    script = """
+import sys
+from importlib.util import find_spec
+
+from archipy.configs.base_config import BaseConfig
+
+eager = sys.version_info < (3, 15)
+assert ("archipy.models.errors" in sys.modules) == eager
+if find_spec("grpc") is not None:
+    assert ("grpc" in sys.modules) == eager
+assert BaseConfig is not None
+
+import archipy.models.errors as errors
+_ = errors.ConfigurationError(operation="lazy", reason="config")
+assert errors.ConfigurationError.__module__ == "archipy.models.errors.system_errors"
+assert "archipy.models.errors.system_errors" in sys.modules
+if find_spec("grpc") is not None:
+    assert "grpc" in sys.modules
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@then("importing the error package honors the interpreter's import timing")
+def step_error_package_import_timing(context):
+    script = """
+import sys
+from importlib.util import find_spec
+
+import archipy.models.errors as errors
+
+eager = sys.version_info < (3, 15)
+assert "archipy.models.errors.base_error" in sys.modules
+assert ("archipy.models.errors.auth_errors" in sys.modules) == eager
+assert ("archipy.models.errors.system_errors" in sys.modules) == eager
+if find_spec("grpc") is not None:
+    assert ("grpc" in sys.modules) == eager
+
+error = errors.ConfigurationError(operation="lazy", reason="error")
+assert error.code == "CONFIGURATION_ERROR"
+assert error.__class__.__module__ == "archipy.models.errors.system_errors"
+assert "archipy.models.errors.system_errors" in sys.modules
+if find_spec("grpc") is not None:
+    assert "grpc" in sys.modules
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+@then("importing core helpers honors the interpreter's import timing")
+def step_core_helper_import_timing(context):
+    script = """
+import sys
+
+from archipy.adapters.email.adapters import EmailAdapter
+from archipy.helpers.errors import capture_exception
+from archipy.helpers.utils.app_utils import FastAPIUtils
+from archipy.helpers.utils.datetime_utils import DatetimeUtils
+from archipy.helpers.utils.file_utils import FileUtils
+from archipy.helpers.utils.jwt_utils import JWTUtils
+from archipy.helpers.utils.password_utils import PasswordUtils
+from archipy.helpers.utils.totp_utils import TOTPUtils
+
+eager = sys.version_info < (3, 15)
+assert ("archipy.configs.base_config" in sys.modules) == eager
+assert ("archipy.models.errors" in sys.modules) == eager
+
+try:
+    PasswordUtils.hash_password("secret")
+except AssertionError as error:
+    assert "set global configs" in str(error)
+else:
+    raise AssertionError("Expected hash_password to require global settings")
+assert "archipy.configs.base_config" in sys.modules
+
+import archipy.models.errors as errors
+_ = errors.InvalidPasswordError()
+assert errors.InvalidPasswordError.__module__ == "archipy.models.errors.validation_errors"
+assert "archipy.models.errors.validation_errors" in sys.modules
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @then("importing the public Keycloak ports honors the interpreter's import timing")
 def step_keycloak_port_import_timing(context):
     script = """

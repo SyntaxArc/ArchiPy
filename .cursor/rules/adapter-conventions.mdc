@@ -78,6 +78,8 @@ except Exception as e:  # noqa: BLE001
 
 Adapters rely on their optional extra being installed — do **not** use lazy imports to guard third-party dependencies inside adapter classes. Missing extras should fail at import time with a clear `ImportError`.
 
+The Python 3.15 `__lazy_modules__` bridge is allowed for **first-party** dependencies that are only needed at call time, such as `archipy.configs.base_config` and `archipy.models.errors`; it defers global settings and optional transports (for example gRPC) without hiding a missing extra. Declare it before the imports, use fully qualified names, and keep Python 3.14 eager. Canonical policy: `architecture-patterns.mdc`.
+
 ### Allowed `PLC0415` exceptions in adapters
 
 1. `session_manager_registry.py` — circular import breakers.

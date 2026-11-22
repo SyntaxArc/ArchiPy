@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Settings are read only when an exception is captured, so a plain import of this helper must not load them.
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 import logging
 
 from archipy.configs.base_config import BaseConfig

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Error types are needed only when a validation failure is converted, not while importing the helper.
+__lazy_modules__ = ["archipy.models.errors"]
+
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Protocol
 

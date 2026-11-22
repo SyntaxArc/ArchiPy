@@ -27,7 +27,20 @@ archipy/helpers/
 
 ## Lazy imports (helpers)
 
-Lazy imports (`PLC0415`) are allowed in helpers for optional extras and circular-import breakers — typically inside functions/methods. Prefer function-scoped imports; module-level lazy imports only where existing decorator packages already require them per `pyproject.toml`.
+Lazy imports (`PLC0415`) are allowed in helpers for optional extras and circular-import breakers — typically inside functions/methods. Prefer function-scoped imports for **optional third-party** modules; module-level lazy imports only where existing decorator packages already require them per `pyproject.toml`.
+
+For **first-party** modules that are only read at call time (global settings, error classes), use the Python 3.15 `__lazy_modules__` bridge instead of moving the import into every function. It keeps Python 3.14 eager:
+
+```python
+from __future__ import annotations
+
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+
+from archipy.configs.base_config import BaseConfig
+from archipy.models.errors import InvalidArgumentError
+```
+
+Rules: fully qualified names, declaration before the imports, module scope only, and no import-time side effects that callers depend on. The `__lazy_modules__` bridge does not replace the optional-extra function-scoped pattern because the module may genuinely be absent. Canonical policy: `architecture-patterns.mdc`.
 
 ```python
 # ✅ GOOD — lazy import inside a helper utility function

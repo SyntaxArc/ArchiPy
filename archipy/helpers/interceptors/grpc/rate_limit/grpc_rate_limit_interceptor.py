@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Config is resolved when the interceptor is built; importing the module must not require global settings.
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+
 import asyncio
 import inspect
 import logging

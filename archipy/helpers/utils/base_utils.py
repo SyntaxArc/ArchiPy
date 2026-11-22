@@ -1,5 +1,8 @@
 """Shared base utility helpers."""
 
+# Error classes are raised by methods, not needed while importing the utility facade.
+__lazy_modules__ = ["archipy.models.errors"]
+
 import re
 
 from archipy.helpers.utils.datetime_utils import DatetimeUtils

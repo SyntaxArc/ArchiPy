@@ -65,6 +65,8 @@ import pydantic
 from archipy.models.errors import NotFoundError
 ```
 
+The Python 3.15 `__lazy_modules__` bridge, when used, sits directly after the future import and before the standard-library block; see `architecture-patterns.mdc`.
+
 ## Error Handling
 
 - Prefer **specific** exception types — never bare `except:`.

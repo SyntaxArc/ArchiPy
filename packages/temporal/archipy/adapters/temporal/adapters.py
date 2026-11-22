@@ -7,6 +7,9 @@ and conventions.
 
 from __future__ import annotations
 
+# Explicit Temporal settings replace the global config; defer settings until a constructor needs them.
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 import asyncio
 import contextlib
 import logging

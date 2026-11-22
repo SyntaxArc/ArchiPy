@@ -1,5 +1,8 @@
 """Kafka configuration."""
 
+# Error classes are used only by validators, which run when a config is built, not when it is imported.
+__lazy_modules__ = ["archipy.models.errors"]
+
 import logging
 from typing import Literal, Self
 

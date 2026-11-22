@@ -11,6 +11,9 @@ do not install ``archipy[vault]`` never import this module.
 
 from __future__ import annotations
 
+# hvac configuration errors are raised only on failure paths, not while importing the settings source.
+__lazy_modules__ = ["archipy.models.errors"]
+
 import json
 import logging
 import os

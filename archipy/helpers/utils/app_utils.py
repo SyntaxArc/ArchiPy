@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Bootstrap helpers receive the config from the caller; importing them must not read the global settings.
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+
 import logging
 import re
 import warnings

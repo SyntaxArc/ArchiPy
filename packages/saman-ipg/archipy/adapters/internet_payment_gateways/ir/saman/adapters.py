@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Payment adapters accept explicit settings; only the default constructor reads the global config.
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Self

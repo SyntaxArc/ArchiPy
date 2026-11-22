@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__lazy_modules__ = ["archipy.configs.base_config"]
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
 
 import functools
 import inspect

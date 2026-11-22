@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Explicit AuthConfig arguments replace the global config; do not load settings just to import the helper.
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+
 # src/helpers/password_helper.py
 import hashlib
 import hmac

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Error types are needed only when an exception is being mapped, not while importing the helper.
+__lazy_modules__ = ["archipy.models.errors"]
+
 from pydantic import ValidationError
 
 from archipy.helpers.errors.validation import invalid_argument_from_validation

@@ -12,6 +12,9 @@ order (highest priority first):
 7. Default class field values / init settings
 """
 
+# Errors are only needed on failure paths; deferring them keeps optional transports (grpc) unloaded at startup.
+__lazy_modules__ = ["archipy.models.errors"]
+
 import importlib
 import os
 from typing import TypeVar

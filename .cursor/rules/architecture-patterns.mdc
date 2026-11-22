@@ -48,3 +48,23 @@ models  ←  configs  ←  helpers  ←  adapters
 
 - **Helpers** may lazy-import optional third-party deps inside functions (`PLC0415`). Canonical policy: `helpers-configs.mdc`.
 - **Adapters** must not lazy-import to guard optional extras — install the extra instead. Narrow exceptions (session registries, Temporal cross-extra): `adapter-conventions.mdc`.
+
+### Python 3.15 `__lazy_modules__` bridge
+
+The project supports Python 3.14 and 3.15, so use the `__lazy_modules__` compatibility mechanism instead of the `lazy` keyword:
+
+```python
+__lazy_modules__ = ["archipy.configs.base_config"]
+
+from archipy.configs.base_config import BaseConfig
+```
+
+- Declare it **before** the imports it applies to, after the module docstring and `from __future__` line.
+- Use **fully qualified** module names. Relative imports are resolved before the lookup, so `from .adapters import X` needs `"archipy.adapters.<service>.adapters"`.
+- It applies only to **module-scope** imports. Imports inside functions, class bodies, `try`/`except`/`finally`, and star imports stay eager and must not be listed.
+- Laziness is local: listing a module in the importer is what defers the import; a lazy re-export in another package does not make `from that_package import Name` lazy.
+- Only defer imports whose names are used at call time. Keeping `TYPE_CHECKING` imports is still correct.
+- Preserve Python 3.14 behavior: on 3.14 the declaration is ignored and the import stays eager, so do not change import structure or rely on deferred side effects.
+- Add or extend a fresh-interpreter Behave scenario that asserts eager behavior on 3.14 and deferred behavior on 3.15. `features/optional_dependencies.feature` owns these checks.
+- Do not use it to hide a missing extra; adapters still fail at import time when their own extra is absent.
+- Libraries must not call `sys.set_lazy_imports()` or install a lazy-imports filter; the application owns those global switches.

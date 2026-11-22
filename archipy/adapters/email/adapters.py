@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Explicit settings replace the global config; do not load settings for a client that will not read them.
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+
 import base64
 import logging
 import os

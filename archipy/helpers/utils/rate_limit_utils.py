@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Error classes are raised by validation methods, not needed while importing the helper.
+__lazy_modules__ = ["archipy.models.errors"]
+
 from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
 from archipy.models.errors import InvalidArgumentError
 

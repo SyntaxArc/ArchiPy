@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Test doubles accept explicit settings and should not need global configuration to be importable.
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 from typing import TYPE_CHECKING, Any
 
 import fakeredis
