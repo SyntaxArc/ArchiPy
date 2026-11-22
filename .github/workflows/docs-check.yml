@@ -54,6 +54,7 @@ jobs:
       - name: Build the docs in strict mode
         env:
           UV_NO_SYNC: "true"
+          READTHEDOCS_CANONICAL_URL: ${{ matrix.python-version == '3.15' && 'https://archipy.readthedocs.io/en/latest/' || '' }}
         run: make docs-check
 
       - name: Run documentation examples
