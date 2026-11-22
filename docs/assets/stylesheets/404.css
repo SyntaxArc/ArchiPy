@@ -8,20 +8,8 @@
 }
 
 .docs-404 {
-  --md-typeset-a-color: color-mix(in srgb, var(--md-primary-fg-color) 65%, var(--md-default-fg-color));
   max-width: 43rem;
   margin: clamp(1rem, 5vw, 3.5rem) auto;
-}
-
-.docs-404__hero {
-  padding: clamp(1.2rem, 4vw, 2.5rem);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--md-primary-fg-color) 10%, var(--md-default-bg-color)),
-    var(--md-default-bg-color)
-  );
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: 0.8rem;
 }
 
 .md-typeset .docs-404__status {
@@ -44,18 +32,6 @@
 
 .docs-404__hero .md-button {
   margin-top: 0.35rem;
-  border-radius: 0.3rem;
-}
-
-.md-typeset .docs-404 .md-button--primary {
-  color: var(--md-primary-bg-color);
-  background-color: var(--md-primary-fg-color--dark);
-  border-color: var(--md-primary-fg-color--dark);
-}
-
-.docs-404 a:focus-visible {
-  outline: 2px solid var(--md-typeset-a-color);
-  outline-offset: 3px;
 }
 
 .md-typeset .docs-404 h2 {
@@ -82,8 +58,8 @@
   display: block;
   width: 100%;
   padding: 0.7rem 0.8rem;
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: 0.4rem;
+  border: 1px solid var(--docs-border);
+  border-radius: 0.6rem;
 }
 
 .docs-404__links a:hover,

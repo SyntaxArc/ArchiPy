@@ -1,0 +1,152 @@
+body[data-md-color-scheme] {
+  --md-text-font: system-ui;
+  --md-typeset-a-color: #1958a8;
+  --md-accent-fg-color: #164580;
+  --docs-surface: #f1f6fc;
+  --docs-border: #d6e0ed;
+  --docs-action: #1958a8;
+  --docs-action-hover: #164580;
+}
+
+body[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: #96c8ff;
+  --md-accent-fg-color: #c4e1ff;
+  --docs-surface: #252e3e;
+  --docs-border: #414c5e;
+  --docs-action: #1d5cae;
+}
+
+.md-header__button.md-logo img {
+  border-radius: 0.2rem;
+}
+
+.md-typeset h1 {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.md-typeset h2 {
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.md-typeset a:focus-visible,
+.md-header :is(a, button):focus-visible {
+  outline: 2px solid var(--md-typeset-a-color);
+  outline-offset: 3px;
+}
+
+.md-typeset .md-button--primary {
+  color: #fff;
+  background-color: var(--docs-action);
+  border-color: var(--docs-action);
+  border-radius: 0.4rem;
+}
+
+.md-typeset .md-button--primary:hover,
+.md-typeset .md-button--primary:focus-visible {
+  color: #fff;
+  background-color: var(--docs-action-hover);
+  border-color: var(--docs-action-hover);
+}
+
+.docs-home {
+  max-width: 57rem;
+  margin: 0 auto;
+}
+
+.md-content__inner:has(> .docs-home) > .md-content__button {
+  display: none;
+}
+
+.docs-home-hero,
+.docs-404__hero {
+  padding: clamp(1.1rem, 4vw, 2.5rem);
+  background: linear-gradient(145deg, var(--docs-surface), var(--md-default-bg-color));
+  border: 1px solid var(--docs-border);
+  border-radius: 0.85rem;
+}
+
+.docs-home-hero {
+  display: grid;
+  gap: clamp(1rem, 4vw, 2.5rem);
+  align-items: center;
+}
+
+@media (min-width: 44em) {
+  .docs-home-hero {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
+
+.md-typeset .docs-home-hero h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+
+.docs-home-hero h1 > .headerlink {
+  display: none;
+}
+
+.docs-home-hero p:last-child {
+  margin-bottom: 0;
+}
+
+.docs-home-install {
+  min-width: 0;
+  padding: clamp(0.75rem, 3vw, 1.25rem);
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--docs-border);
+  border-radius: 0.6rem;
+}
+
+.md-typeset .docs-home-install h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.docs-home-install p {
+  margin: 0.45em 0;
+  font-size: 0.75rem;
+}
+
+.docs-home-install .highlight {
+  margin: 0.6em 0 0;
+}
+
+.docs-home-install .md-code__button[data-md-type="copy"] {
+  color: var(--md-typeset-a-color);
+}
+
+.md-typeset .docs-entry-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.75rem;
+}
+
+.md-typeset .docs-api-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 48em) {
+  .md-typeset .docs-api-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .docs-api-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 70em) {
+  .md-typeset .docs-api-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.md-typeset .docs-entry-grid > .card,
+.md-typeset .docs-entry-grid > ul > li {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--docs-border);
+  border-radius: 0.6rem;
+}

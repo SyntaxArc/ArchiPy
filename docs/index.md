@@ -1,69 +1,57 @@
 ---
 title: Get Started
-description: Introduction to ArchiPy and installation guide for the framework and its optional dependencies.
+description: Install ArchiPy, build your first Python service, and find examples and API reference.
+hide:
+  - navigation
+  - toc
 ---
 
-# Get Started
+<div class="docs-home" markdown="1">
 
-![ArchiPy Logo](assets/logo.jpg)
+<div class="docs-home-hero" markdown="1">
+<div markdown="1">
 
-[![PyPI version](https://img.shields.io/pypi/v/archipy)](https://pypi.org/project/archipy/)
-[![Python versions](https://img.shields.io/pypi/pyversions/archipy)](https://pypi.org/project/archipy/)
-[![License](https://img.shields.io/pypi/l/archipy)](community/license.md)
-[![Downloads](https://img.shields.io/pypi/dm/archipy)](https://pypi.org/project/archipy/)
-[![CI](https://github.com/SyntaxArc/ArchiPy/actions/workflows/tests.yml/badge.svg)](https://github.com/SyntaxArc/ArchiPy/actions)
-[![GitHub Stars](https://img.shields.io/github/stars/SyntaxArc/ArchiPy?style=social)](https://github.com/SyntaxArc/ArchiPy)
+# Build with ArchiPy { #get-started }
 
-ArchiPy is a Python framework that provides standardized, scalable building blocks for modern applications.
-Built on Clean Architecture principles with Python 3.14+, it removes the boilerplate from wiring up databases,
-caches, queues, and services — so you focus on business logic.
+Typed adapters for databases, caches, and queues in Python services.
 
-## In 30 Seconds
+[Start the quickstart](getting-started/quickstart.md){ .md-button .md-button--primary }
 
-Install and run a typed, cached service:
+</div>
+<div class="docs-home-install" markdown="1">
 
-=== "uv"
+## Install ArchiPy { #in-30-seconds }
 
-    ```bash
-    uv add "archipy[redis,cache]"
-    ```
+Python 3.14 or later
 
-=== "pip"
-
-    ```bash
-    pip install "archipy[redis,cache]"
-    ```
-
-```python
-from archipy.configs.base_config import BaseConfig
-from archipy.adapters.redis.adapters import RedisAdapter
-from archipy.helpers.decorators import ttl_cache
-
-config = BaseConfig()
-BaseConfig.set_global(config)
-redis = RedisAdapter()
-
-@ttl_cache(ttl=60)
-def get_user(user_id: str) -> dict:
-    return redis.get(f"user:{user_id}")
+```bash
+uv add archipy
 ```
 
-That's it — typed config, live Redis adapter, and a TTL cache, all wired together.
+</div>
+</div>
+
+<div class="grid cards docs-entry-grid" markdown="1">
+
+-   **[Installation](getting-started/installation.md)**
+
+    Choose extras and set up your environment.
+
+-   **[Tutorials](tutorials/index.md)**
+
+    Connect an adapter or add an application feature.
+
+-   **[API Reference](api_reference/index.md)**
+
+    Look up public classes, configuration, and helpers.
+
+</div>
 
 ## Why Use ArchiPy?
 
-- **Clean Architecture out of the box** — four strictly separated layers (models, configs, helpers, adapters) enforce
-  dependency rules automatically
-- **Type-safe everything** — configurations, entities, DTOs, and errors all use Pydantic or SQLAlchemy with full type
-  hint support
-- **Modular adapters** — install only what you need; each integration (PostgreSQL, Redis, Kafka, Keycloak…) is an
-  optional extra
-- **Testability first** — every adapter ships with a `ports.py` interface; tests run against real services via
-  `testcontainers`, and Redis also ships a `mocks.py` test double for logic-only unit tests
-- **One config system** — environment variables, `.env` files, and runtime overrides all flow through a single validated
-  `BaseConfig`
-- **Python 3.14+ native** — uses `X | Y` unions, `list[str]` generics, and modern syntax throughout; no legacy
-  compatibility shims
+- Install each integration as an optional extra.
+- Validate environment variables, `.env` values, and runtime overrides with `BaseConfig`.
+- Use adapter interfaces to keep your business logic independent of clients and test against real services with testcontainers.
 
 See [Concepts](getting-started/concepts.md) for a detailed comparison of ArchiPy against plain FastAPI and Django.
 
@@ -99,10 +87,10 @@ See [Concepts](getting-started/concepts.md) for the full architectural breakdown
 
 ## Next Steps
 
-- [Installation](getting-started/installation.md) — prerequisites, install methods, and optional extras
 - [Concepts](getting-started/concepts.md) — understand the Clean Architecture layers and design philosophy
-- [Quickstart](getting-started/quickstart.md) — five-minute step-by-step guide
-- [Tutorials](tutorials/index.md) — step-by-step guides for every adapter, helper, and feature
-- [API Reference](api_reference/index.md) — full reference for all public classes and functions
+- [Project Structure](getting-started/project_structure.md) — organize your application layers
+- [Complete Example](getting-started/complete_user_example.md) — follow a feature through the stack
 - [FAQ](community/faq.md) — answers to common questions
 - [Contributing](community/contributing.md) — set up a dev environment and contribute to ArchiPy
+
+</div>
