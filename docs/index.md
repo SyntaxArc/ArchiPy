@@ -13,7 +13,7 @@ hide:
 
 # Build with ArchiPy { #get-started }
 
-Build Python services with typed adapters for databases, caches, and queues.
+Typed adapters for databases, caches, and queues in Python services.
 
 [Start the quickstart](getting-started/quickstart.md){ .md-button .md-button--primary }
 
