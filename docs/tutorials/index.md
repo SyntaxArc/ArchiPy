@@ -1,100 +1,77 @@
 ---
 title: Tutorials
-description: Overview of all ArchiPy tutorials and usage guides.
+description: Connect integrations, build application features, and operate ArchiPy services.
 ---
 
 # Tutorials
 
-This section contains practical examples of using ArchiPy components with **Python 3.14 type hints**, **proper exception
-handling patterns**, and **comprehensive error chaining**.
+Find a guide for the service you want to connect or the feature you want to build. If you are setting up your first
+ArchiPy project, start with the [Quickstart](../getting-started/quickstart.md).
 
-All examples follow ArchiPy's coding standards:
+## Integrations { #adapters }
 
-- ✅ **Python 3.14 Type Hints**: Using `|` for unions, lowercase built-in types (`str`, `int`, `list`, `dict`)
-- ✅ **Exception Chaining**: All exceptions use `raise ... from e` to preserve error context
-- ✅ **Try-Except-Else Pattern**: Explicit `else` blocks with return statements for clear control flow
-- ✅ **Proper Logging**: Using `logger` instead of `print()` statements throughout
-- ✅ **Domain-Specific Errors**: ArchiPy custom exceptions instead of generic `ValueError` or `Exception`
+### Databases and search
 
-## Adapters
+- [PostgreSQL](adapters/postgres.md), [MySQL](adapters/mysql.md), and [SQLite](adapters/sqlite.md) for relational data
+- [SQLAlchemy Search Totals](adapters/sqlalchemy.md) for paginated results with total counts
+- [StarRocks](adapters/starrocks.md) for analytics and [ScyllaDB](adapters/scylladb.md) for wide-column storage
+- [Elasticsearch](adapters/elasticsearch.md) for indexing and [Elasticsearch patterns](adapters/elasticsearch_patterns.md)
+  for application-level search
 
-Learn how to use ArchiPy's database, cache, messaging, and storage adapters with complete error handling:
+### Caches, files, and secrets
 
-- [PostgreSQL](adapters/postgres.md) - Database operations with SQLAlchemy and atomic transactions
-- [MySQL](adapters/mysql.md) - Database operations with SQLAlchemy and atomic transactions
-- [SQLite](adapters/sqlite.md) - Lightweight database adapter for local storage
-- [SQLAlchemy Search Totals](adapters/sqlalchemy.md) - Search pagination with total counts for SQLAlchemy adapters
-- [StarRocks](adapters/starrocks.md) - Analytics database adapter
-- [ScyllaDB](adapters/scylladb.md) - NoSQL database adapter for ScyllaDB and Apache Cassandra
-- [Redis](adapters/redis.md) - Cache operations, pub/sub, and testing with testcontainers
-- [Elasticsearch](adapters/elasticsearch.md) - Search and indexing with the Elasticsearch adapter
-- [Vault](adapters/vault.md) - Secrets management with HashiCorp Vault
-- [Email](adapters/email.md) - Email sending with proper error handling
-- [Keycloak](adapters/keycloak.md) - Authentication and authorization with proper exception chaining
-- [MinIO](adapters/minio.md) - Object storage operations with presigned URLs
-- [Kafka](adapters/kafka.md) - Message streaming with producer/consumer patterns
-- [Temporal](adapters/temporal.md) - Workflow orchestration
-- [Payment Gateways](adapters/payment_gateways.md) - Iranian payment gateway integration (
-  [Parsian](https://github.com/SyntaxArc/ArchiPy/tree/master/packages/parsian-ipg),
-  [Saman](https://github.com/SyntaxArc/ArchiPy/tree/master/packages/saman-ipg))
+- [Redis](adapters/redis.md) for caching and pub/sub
+- [MinIO](adapters/minio.md) for object storage and presigned URLs
+- [Vault](adapters/vault.md) for application secrets
 
-## Helpers
+### Messaging, workflows, and external services
 
-Utility functions and decorators following best practices:
+- [Kafka](adapters/kafka.md) for event streams and [Temporal](adapters/temporal.md) for workflows
+- [Keycloak](adapters/keycloak.md) for authentication and authorization
+- [Email](adapters/email.md) for outbound messages
+- [Payment Gateways](adapters/payment_gateways.md) for Parsian and Saman payments
 
-- [Decorators](helpers/decorators.md) - Retry, timeout, caching, and transaction decorators with Python 3.14 types
-- [Interceptors](helpers/interceptors.md) - gRPC and FastAPI interceptors for cross-cutting concerns
-- [Metaclasses](helpers/metaclasses.md) - Singleton and registry metaclass patterns
-- [Utils](helpers/utils.md) - Datetime, JWT, password, file, and validation utilities with proper error handling
+## Application patterns
 
-## Configuration
+### Configuration
 
-Type-safe configuration management:
+[Configuration Management](config_management.md) covers environment variables and validated settings.
 
-- [Configuration Management](config_management.md) - Environment-based configuration with Pydantic and security best
-  practices
+### Dependency Injection
 
-## Testing
+[Dependency Injection](dependency_injection.md) shows how to wire adapters into application logic.
 
-Behavior-Driven Development with Behave:
+### Helpers
 
-- [BDD Testing](testing_strategy.md) — Gherkin features, mock adapters, testcontainers, and the Ports & Adapters testing
-  pattern
+- [Decorators](helpers/decorators.md) for retry, timeout, cache, and transaction behavior
+- [Interceptors](helpers/interceptors.md) for cross-cutting behavior in gRPC and FastAPI
+- [Metaclasses](helpers/metaclasses.md) for singleton and registry patterns
+- [Utilities](helpers/utils.md) for dates, JWTs, passwords, and files
 
-## Models
+### Models
 
-Data Transfer Objects and type-safe models:
+[Protobuf DTOs](models/protobuf_dtos.md) shows how to convert between Pydantic and Protocol Buffers.
 
-- [Protobuf DTOs](models/protobuf_dtos.md) - Converting between Pydantic DTOs and Protocol Buffers with Python 3.14
-  syntax
+### Error Handling
 
-## Error Handling
+[Error Handling](error_handling.md) covers domain exceptions and preserving underlying error context.
 
-Comprehensive error handling patterns:
+### Testing
 
-- [Error Handling](error_handling.md) - Domain-specific exceptions, error recovery, and proper exception
-  chaining
-
-## Dependency Injection
-
-- [Dependency Injection](dependency_injection.md) - Wiring adapters and logics with dependency injection
-
-## Observability
-
-- [Observability](observability.md) - OpenTelemetry traces, metrics, and logs
-- [Pydantic AI](pydantic_ai.md) - Pydantic AI agent telemetry through `BaseConfig.PYDANTIC_AI`
+[BDD Testing](testing_strategy.md) pairs Behave scenarios with real services through testcontainers.
 
 ## Operations
 
-- [Caching](cache.md) - In-process TTL caching with `ttl_cache` and the `cache` extra
-- [Scheduler](scheduler.md) - Running APScheduler jobs with the `scheduler` extra
-- [Health Checks and Shutdown](health_checks.md) - Readiness checks and graceful shutdown building blocks
+- [Caching](cache.md) for in-process TTL caches
+- [Scheduler](scheduler.md) for APScheduler jobs
+- [Health Checks and Shutdown](health_checks.md) for readiness checks and graceful shutdown
 
----
+### Observability
 
-> **Note**: Each adapter tutorial links to its BDD scenarios and API reference.
+- [Observability](observability.md) for OpenTelemetry traces, metrics, and logs
+- [Pydantic AI](pydantic_ai.md) for agent telemetry
 
 ## See Also
 
-- [API Reference](../api_reference/index.md) - Full API documentation
-- [Concepts](../getting-started/concepts.md) - ArchiPy architectural patterns
+- [API Reference](../api_reference/index.md) for adapter and helper signatures
+- [Concepts](../getting-started/concepts.md) for ArchiPy’s application layers and import rules
