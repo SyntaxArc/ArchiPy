@@ -1,5 +1,7 @@
 """Kafka configuration."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import logging
 from typing import Literal
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+
 import threading
 import time
 from datetime import UTC, date, datetime, timedelta

@@ -42,9 +42,28 @@ models  ←  configs  ←  helpers  ←  adapters
 - Enforced by the import-linter `layers` contract in `pyproject.toml` (`make lint`, pre-commit). Imports under
   `TYPE_CHECKING` do not count. Add to the contract's `ignore_imports` only for a documented lazy import.
 - Models read settings (language, pagination limits) through `archipy.models.runtime_settings.get_settings()`.
-  `BaseConfig` registers itself as the provider, so applications never call `register_settings_provider`.
+  `BaseConfig` registers the default provider. Application bootstrap uses `BaseConfig.set_global()`.
 
 ## Lazy Imports (ownership)
 
 - **Helpers** may lazy-import optional third-party deps inside functions (`PLC0415`). Canonical policy: `helpers-configs.mdc`.
 - **Adapters** must not lazy-import to guard optional extras — install the extra instead. Narrow exceptions (session registries, Temporal cross-extra): `adapter-conventions.mdc`.
+
+### Python 3.15 `__lazy_modules__`
+
+Use `__lazy_modules__` to defer imports on Python 3.15 while keeping the same import statements eager on 3.14.
+
+```python
+__lazy_modules__ = ["archipy.configs.base_config"]
+
+from archipy.configs.base_config import BaseConfig
+```
+
+- Declare it **before** the imports it applies to, after the module docstring and `from __future__` line.
+- Use **fully qualified** module names. Relative imports are resolved before the lookup, so `from .adapters import X` needs `"archipy.adapters.<service>.adapters"`.
+- It applies only to **module-scope** imports. Imports inside functions, class bodies, `try`/`except`/`finally`, and star imports stay eager and must not be listed.
+- Laziness is local: listing a module in the importer is what defers the import; a lazy re-export in another package does not make `from that_package import Name` lazy.
+- Defer imports that are safe to load on first use. Keep imports eager when callers depend on their import-time side effects.
+- Add or extend a fresh-interpreter Behave scenario that asserts eager behavior on 3.14 and deferred behavior on 3.15. `features/optional_dependencies.feature` owns these checks.
+- Do not use it to hide a missing extra; adapters still fail at import time when their own extra is absent.
+- Libraries must not call `sys.set_lazy_imports()` or install a lazy-imports filter; the application owns those global switches.

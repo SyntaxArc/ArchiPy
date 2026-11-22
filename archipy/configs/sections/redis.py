@@ -1,5 +1,7 @@
 """Redis configuration."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import logging
 from enum import StrEnum
 from typing import Literal, Self

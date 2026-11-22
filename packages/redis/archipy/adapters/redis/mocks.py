@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 from typing import TYPE_CHECKING, Any
 
 import fakeredis

@@ -1,5 +1,7 @@
 """Elasticsearch configuration."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import logging
 import ssl
 from typing import Literal, Self

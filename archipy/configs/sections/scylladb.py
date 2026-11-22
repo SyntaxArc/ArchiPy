@@ -1,5 +1,7 @@
 """ScyllaDB configuration."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import ssl
 from typing import Literal, Self
 

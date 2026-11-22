@@ -27,7 +27,9 @@ archipy/helpers/
 
 ## Lazy imports (helpers)
 
-Lazy imports (`PLC0415`) are allowed in helpers for optional extras and circular-import breakers — typically inside functions/methods. Prefer function-scoped imports; module-level lazy imports only where existing decorator packages already require them per `pyproject.toml`.
+Lazy imports (`PLC0415`) are allowed in helpers for optional extras and circular-import breakers — typically inside functions/methods. Prefer function-scoped imports for **optional third-party** modules; module-level lazy imports only where existing decorator packages already require them per `pyproject.toml`.
+
+For first-party imports such as `BaseConfig` and error classes, follow the `__lazy_modules__` guidance in `architecture-patterns.mdc`.
 
 ```python
 # ✅ GOOD — lazy import inside a helper utility function

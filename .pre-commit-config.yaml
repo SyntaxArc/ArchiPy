@@ -37,18 +37,11 @@ repos:
         name: trailing-whitespace-fixer
         entry: uv run trailing-whitespace-fixer
         language: system
-      - id: uv-lock
-        name: uv-lock
-        entry: uv lock
-        language: system
-        pass_filenames: false
-        stages:
-          - post-checkout
-          - post-merge
       - id: uv-sync
         name: uv-sync
-        entry: uv sync --group dev
+        entry: uv sync --locked --all-extras --all-groups
         language: system
+        always_run: true
         pass_filenames: false
         stages:
           - post-checkout

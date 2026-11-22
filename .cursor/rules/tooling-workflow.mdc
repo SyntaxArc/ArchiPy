@@ -13,6 +13,9 @@ Always use **`uv`** — never `pip install` directly.
 # Install all deps (including dev + all extras)
 uv sync --all-extras --all-groups
 
+# After switching branches or pulling a lockfile change, sync to the lockfile
+uv sync --locked --all-extras --all-groups
+
 # Add a new dependency
 uv add <package>
 
@@ -44,7 +47,7 @@ Hooks run automatically on `git commit`. They include (in order):
 1. `check-added-large-files`
 2. `check-yaml`, `check-toml`, `check-json`, `pretty-format-json`
 3. `end-of-file-fixer`, `trailing-whitespace-fixer`
-4. `uv lock` / `uv sync` (on post-checkout and post-merge)
+4. `uv sync --locked --all-extras --all-groups` (on post-checkout and post-merge when those hooks are installed)
 5. `codespell` — catches common typos in `.py`/`.pyi` files
 6. `ruff-format` → `ruff check --fix` → `add-trailing-comma`
 7. `validate-pyproject` — validates `pyproject.toml`

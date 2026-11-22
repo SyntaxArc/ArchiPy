@@ -78,6 +78,8 @@ except Exception as e:  # noqa: BLE001
 
 Adapters rely on their optional extra being installed — do **not** use lazy imports to guard third-party dependencies inside adapter classes. Missing extras should fail at import time with a clear `ImportError`.
 
+Adapters may defer first-party imports such as `BaseConfig` using `__lazy_modules__`. See `architecture-patterns.mdc`.
+
 ### Allowed `PLC0415` exceptions in adapters
 
 1. `session_manager_registry.py` — circular import breakers.

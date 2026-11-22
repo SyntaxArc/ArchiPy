@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import asyncio
 import inspect
 import signal

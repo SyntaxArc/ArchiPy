@@ -7,6 +7,8 @@ and integration with ArchiPy service adapters.
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.configs.base_config"]
+
 import asyncio
 import logging
 from datetime import timedelta

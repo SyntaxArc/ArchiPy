@@ -90,11 +90,15 @@ def step_does_not_require(context, requirement):
 def step_error_models_do_not_load_sdks(context):
     script = """
 import sys
-from archipy.models.errors import BaseError, ConfigurationError, InvalidArgumentError
 
-assert ("archipy.models.errors.keycloak_errors" in sys.modules) == (sys.version_info < (3, 15))
+import archipy.models.errors
 
-from archipy.models.errors import KeycloakInvalidCredentialsError
+eager = sys.version_info < (3, 15)
+assert "archipy.models.errors.base_error" in sys.modules
+for name in ("auth_errors", "keycloak_errors", "system_errors"):
+    assert (f"archipy.models.errors.{name}" in sys.modules) == eager
+
+from archipy.models.errors import BaseError, ConfigurationError, InvalidArgumentError, KeycloakInvalidCredentialsError
 from archipy.models.errors.keycloak_errors import InvalidCredentialsError, handle_keycloak_error
 from archipy.models.errors.temporal_errors import WorkerConnectionError
 
@@ -228,6 +232,147 @@ assert {name!r} in exports and {implementation!r} in exports
     _check_imports(script)
 
 
+@then("importing the base configuration honors the interpreter's import timing")
+def step_base_config_import_timing(context):
+    script = """
+import sys
+
+from archipy.configs.base_config import BaseConfig
+
+eager = sys.version_info < (3, 15)
+assert ("archipy.models.errors" in sys.modules) == eager
+assert "grpc" not in sys.modules
+assert BaseConfig is not None
+
+import archipy.models.errors as errors
+_ = errors.ConfigurationError(operation="lazy", reason="config")
+assert errors.ConfigurationError.__module__ == "archipy.models.errors.system_errors"
+assert "archipy.models.errors.system_errors" in sys.modules
+assert "grpc" not in sys.modules
+"""
+    _check_imports(script)
+
+
+@then("the error package works when gRPC is not installed")
+def step_error_package_without_grpc(context):
+    script = """
+import importlib
+import pkgutil
+import sys
+
+class Blocker:
+    def find_spec(self, name, path=None, target=None):
+        if name == "grpc" or name.startswith("grpc."):
+            raise ModuleNotFoundError(f"No module named {name!r}")
+        return None
+
+sys.meta_path.insert(0, Blocker())
+
+import archipy.models.errors as errors
+from archipy.models.errors.base_error import BaseError
+
+for module in pkgutil.iter_modules(errors.__path__):
+    if module.name != "__init__":
+        importlib.import_module(f"{errors.__name__}.{module.name}")
+
+def subclasses(cls):
+    found = set()
+    for child in cls.__subclasses__():
+        if child not in found:
+            found.add(child)
+            found.update(subclasses(child))
+    return found
+
+classes = subclasses(BaseError)
+assert len(classes) >= 80, len(classes)
+assert all(isinstance(cls.grpc_status, int) and 0 <= cls.grpc_status <= 16 for cls in classes)
+expected_statuses = {
+    errors.UnknownError: 2,
+    errors.InvalidArgumentError: 3,
+    errors.DeadlineExceededError: 4,
+    errors.NotFoundError: 5,
+    errors.AlreadyExistsError: 6,
+    errors.PermissionDeniedError: 7,
+    errors.ResourceExhaustedError: 8,
+    errors.FailedPreconditionError: 9,
+    errors.AbortedError: 10,
+    errors.OutOfRangeError: 11,
+    errors.ConfigurationError: 13,
+    errors.UnavailableError: 14,
+    errors.DataLossError: 15,
+    errors.UnauthenticatedError: 16,
+}
+for error_type, status in expected_statuses.items():
+    assert error_type.grpc_status == status, error_type.__name__
+assert "grpc" not in sys.modules
+"""
+    _check_imports(script)
+
+
+@then("importing core helpers honors the interpreter's import timing")
+def step_core_helper_import_timing(context):
+    script = """
+import sys
+
+from archipy.adapters.email.adapters import EmailAdapter
+from archipy.helpers.errors import capture_exception
+from archipy.helpers.utils.app_utils import FastAPIUtils
+from archipy.helpers.utils.datetime_utils import DatetimeUtils
+from archipy.helpers.utils.file_utils import FileUtils
+from archipy.helpers.utils.jwt_utils import JWTUtils
+from archipy.helpers.utils.password_utils import PasswordUtils
+from archipy.helpers.utils.totp_utils import TOTPUtils
+
+eager = sys.version_info < (3, 15)
+assert ("archipy.configs.base_config" in sys.modules) == eager
+assert ("archipy.models.errors" in sys.modules) == eager
+
+try:
+    PasswordUtils.hash_password("secret")
+except AssertionError as error:
+    assert "set global configs" in str(error)
+else:
+    raise AssertionError("Expected hash_password to require global settings")
+assert "archipy.configs.base_config" in sys.modules
+
+import archipy.models.errors as errors
+_ = errors.InvalidPasswordError()
+assert errors.InvalidPasswordError.__module__ == "archipy.models.errors.validation_errors"
+assert "archipy.models.errors.validation_errors" in sys.modules
+"""
+    _check_imports(script)
+
+
+@then("the custom settings provider still controls error localization")
+def step_custom_settings_provider(context):
+    script = """
+from types import SimpleNamespace
+
+from archipy.helpers.utils.password_utils import PasswordUtils
+from archipy.models.errors import InvalidPasswordError
+from archipy.models.runtime_settings import get_settings, register_settings_provider
+from archipy.models.types.language_type import LanguageType
+
+settings = SimpleNamespace(LANGUAGE=LanguageType.EN)
+register_settings_provider(lambda: settings)
+assert InvalidPasswordError().lang == LanguageType.EN
+
+try:
+    PasswordUtils.hash_password("secret")
+except AssertionError as error:
+    assert "set global configs" in str(error)
+else:
+    raise AssertionError("Expected hash_password to require global settings")
+
+assert InvalidPasswordError().lang == LanguageType.EN, "Loading BaseConfig replaced the custom settings provider"
+
+replacement_settings = SimpleNamespace(LANGUAGE=LanguageType.FA)
+register_settings_provider(lambda: replacement_settings)
+assert get_settings() is replacement_settings
+"""
+    _check_imports(script)
+
+
 @then("importing the public Keycloak ports honors the interpreter's import timing")
 def step_keycloak_port_import_timing(context):
     script = """
@@ -348,7 +493,10 @@ VaultAdapter(VaultConfig(ADDR=os.environ["BDD_VAULT_ADDR"], TOKEN=os.environ["BD
             "BDD_VAULT_ADDR": vault.ADDR,
             "BDD_VAULT_TOKEN": vault.TOKEN.get_secret_value(),
         }
-    script = "import sys\n" + setup + f"""
+    script = (
+        "import sys\n"
+        + setup
+        + f"""
 assert ("archipy.configs.base_config" in sys.modules) == (sys.version_info < (3, 15))
 
 try:
@@ -366,6 +514,7 @@ settings = BaseConfig.model_construct()
 BaseConfig.set_global(settings)
 assert get_settings() is settings
 """
+    )
     result = subprocess.run(
         [sys.executable, "-c", script],
         capture_output=True,

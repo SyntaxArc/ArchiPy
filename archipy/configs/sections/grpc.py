@@ -1,5 +1,7 @@
 """gRPC configuration."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import os
 from typing import Literal, Self
 

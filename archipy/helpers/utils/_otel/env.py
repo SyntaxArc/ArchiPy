@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Importing the config template loads every service section.
+__lazy_modules__ = ["archipy.configs.config_template", "archipy.models.errors"]
+
 import logging
 import os
 from typing import TYPE_CHECKING

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
 from archipy.models.errors import InvalidArgumentError
 

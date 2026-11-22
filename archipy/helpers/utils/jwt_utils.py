@@ -6,6 +6,8 @@ cryptographic security, token validation, and comprehensive error handling.
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 

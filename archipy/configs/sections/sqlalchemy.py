@@ -1,5 +1,7 @@
 """SQLAlchemy database configurations."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import contextlib
 import warnings
 from typing import Literal, Self

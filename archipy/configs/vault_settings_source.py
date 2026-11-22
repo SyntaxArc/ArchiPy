@@ -11,6 +11,8 @@ do not install ``archipy[vault]`` never import this module.
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import json
 import logging
 import os

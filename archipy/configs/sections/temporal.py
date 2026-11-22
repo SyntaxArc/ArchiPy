@@ -1,5 +1,7 @@
 """Temporal configuration."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator

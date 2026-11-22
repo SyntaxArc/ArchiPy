@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Protocol
 

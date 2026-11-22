@@ -9,14 +9,11 @@ DEFAULT_PAGINATION_MAX_ITEMS = 10000
 """Largest ``page * page_size`` a pagination request may reach when no settings are registered."""
 
 _settings_provider: Callable[[], object] | None = None
+_default_settings_provider: Callable[[], object] | None = None
 
 
 def register_settings_provider(provider: Callable[[], object]) -> None:
-    """Register the callable that returns the application settings.
-
-    The configs layer registers ``BaseConfig.global_config`` when ``archipy.configs.base_config`` is imported, so models
-    read settings without importing configs. Applications do not call this; it is only for feeding models settings from
-    another source, such as in a test. The provider raises ``AssertionError`` while no settings are set.
+    """Set or replace the callable that returns the application settings.
 
     Args:
         provider: Callable returning the settings object.
@@ -25,15 +22,26 @@ def register_settings_provider(provider: Callable[[], object]) -> None:
     _settings_provider = provider
 
 
+def register_default_settings_provider(provider: Callable[[], object]) -> None:
+    """Set the provider used when no explicit provider is registered.
+
+    Args:
+        provider: Callable returning the settings object.
+    """
+    global _default_settings_provider  # noqa: PLW0603
+    _default_settings_provider = provider
+
+
 def get_settings() -> object | None:
     """Return the registered application settings.
 
     Returns:
         The settings object, or ``None`` when no provider is registered or no settings are set yet.
     """
-    if _settings_provider is None:
+    provider = _settings_provider if _settings_provider is not None else _default_settings_provider
+    if provider is None:
         return None
     try:
-        return _settings_provider()
+        return provider()
     except AssertionError:
         return None

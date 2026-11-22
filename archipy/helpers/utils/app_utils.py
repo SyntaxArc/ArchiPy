@@ -6,6 +6,7 @@ __lazy_modules__ = [
     "archipy.configs.base_config",
     "archipy.helpers.utils._app_fastapi",
     "archipy.helpers.utils._app_grpc",
+    "archipy.models.errors",
 ]
 
 import logging

@@ -12,6 +12,8 @@ order (highest priority first):
 7. Default class field values / init settings
 """
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import importlib
 import os
 from typing import TypeVar
@@ -55,7 +57,7 @@ from archipy.configs.config_template import (
 )
 from archipy.configs.environment_type import EnvironmentType
 from archipy.models.errors import ConfigurationError
-from archipy.models.runtime_settings import register_settings_provider
+from archipy.models.runtime_settings import register_default_settings_provider
 from archipy.models.types import LanguageType
 
 R = TypeVar("R", bound="BaseConfig")  # Runtime Config
@@ -313,4 +315,4 @@ class BaseConfig[R](BaseSettings):
         cls.__global_config = config
 
 
-register_settings_provider(BaseConfig.global_config)
+register_default_settings_provider(BaseConfig.global_config)

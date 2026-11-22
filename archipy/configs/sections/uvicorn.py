@@ -1,5 +1,7 @@
 """Uvicorn server configuration."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator

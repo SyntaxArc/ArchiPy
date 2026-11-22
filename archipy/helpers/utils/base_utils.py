@@ -1,5 +1,7 @@
 """Shared base utility helpers."""
 
+__lazy_modules__ = ["archipy.models.errors"]
+
 import re
 
 from archipy.helpers.utils.datetime_utils import DatetimeUtils

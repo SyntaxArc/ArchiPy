@@ -4,7 +4,17 @@ This module provides a comprehensive set of custom exceptions for handling vario
 error scenarios in the application, organized by category.
 """
 
-__lazy_modules__ = ["archipy.models.errors.keycloak_errors"]
+# Load error families on demand so importing BaseError stays lightweight.
+__lazy_modules__ = [
+    "archipy.models.errors.auth_errors",
+    "archipy.models.errors.business_errors",
+    "archipy.models.errors.database_errors",
+    "archipy.models.errors.keycloak_errors",
+    "archipy.models.errors.network_errors",
+    "archipy.models.errors.resource_errors",
+    "archipy.models.errors.system_errors",
+    "archipy.models.errors.validation_errors",
+]
 
 from archipy.models.errors.auth_errors import (
     AccountDisabledError,

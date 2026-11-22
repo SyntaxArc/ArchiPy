@@ -65,6 +65,8 @@ import pydantic
 from archipy.models.errors import NotFoundError
 ```
 
+Place `__lazy_modules__` before the standard-library imports. See `architecture-patterns.mdc`.
+
 ## Error Handling
 
 - Prefer **specific** exception types — never bare `except:`.

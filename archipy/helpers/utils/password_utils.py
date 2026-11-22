@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+
 # src/helpers/password_helper.py
 import hashlib
 import hmac
