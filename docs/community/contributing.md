@@ -230,7 +230,7 @@ New adapters follow a consistent checklist. Use this as your guide when contribu
     - `docs/tutorials/adapters/<name>.md` — example guide (5 required sections)
     - `docs/api_reference/adapters/<name>.md` — API reference with mkdocstrings
 
-8. **Update `mkdocs.yml`** — add both new pages under the appropriate `nav:` keys.
+8. **Update `zensical.toml`** by adding both pages to the appropriate sections of the `nav` array.
 
 > **Note:** Use the [GitHub issue templates](https://github.com/SyntaxArc/ArchiPy/issues/new/choose) when reporting
 > bugs, requesting features, or proposing new adapters.
@@ -249,7 +249,8 @@ This section outlines the standards and practices for ArchiPy documentation.
 
 ### Documentation Structure
 
-- `mkdocs.yml` - Main [Zensical](https://zensical.org) configuration file (`mkdocs-fast.yml` and `mkdocs-full.yml` override it)
+- `zensical.toml` defines the site, navigation, theme, and API reference. [Zensical configuration](https://zensical.org/docs/setup/basics/)
+- `overrides/404.html` defines the page visitors see for missing URLs. [Zensical theme overrides](https://zensical.org/docs/customization/#custom-error-pages)
 - `docs/` - Markdown documentation files
     - `index.md` - Get Started page
     - `api_reference/` - API documentation
@@ -304,13 +305,13 @@ Build the documentation:
 make docs-build
 ```
 
-Check the build in strict mode (broken links and API reference errors fail):
+Run the clean, strict build used by CI:
 
 ```bash
 make docs-check
 ```
 
-The `deploy-docs` workflow publishes to GitHub Pages on every push to `master`.
+GitHub Pages deploys when documentation or API sources change on `master`. Read the Docs builds from the same configuration.
 
 ### Documentation Improvement Guidelines
 

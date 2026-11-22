@@ -180,13 +180,7 @@ Support ArchiPy by checking out our amazing sponsors! [View Sponsors](SPONSORS.m
 
 ## 📚 Documentation
 
-ArchiPy's documentation has been built with Zensical for improved readability and organization:
-
-- **Modern Interface**: Responsive theme with responsive design
-- **Improved Navigation**: Intuitive organization and search
-- **Clearer Examples**: Expanded code samples with explanations
-- **API Reference**: Auto-generated from source code docstrings
-- **Performance Optimized**: Multiple build modes for fast iteration
+Zensical builds the documentation with the navigation and API reference settings in `zensical.toml`.
 
 ### Quick Start
 
@@ -194,17 +188,11 @@ ArchiPy's documentation has been built with Zensical for improved readability an
 # Install documentation dependencies
 uv sync --group docs
 
-# Fast mode for quick iterations (10-20s builds)
-make docs-serve-fast
-
-# Balanced mode for regular work (30-60s builds)
+# Preview the docs with live reload
 make docs-serve
 
-# Full production build (2-5min, all features)
-make docs-build-full
-
-# Deploy to GitHub Pages
-make docs-deploy
+# Run the same clean, strict build as CI
+make docs-check
 ```
 
 **See [the quickstart](https://syntaxarc.github.io/ArchiPy/getting-started/quickstart/) for more commands and tips.**

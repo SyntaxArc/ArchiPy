@@ -5,7 +5,8 @@ on:
     branches: [ '*' ]
     paths:
       - 'docs/**'
-      - 'mkdocs*.yml'
+      - 'overrides/**'
+      - 'zensical.toml'
       - 'archipy/**'
       - 'packages/**'
       - 'pyproject.toml'

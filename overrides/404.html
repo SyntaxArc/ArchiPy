@@ -1,0 +1,17 @@
+{% extends "main.html" %}
+
+{% block content %}
+<h1>Page Not Found</h1>
+<p>The requested page may have moved or been removed.</p>
+<h2>Find What You Need</h2>
+<ul>
+  <li><a href="{{ '.' | url }}">Get Started</a> for an overview and quick example</li>
+  <li><a href="{{ 'getting-started/installation/' | url }}">Installation</a> for ArchiPy and its optional extras</li>
+  <li><a href="{{ 'getting-started/quickstart/' | url }}">Quickstart</a> for a five-minute guide</li>
+  <li><a href="{{ 'getting-started/concepts/' | url }}">Concepts</a> for Clean Architecture layers and import rules</li>
+  <li><a href="{{ 'tutorials/' | url }}">Tutorials</a> for adapters and helpers</li>
+  <li><a href="{{ 'api_reference/' | url }}">API Reference</a> for public classes</li>
+  <li><a href="{{ 'community/faq/' | url }}">FAQ</a> for common questions</li>
+</ul>
+<p>Use the search bar to find a specific topic.</p>
+{% endblock %}
