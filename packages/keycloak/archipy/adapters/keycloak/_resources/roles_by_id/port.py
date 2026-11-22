@@ -30,7 +30,7 @@ class KeycloakRolesByIdPort:
     def update_role_by_id(
         self,
         role_id: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a role by its id."""
         raise NotImplementedError
@@ -49,7 +49,7 @@ class KeycloakRolesByIdPort:
     def add_role_composites_by_id(
         self,
         role_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite role."""
         raise NotImplementedError
@@ -58,7 +58,7 @@ class KeycloakRolesByIdPort:
     def delete_role_composites_by_id(
         self,
         role_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite role."""
         raise NotImplementedError
@@ -82,7 +82,7 @@ class KeycloakRolesByIdPort:
     def update_role_management_permissions_by_id(
         self,
         role_id: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a role."""
         raise NotImplementedError
@@ -100,7 +100,7 @@ class AsyncKeycloakRolesByIdPort:
     async def update_role_by_id(
         self,
         role_id: str,
-        payload: KeycloakRoleRequestDTO | dict[str, Any],
+        payload: KeycloakRoleRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a role by its id."""
         raise NotImplementedError
@@ -123,7 +123,7 @@ class AsyncKeycloakRolesByIdPort:
     async def add_role_composites_by_id(
         self,
         role_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add child roles to a composite role."""
         raise NotImplementedError
@@ -132,7 +132,7 @@ class AsyncKeycloakRolesByIdPort:
     async def delete_role_composites_by_id(
         self,
         role_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove child roles from a composite role."""
         raise NotImplementedError
@@ -156,7 +156,7 @@ class AsyncKeycloakRolesByIdPort:
     async def update_role_management_permissions_by_id(
         self,
         role_id: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a role."""
         raise NotImplementedError

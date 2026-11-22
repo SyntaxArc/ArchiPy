@@ -12,7 +12,6 @@ import time
 from functools import wraps
 from typing import TYPE_CHECKING, cast
 
-from archipy.helpers._deprecation import deprecated_alias
 from archipy.models.errors import DeadlineExceededError, FailedPreconditionError
 
 if TYPE_CHECKING:
@@ -107,6 +106,3 @@ def timeout[**P, R](seconds: float) -> Callable[[Callable[P, R]], Callable[P, R]
         return wrapper
 
     return decorator
-
-
-timeout_decorator = deprecated_alias("timeout_decorator", timeout)

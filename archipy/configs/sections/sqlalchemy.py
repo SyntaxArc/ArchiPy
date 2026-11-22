@@ -9,7 +9,6 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, PostgresDsn, SecretStr, field_validator, model_validator
 
-from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.models.errors import ConfigurationError
 
 
@@ -85,88 +84,6 @@ class SQLAlchemyConfig(BaseModel):
         default_factory=SQLAlchemyCountCacheConfig,
         description="Search query count cache settings",
     )
-
-    POOL_MAX_OVERFLOW: int = Field(
-        default=1,
-        description="Maximum number of connections to allow in pool overflow",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "POOL_MAX_OVERFLOW", "POOL", "MAX_OVERFLOW"),
-    )
-    POOL_PRE_PING: bool = Field(
-        default=True,
-        description="Whether to ping connections before use",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "POOL_PRE_PING", "POOL", "PRE_PING"),
-    )
-    POOL_RECYCLE_SECONDS: int = Field(
-        default=10 * 60,
-        description="Number of seconds between connection recycling",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "POOL_RECYCLE_SECONDS", "POOL", "RECYCLE_SECONDS"),
-    )
-    POOL_RESET_ON_RETURN: str = Field(
-        default="rollback",
-        description="Action to take when returning connections to pool",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "POOL_RESET_ON_RETURN", "POOL", "RESET_ON_RETURN"),
-    )
-    POOL_SIZE: int = Field(
-        default=20,
-        description="Number of connections to keep open in the pool",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "POOL_SIZE", "POOL", "SIZE"),
-    )
-    POOL_TIMEOUT: int = Field(
-        default=30,
-        description="Seconds to wait before giving up on getting a connection",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "POOL_TIMEOUT", "POOL", "TIMEOUT"),
-    )
-    POOL_USE_LIFO: bool = Field(
-        default=True,
-        description="Whether to use LIFO for connection pool",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "POOL_USE_LIFO", "POOL", "USE_LIFO"),
-    )
-    COUNT_CACHE_ENABLED: bool = Field(
-        default=False,
-        description="Whether to cache the total count of search queries, so only the first page runs a COUNT",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "COUNT_CACHE_ENABLED", "COUNT_CACHE", "IS_ENABLED"),
-    )
-    COUNT_CACHE_MAX_SIZE: int = Field(
-        default=1000,
-        ge=1,
-        description="Maximum number of cached search query totals",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "COUNT_CACHE_MAX_SIZE", "COUNT_CACHE", "MAX_SIZE"),
-    )
-    COUNT_CACHE_TTL_SECONDS: int = Field(
-        default=60,
-        ge=1,
-        description="Seconds a cached search query total stays valid",
-        deprecated=deprecated_flat_message("SQLALCHEMY", "COUNT_CACHE_TTL_SECONDS", "COUNT_CACHE", "TTL_SECONDS"),
-    )
-
-    @model_validator(mode="after")
-    def fold_deprecated_flat_fields(self) -> Self:
-        """Copy deprecated flat settings into their groups."""
-        fold_flat_fields(
-            self,
-            "POOL",
-            SQLAlchemyPoolConfig,
-            {
-                "POOL_MAX_OVERFLOW": "MAX_OVERFLOW",
-                "POOL_PRE_PING": "PRE_PING",
-                "POOL_RECYCLE_SECONDS": "RECYCLE_SECONDS",
-                "POOL_RESET_ON_RETURN": "RESET_ON_RETURN",
-                "POOL_SIZE": "SIZE",
-                "POOL_TIMEOUT": "TIMEOUT",
-                "POOL_USE_LIFO": "USE_LIFO",
-            },
-        )
-        fold_flat_fields(
-            self,
-            "COUNT_CACHE",
-            SQLAlchemyCountCacheConfig,
-            {
-                "COUNT_CACHE_ENABLED": "IS_ENABLED",
-                "COUNT_CACHE_MAX_SIZE": "MAX_SIZE",
-                "COUNT_CACHE_TTL_SECONDS": "TTL_SECONDS",
-            },
-        )
-        return self
 
 
 class SQLiteSQLAlchemyConfig(SQLAlchemyConfig):

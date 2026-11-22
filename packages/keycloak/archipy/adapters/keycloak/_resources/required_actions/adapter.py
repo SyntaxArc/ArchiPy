@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -34,9 +33,6 @@ class KeycloakRequiredActionsMixin(SyncKeycloakMixinBase):
 
     def get_required_actions(self) -> list[KeycloakRequiredActionProviderDTO]:
         """List the required actions registered in the realm.
-
-        Args:
-            (none)
 
         Returns:
             The required actions.
@@ -73,7 +69,7 @@ class KeycloakRequiredActionsMixin(SyncKeycloakMixinBase):
     def update_required_action(
         self,
         alias: str,
-        payload: KeycloakRequiredActionProviderRequestDTO | dict[str, Any],
+        payload: KeycloakRequiredActionProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a required action.
 
@@ -141,9 +137,6 @@ class KeycloakRequiredActionsMixin(SyncKeycloakMixinBase):
 
     def get_unregistered_required_actions(self) -> list[KeycloakUnregisteredRequiredActionDTO]:
         """List the required action providers that are not registered in the realm.
-
-        Args:
-            (none)
 
         Returns:
             The unregistered providers.
@@ -218,7 +211,7 @@ class KeycloakRequiredActionsMixin(SyncKeycloakMixinBase):
     def update_required_action_config(
         self,
         alias: str,
-        config: KeycloakRequiredActionConfigRequestDTO | dict[str, Any],
+        config: KeycloakRequiredActionConfigRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Set the settings of a required action.
 
@@ -285,9 +278,6 @@ class AsyncKeycloakRequiredActionsMixin(AsyncKeycloakMixinBase):
     async def get_required_actions(self) -> list[KeycloakRequiredActionProviderDTO]:
         """List the required actions registered in the realm.
 
-        Args:
-            (none)
-
         Returns:
             The required actions.
         """
@@ -323,7 +313,7 @@ class AsyncKeycloakRequiredActionsMixin(AsyncKeycloakMixinBase):
     async def update_required_action(
         self,
         alias: str,
-        payload: KeycloakRequiredActionProviderRequestDTO | dict[str, Any],
+        payload: KeycloakRequiredActionProviderRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a required action.
 
@@ -391,9 +381,6 @@ class AsyncKeycloakRequiredActionsMixin(AsyncKeycloakMixinBase):
 
     async def get_unregistered_required_actions(self) -> list[KeycloakUnregisteredRequiredActionDTO]:
         """List the required action providers that are not registered in the realm.
-
-        Args:
-            (none)
 
         Returns:
             The unregistered providers.
@@ -468,7 +455,7 @@ class AsyncKeycloakRequiredActionsMixin(AsyncKeycloakMixinBase):
     async def update_required_action_config(
         self,
         alias: str,
-        config: KeycloakRequiredActionConfigRequestDTO | dict[str, Any],
+        config: KeycloakRequiredActionConfigRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Set the settings of a required action.
 

@@ -655,7 +655,7 @@ class AtomicActivity(BaseActivity[T, R]):
             ImportError: If SQLAlchemy is not installed and atomic decorators are needed.
         """
         # Lazy import to avoid requiring SQLAlchemy when using temporalio without sqlalchemy extra
-        from archipy.helpers.decorators import (
+        from archipy.adapters.base.sqlalchemy.atomic import (
             postgres_sqlalchemy_atomic,
             sqlite_sqlalchemy_atomic,
             starrocks_sqlalchemy_atomic,

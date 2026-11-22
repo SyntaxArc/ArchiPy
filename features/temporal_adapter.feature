@@ -200,11 +200,6 @@ Feature: Temporal Adapter Operations
     Then the worker manager should have 2 workers
     And each worker should be on a different task queue
 
-  Scenario: Worker with build_id for versioning
-    When I start a worker for task queue "versioned-queue" with build_id "v1.0.0"
-    Then the worker should be running
-    And the worker should have build_id "v1.0.0"
-
   Scenario: Worker with poller autoscaling and an activity rate limit runs workflows
     Given a Temporal worker manager is configured with poller autoscaling and 50 activities per second
     And a worker is started for task queue "test-queue" with GreetingWorkflow

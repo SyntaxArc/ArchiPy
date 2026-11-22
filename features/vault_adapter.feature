@@ -41,9 +41,9 @@ Feature: Vault Adapter
     When I mutate the dict returned by reading Vault secret "app/cached-copy"
     Then reading Vault secret "app/cached-copy" should return key "v" with value "one"
 
-  Scenario Outline: VAULT__VERIFY_SSL accepts explicit booleans and rejects unknown spellings
-    When I parse VAULT__VERIFY_SSL "<value>"
-    Then VAULT__VERIFY_SSL should resolve to "<outcome>"
+  Scenario Outline: VAULT__TLS__VERIFY_SSL accepts explicit booleans and rejects unknown spellings
+    When I parse VAULT__TLS__VERIFY_SSL "<value>"
+    Then VAULT__TLS__VERIFY_SSL should resolve to "<outcome>"
 
     Examples:
       | value   | outcome    |
@@ -143,27 +143,21 @@ Feature: Vault Adapter
     When I call the Vault API with requests
     Then the collector should have a span with attribute "http.url" containing "/v1/sys/health"
 
-  Scenario Outline: Vault settings are grouped and the flat names still work
+  Scenario Outline: Vault settings are grouped
     When a Vault config is built with <settings>
     Then the Vault setting "<path>" should be "<expected>"
-    And <warnings> Vault deprecation warning should be raised
 
     Examples:
-      | settings                                                  | path            | expected  | warnings |
-      | {"APPROLE": {"ROLE_ID": "r1"}}                            | APPROLE.ROLE_ID | r1        | 0        |
-      | {"APPROLE_ROLE_ID": "r2"}                                 | APPROLE.ROLE_ID | r2        | 1        |
-      | {"APPROLE": {"ROLE_ID": "new"}, "APPROLE_ROLE_ID": "old"} | APPROLE.ROLE_ID | new       | 1        |
-      | {"VERIFY_SSL": false}                                     | TLS.VERIFY_SSL  | False     | 1        |
-      | {"TLS": {"VERIFY_SSL": false}}                            | TLS.VERIFY_SSL  | False     | 0        |
-      | {}                                                        | AWS.REGION      | us-east-1 | 0        |
+      | settings                       | path            | expected  |
+      | {"APPROLE": {"ROLE_ID": "r1"}} | APPROLE.ROLE_ID | r1        |
+      | {"TLS": {"VERIFY_SSL": false}} | TLS.VERIFY_SSL  | False     |
+      | {}                             | AWS.REGION      | us-east-1 |
 
-  Scenario Outline: The Vault bootstrap reads grouped and flat environment variables
+  Scenario Outline: The Vault bootstrap reads grouped environment variables
     When the Vault bootstrap config is read with environment <env>
     Then the Vault setting "<path>" should be "<expected>"
 
     Examples:
-      | env                                                             | path            | expected |
-      | {"VAULT__APPROLE__ROLE_ID": "nested"}                           | APPROLE.ROLE_ID | nested   |
-      | {"VAULT__APPROLE_ROLE_ID": "flat"}                              | APPROLE.ROLE_ID | flat     |
-      | {"VAULT__APPROLE__ROLE_ID": "n", "VAULT__APPROLE_ROLE_ID": "f"} | APPROLE.ROLE_ID | n        |
-      | {"VAULT__TLS__VERIFY_SSL": "off"}                               | TLS.VERIFY_SSL  | False    |
+      | env                                   | path            | expected |
+      | {"VAULT__APPROLE__ROLE_ID": "nested"} | APPROLE.ROLE_ID | nested   |
+      | {"VAULT__TLS__VERIFY_SSL": "off"}     | TLS.VERIFY_SSL  | False    |

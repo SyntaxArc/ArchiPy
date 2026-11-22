@@ -27,7 +27,8 @@ class KeycloakAuthzenMixin(SyncKeycloakMixinBase):
             The decision point and the evaluation endpoints.
 
         Raises:
-            Mapped application errors; ``ResourceNotFoundError`` when the server's ``authzen`` feature is off.
+            ResourceNotFoundError: If the realm does not expose AuthZEN discovery.
+            BaseError: If the discovery request fails for another reason.
         """
         return to_dto(
             KeycloakAuthzenConfigurationDTO,
@@ -99,7 +100,8 @@ class AsyncKeycloakAuthzenMixin(AsyncKeycloakMixinBase):
             The decision point and the evaluation endpoints.
 
         Raises:
-            Mapped application errors; ``ResourceNotFoundError`` when the server's ``authzen`` feature is off.
+            ResourceNotFoundError: If the realm does not expose AuthZEN discovery.
+            BaseError: If the discovery request fails for another reason.
         """
         return to_dto(
             KeycloakAuthzenConfigurationDTO,

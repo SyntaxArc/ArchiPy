@@ -5,7 +5,10 @@ on:
     branches: [ '*' ]
     paths:
       - 'docs/**'
-      - 'mkdocs*.yml'
+      - 'overrides/**'
+      - 'zensical.toml'
+      - 'scripts/check_docs.py'
+      - 'scripts/smoke_docs.py'
       - 'archipy/**'
       - 'packages/**'
       - 'pyproject.toml'
@@ -24,6 +27,14 @@ jobs:
     container: ghcr.io/astral-sh/uv:0.13.9-trixie
     env:
       UV_PYTHON: ${{ matrix.python-version }}
+    services:
+      redis:
+        image: redis:8.10.3-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
     strategy:
       fail-fast: false
       matrix:
@@ -38,12 +49,18 @@ jobs:
           key: uv-docs-${{ runner.arch }}-${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
 
       - name: Install dependencies
-        run: uv sync --locked --group docs
+        run: uv sync --locked --group docs --extra redis
 
       - name: Build the docs in strict mode
         env:
           UV_NO_SYNC: "true"
         run: make docs-check
+
+      - name: Run documentation examples
+        env:
+          UV_NO_SYNC: "true"
+          REDIS__MASTER_HOST: redis
+        run: make docs-smoke
 
   docs-check:
     needs: build

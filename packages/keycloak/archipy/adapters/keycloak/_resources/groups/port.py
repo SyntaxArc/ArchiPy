@@ -31,7 +31,7 @@ class KeycloakGroupsPort:
     @abstractmethod
     def create_group(
         self,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
         parent: str | None = None,
         skip_exists: bool = False,
     ) -> str | None:
@@ -42,7 +42,7 @@ class KeycloakGroupsPort:
     def update_group(
         self,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a group."""
         raise NotImplementedError
@@ -83,7 +83,7 @@ class KeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_subgroups(self, group: KeycloakGroupDTO | dict[str, Any], path: str) -> KeycloakGroupDTO | None:
+    def get_subgroups(self, group: KeycloakGroupDTO, path: str) -> KeycloakGroupDTO | None:
         """Get subgroups for a group at the given path."""
         raise NotImplementedError
 
@@ -194,7 +194,7 @@ class KeycloakGroupsPort:
     def update_group_management_permissions(
         self,
         group_id: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a group."""
         raise NotImplementedError
@@ -208,7 +208,7 @@ class AsyncKeycloakGroupsPort:
     @abstractmethod
     async def create_group(
         self,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
         parent: str | None = None,
         skip_exists: bool = False,
     ) -> str | None:
@@ -219,7 +219,7 @@ class AsyncKeycloakGroupsPort:
     async def update_group(
         self,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a group."""
         raise NotImplementedError
@@ -264,7 +264,7 @@ class AsyncKeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_subgroups(self, group: KeycloakGroupDTO | dict[str, Any], path: str) -> KeycloakGroupDTO | None:
+    async def get_subgroups(self, group: KeycloakGroupDTO, path: str) -> KeycloakGroupDTO | None:
         """Get subgroups for a group at the given path."""
         raise NotImplementedError
 
@@ -375,7 +375,7 @@ class AsyncKeycloakGroupsPort:
     async def update_group_management_permissions(
         self,
         group_id: str,
-        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+        payload: KeycloakManagementPermissionRequestDTO,
     ) -> KeycloakManagementPermissionDTO:
         """Enable or disable the fine-grained permissions of a group."""
         raise NotImplementedError

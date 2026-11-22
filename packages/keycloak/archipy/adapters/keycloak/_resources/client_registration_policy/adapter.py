@@ -18,9 +18,6 @@ class KeycloakClientRegistrationPolicyMixin(SyncKeycloakMixinBase):
     def get_client_registration_policy_providers(self) -> list[KeycloakComponentTypeDTO]:
         """List the client registration policy providers and their settings.
 
-        Args:
-            (none)
-
         Returns:
             The providers.
         """
@@ -40,9 +37,6 @@ class AsyncKeycloakClientRegistrationPolicyMixin(AsyncKeycloakMixinBase):
 
     async def get_client_registration_policy_providers(self) -> list[KeycloakComponentTypeDTO]:
         """List the client registration policy providers and their settings.
-
-        Args:
-            (none)
 
         Returns:
             The providers.

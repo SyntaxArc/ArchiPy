@@ -10,7 +10,6 @@ repos:
         entry: uv run check-yaml
         types:
           - yaml
-        exclude: ^mkdocs
         language: system
       - id: check-toml
         name: check-toml

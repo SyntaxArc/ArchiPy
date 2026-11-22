@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakCreateResultDTO,
@@ -43,7 +43,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def create_authentication_flow(
         self,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakCreateResultDTO:
         """Create a new authentication flow."""
@@ -52,7 +52,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def copy_authentication_flow(
         self,
-        payload: KeycloakAuthenticationFlowCopyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowCopyRequestDTO,
         flow_alias: str,
     ) -> KeycloakCreateResultDTO:
         """Copy an existing authentication flow."""
@@ -88,7 +88,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def create_authentication_flow_execution(
         self,
-        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO,
         flow_alias: str,
     ) -> KeycloakCreateResultDTO:
         """Create an execution in an authentication flow."""
@@ -97,7 +97,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def update_authentication_flow_executions(
         self,
-        payload: KeycloakAuthenticationExecutionInfoRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationExecutionInfoRequestDTO,
         flow_alias: str,
     ) -> KeycloakUpdateResultDTO:
         """Update executions in an authentication flow."""
@@ -106,7 +106,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def create_authentication_flow_subflow(
         self,
-        payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationSubflowCreateRequestDTO,
         flow_alias: str,
         skip_exists: bool = False,
     ) -> KeycloakCreateResultDTO:
@@ -127,7 +127,7 @@ class KeycloakAuthFlowsPort:
     def update_authentication_flow(
         self,
         flow_id: str,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an authentication flow."""
         raise NotImplementedError
@@ -152,7 +152,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def update_authenticator_config(
         self,
-        payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticatorConfigRequestDTO,
         config_id: str,
     ) -> KeycloakUpdateResultDTO:
         """Update authenticator configuration."""
@@ -167,7 +167,7 @@ class KeycloakAuthFlowsPort:
     def create_execution_config(
         self,
         execution_id: str,
-        payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticatorConfigRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create configuration for an authentication flow execution."""
         raise NotImplementedError
@@ -195,7 +195,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def create_execution(
         self,
-        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationExecutionRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add an execution to a flow by its representation."""
         raise NotImplementedError
@@ -212,7 +212,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def create_authentication_flow(
         self,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakCreateResultDTO:
         """Create a new authentication flow."""
@@ -221,7 +221,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def copy_authentication_flow(
         self,
-        payload: KeycloakAuthenticationFlowCopyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowCopyRequestDTO,
         flow_alias: str,
     ) -> KeycloakCreateResultDTO:
         """Copy an existing authentication flow."""
@@ -257,7 +257,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def create_authentication_flow_execution(
         self,
-        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO,
         flow_alias: str,
     ) -> KeycloakCreateResultDTO:
         """Create an execution in an authentication flow."""
@@ -266,7 +266,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def update_authentication_flow_executions(
         self,
-        payload: KeycloakAuthenticationExecutionInfoRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationExecutionInfoRequestDTO,
         flow_alias: str,
     ) -> KeycloakUpdateResultDTO:
         """Update executions in an authentication flow."""
@@ -275,7 +275,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def create_authentication_flow_subflow(
         self,
-        payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationSubflowCreateRequestDTO,
         flow_alias: str,
         skip_exists: bool = False,
     ) -> KeycloakCreateResultDTO:
@@ -296,7 +296,7 @@ class AsyncKeycloakAuthFlowsPort:
     async def update_authentication_flow(
         self,
         flow_id: str,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an authentication flow."""
         raise NotImplementedError
@@ -324,7 +324,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def update_authenticator_config(
         self,
-        payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticatorConfigRequestDTO,
         config_id: str,
     ) -> KeycloakUpdateResultDTO:
         """Update authenticator configuration."""
@@ -339,7 +339,7 @@ class AsyncKeycloakAuthFlowsPort:
     async def create_execution_config(
         self,
         execution_id: str,
-        payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticatorConfigRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create configuration for an authentication flow execution."""
         raise NotImplementedError
@@ -367,7 +367,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def create_execution(
         self,
-        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationExecutionRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add an execution to a flow by its representation."""
         raise NotImplementedError

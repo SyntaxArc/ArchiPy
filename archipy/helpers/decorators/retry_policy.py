@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from functools import wraps
 from typing import TYPE_CHECKING, cast
 
-from archipy.helpers._deprecation import deprecated_alias
 from archipy.models.errors import InvalidArgumentError, ResourceExhaustedError
 
 if TYPE_CHECKING:
@@ -170,6 +169,3 @@ def _wrap_sync[**P, R](func: Callable[P, R], policy: _RetryPolicy) -> Callable[P
         raise policy.exhausted(last_exception)
 
     return wrapper
-
-
-retry_decorator = deprecated_alias("retry_decorator", retry)

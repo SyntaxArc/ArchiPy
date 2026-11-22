@@ -30,6 +30,11 @@ except Exception as exception:
 """
 
 
+def _check_imports(script):
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 @given("jinja2 is not installed")
 def step_given_no_jinja2(context):
     get_current_scenario_context(context).store("block_jinja2", True)
@@ -81,6 +86,123 @@ def step_does_not_require(context, requirement):
     assert not any(item.startswith(requirement) for item in requirements), f"{requirement} found in {requirements}"
 
 
+@then("importing and using public error types does not load gRPC or Keycloak")
+def step_error_models_do_not_load_sdks(context):
+    script = """
+import sys
+
+import archipy.models.errors
+
+eager = sys.version_info < (3, 15)
+assert "archipy.models.errors.base_error" in sys.modules
+for name in ("auth_errors", "keycloak_errors", "system_errors"):
+    assert (f"archipy.models.errors.{name}" in sys.modules) == eager
+
+from archipy.models.errors import BaseError, ConfigurationError, InvalidArgumentError, KeycloakInvalidCredentialsError
+from archipy.models.errors.keycloak_errors import InvalidCredentialsError, handle_keycloak_error
+from archipy.models.errors.temporal_errors import WorkerConnectionError
+
+assert KeycloakInvalidCredentialsError is InvalidCredentialsError
+assert isinstance(handle_keycloak_error(Exception("invalid credentials")), KeycloakInvalidCredentialsError)
+for error, expected in (
+    (ConfigurationError(), (500, 13)),
+    (InvalidArgumentError(), (400, 3)),
+    (KeycloakInvalidCredentialsError(), (401, 16)),
+    (WorkerConnectionError(), (503, 14)),
+):
+    assert isinstance(error, BaseError)
+    assert (error.http_status, error.grpc_status) == expected
+
+assert "grpc" not in sys.modules
+assert "keycloak" not in sys.modules
+"""
+    _check_imports(script)
+
+
+@then("resolving an error honors the interpreter's import timing for global configuration")
+def step_error_helpers_import_timing(context):
+    script = """
+import sys
+from archipy.helpers.errors import capture_exception, resolve_error
+from archipy.models.errors import InvalidArgumentError
+
+error = InvalidArgumentError()
+assert resolve_error(error) is error
+module = "archipy.configs.base_config"
+assert (module in sys.modules) == (sys.version_info < (3, 15))
+try:
+    capture_exception(error)
+except AssertionError as exception:
+    assert "set global configs" in str(exception)
+else:
+    raise AssertionError("Expected capture_exception to require global settings")
+assert module in sys.modules
+"""
+    _check_imports(script)
+
+
+@then("loading a Redis config honors the interpreter's import timing for SQLAlchemy settings")
+def step_config_section_import_timing(context):
+    script = """
+import sys
+from archipy.configs.config_template import RedisConfig
+from archipy.configs.sections.redis import RedisConfig as CanonicalRedisConfig
+
+assert RedisConfig is CanonicalRedisConfig
+module = "archipy.configs.sections.sqlalchemy"
+assert (module in sys.modules) == (sys.version_info < (3, 15))
+
+from archipy.configs.config_template import SQLAlchemyConfig
+
+assert module in sys.modules
+assert SQLAlchemyConfig is sys.modules[module].SQLAlchemyConfig
+"""
+    _check_imports(script)
+
+
+@then("""the "{framework}" app loads with the interpreter's import timing""")
+def step_app_framework_import_timing(context, framework):
+    create_app, other_framework = {
+        "fastapi": ('assert AppUtils.create_fastapi_app(config).openapi()["openapi"]', "grpc"),
+        "grpc": ("AppUtils.create_grpc_app(config).stop(0)", "fastapi"),
+    }[framework]
+    script = f"""
+import sys
+from archipy.helpers.utils.app_utils import AppUtils
+
+eager = sys.version_info < (3, 15)
+for module in ("fastapi", "grpc", "archipy.configs.base_config"):
+    assert (module in sys.modules) == eager, module
+
+from archipy.configs.base_config import BaseConfig
+config = BaseConfig.model_construct()
+{create_app}
+
+assert {framework!r} in sys.modules
+assert ({other_framework!r} in sys.modules) == eager
+"""
+    _check_imports(script)
+
+
+@then("application utilities report missing FastAPI and gRPC extras on request")
+def step_app_utils_without_frameworks(context):
+    script = """
+import sys
+
+class _BlockFrameworks:
+    def find_spec(self, name, path=None, target=None):
+        if name in {"fastapi", "grpc"}:
+            raise ModuleNotFoundError(name, name=name)
+
+sys.meta_path.insert(0, _BlockFrameworks())
+from archipy.helpers.utils.app_utils import FASTAPI_APP, GRPC_APP, AppUtils
+
+assert not FASTAPI_APP and not GRPC_APP
+assert AppUtils.__name__ == "AppUtils"
+"""
+    _check_imports(script)
+
+
 @given('a fresh Python process importing "{name}" from "{package}"')
 def step_public_import(context, name, package):
     get_current_scenario_context(context).store("public_import", (package, name))
@@ -107,8 +229,7 @@ assert {implementation} is getattr(import_module({module!r}), {canonical_name!r}
 exports = import_module({package!r}).__all__
 assert {name!r} in exports and {implementation!r} in exports
 """
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
-    assert result.returncode == 0, result.stderr
+    _check_imports(script)
 
 
 @then("importing the base configuration honors the interpreter's import timing")
@@ -129,31 +250,7 @@ assert errors.ConfigurationError.__module__ == "archipy.models.errors.system_err
 assert "archipy.models.errors.system_errors" in sys.modules
 assert "grpc" not in sys.modules
 """
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
-    assert result.returncode == 0, result.stderr
-
-
-@then("importing the error package honors the interpreter's import timing")
-def step_error_package_import_timing(context):
-    script = """
-import sys
-
-import archipy.models.errors as errors
-
-eager = sys.version_info < (3, 15)
-assert "archipy.models.errors.base_error" in sys.modules
-assert ("archipy.models.errors.auth_errors" in sys.modules) == eager
-assert ("archipy.models.errors.system_errors" in sys.modules) == eager
-assert "grpc" not in sys.modules
-
-error = errors.ConfigurationError(operation="lazy", reason="error")
-assert error.code == "CONFIGURATION_ERROR"
-assert error.__class__.__module__ == "archipy.models.errors.system_errors"
-assert "archipy.models.errors.system_errors" in sys.modules
-assert "grpc" not in sys.modules
-"""
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
-    assert result.returncode == 0, result.stderr
+    _check_imports(script)
 
 
 @then("the error package works when gRPC is not installed")
@@ -209,8 +306,7 @@ for error_type, status in expected_statuses.items():
     assert error_type.grpc_status == status, error_type.__name__
 assert "grpc" not in sys.modules
 """
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
-    assert result.returncode == 0, result.stderr
+    _check_imports(script)
 
 
 @then("importing core helpers honors the interpreter's import timing")
@@ -244,8 +340,7 @@ _ = errors.InvalidPasswordError()
 assert errors.InvalidPasswordError.__module__ == "archipy.models.errors.validation_errors"
 assert "archipy.models.errors.validation_errors" in sys.modules
 """
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
-    assert result.returncode == 0, result.stderr
+    _check_imports(script)
 
 
 @then("the custom settings provider still controls error localization")
@@ -271,8 +366,7 @@ else:
 
 assert InvalidPasswordError().lang == LanguageType.EN, "Loading BaseConfig replaced the custom settings provider"
 """
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
-    assert result.returncode == 0, result.stderr
+    _check_imports(script)
 
 
 @then("importing the public Keycloak ports honors the interpreter's import timing")
@@ -297,8 +391,7 @@ assert issubclass(KeycloakAdapter, KeycloakPort)
 assert issubclass(KeycloakAdapter, KeycloakGroupsMixin)
 assert issubclass(AsyncKeycloakAdapter, AsyncKeycloakPort)
 """
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False)
-    assert result.returncode == 0, result.stderr
+    _check_imports(script)
 
 
 @then('the "{package}" adapter can defer global configuration when given explicit settings')

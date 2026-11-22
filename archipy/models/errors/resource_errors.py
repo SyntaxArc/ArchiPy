@@ -1,19 +1,7 @@
 """Resource-related error types."""
 
-from typing import TYPE_CHECKING, Any, ClassVar
-
-if TYPE_CHECKING:
-    from http import HTTPStatus
-
-else:
-    HTTPStatus = None
-
-try:
-    from http import HTTPStatus
-
-    HTTP_AVAILABLE = True
-except ImportError:
-    HTTP_AVAILABLE = False
+from http import HTTPStatus
+from typing import Any, ClassVar
 
 from archipy.models.errors.base_error import BaseError
 from archipy.models.types.language_type import LanguageType
@@ -25,7 +13,7 @@ class NotFoundError(BaseError):
     code: ClassVar[str] = "NOT_FOUND"
     message_en: ClassVar[str] = "Requested resource not found: {resource_type}"
     message_fa: ClassVar[str] = "منبع درخواستی یافت نشد: {resource_type}"
-    http_status: ClassVar[int] = HTTPStatus.NOT_FOUND.value if HTTP_AVAILABLE and HTTPStatus is not None else 404
+    http_status: ClassVar[int] = HTTPStatus.NOT_FOUND.value
     grpc_status: ClassVar[int] = 5
 
     def __init__(
@@ -53,7 +41,7 @@ class AlreadyExistsError(BaseError):
     code: ClassVar[str] = "ALREADY_EXISTS"
     message_en: ClassVar[str] = "Resource already exists: {resource_type}"
     message_fa: ClassVar[str] = "منبع از قبل موجود است: {resource_type}"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 6
 
     def __init__(
@@ -81,7 +69,7 @@ class ConflictError(BaseError):
     code: ClassVar[str] = "CONFLICT"
     message_en: ClassVar[str] = "Resource conflict detected"
     message_fa: ClassVar[str] = "تعارض در منابع تشخیص داده شد"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 10
 
     def __init__(
@@ -108,7 +96,7 @@ class ResourceLockedError(BaseError):
     code: ClassVar[str] = "RESOURCE_LOCKED"
     message_en: ClassVar[str] = "Resource is currently locked"
     message_fa: ClassVar[str] = "منبع در حال حاضر قفل شده است"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 10
 
     def __init__(
@@ -135,7 +123,7 @@ class ResourceBusyError(BaseError):
     code: ClassVar[str] = "RESOURCE_BUSY"
     message_en: ClassVar[str] = "Resource is currently busy"
     message_fa: ClassVar[str] = "منبع در حال حاضر مشغول است"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 10
 
     def __init__(
@@ -162,9 +150,7 @@ class DataLossError(BaseError):
     code: ClassVar[str] = "DATA_LOSS"
     message_en: ClassVar[str] = "Critical data loss detected"
     message_fa: ClassVar[str] = "از دست دادن اطلاعات حیاتی تشخیص داده شد."
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 15
 
 
@@ -174,7 +160,7 @@ class InvalidEntityTypeError(BaseError):
     code: ClassVar[str] = "INVALID_ENTITY"
     message_en: ClassVar[str] = "Invalid entity type"
     message_fa: ClassVar[str] = "نوع موجودیت نامعتبر است."
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
     grpc_status: ClassVar[int] = 3
 
     def __init__(
@@ -204,7 +190,7 @@ class FileTooLargeError(BaseError):
     code: ClassVar[str] = "FILE_TOO_LARGE"
     message_en: ClassVar[str] = "File size exceeds the maximum allowed limit"
     message_fa: ClassVar[str] = "حجم فایل از حد مجاز بیشتر است"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
     grpc_status: ClassVar[int] = 3
 
     def __init__(
@@ -234,7 +220,7 @@ class InvalidFileTypeError(BaseError):
     code: ClassVar[str] = "INVALID_FILE_TYPE"
     message_en: ClassVar[str] = "File type is not supported"
     message_fa: ClassVar[str] = "نوع فایل پشتیبانی نمی‌شود"
-    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value if HTTP_AVAILABLE and HTTPStatus is not None else 400
+    http_status: ClassVar[int] = HTTPStatus.BAD_REQUEST.value
     grpc_status: ClassVar[int] = 3
 
     def __init__(
@@ -264,7 +250,7 @@ class QuotaExceededError(BaseError):
     code: ClassVar[str] = "QUOTA_EXCEEDED"
     message_en: ClassVar[str] = "Storage quota has been exceeded"
     message_fa: ClassVar[str] = "سهمیه ذخیره‌سازی به پایان رسیده است"
-    http_status: ClassVar[int] = HTTPStatus.FORBIDDEN.value if HTTP_AVAILABLE and HTTPStatus is not None else 403
+    http_status: ClassVar[int] = HTTPStatus.FORBIDDEN.value
     grpc_status: ClassVar[int] = 8
 
     def __init__(
@@ -294,9 +280,7 @@ class ResourceExhaustedError(BaseError):
     code: ClassVar[str] = "RESOURCE_EXHAUSTED"
     message_en: ClassVar[str] = "Resource limit has been reached"
     message_fa: ClassVar[str] = "محدودیت منابع به پایان رسیده است."
-    http_status: ClassVar[int] = (
-        HTTPStatus.TOO_MANY_REQUESTS.value if HTTP_AVAILABLE and HTTPStatus is not None else 429
-    )
+    http_status: ClassVar[int] = HTTPStatus.TOO_MANY_REQUESTS.value
     grpc_status: ClassVar[int] = 8
 
     def __init__(
@@ -318,9 +302,7 @@ class StorageError(BaseError):
     code: ClassVar[str] = "STORAGE_ERROR"
     message_en: ClassVar[str] = "Storage access error occurred"
     message_fa: ClassVar[str] = "خطا در دسترسی به فضای ذخیره‌سازی"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(

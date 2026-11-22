@@ -9,7 +9,6 @@ import logging
 import os
 import smtplib
 import ssl
-import warnings
 from email import encoders
 from email.errors import MessageError
 from email.mime.audio import MIMEAudio
@@ -28,7 +27,7 @@ from pydantic import EmailStr, HttpUrl, ValidationError
 from archipy.adapters.email.ports import EmailPort
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.decorators.tracing import trace_span
-from archipy.helpers.utils.base_utils import BaseUtils
+from archipy.helpers.errors import capture_exception
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.dtos.email_dtos import EmailAttachmentDTO
 from archipy.models.errors import ConfigurationError, InvalidArgumentError, UnavailableError
@@ -77,7 +76,7 @@ class EmailConnectionManager:
         """Initialize EmailConnectionManager.
 
         Raises:
-            ConfigurationError: If only one of ``USERNAME`` and ``PASSWORD`` is set while ``TLS.MODE`` is not ``auto``.
+            ConfigurationError: If credentials are incomplete or SMTP authentication is configured without TLS.
         """
         self.config = config
         self.smtp_connection: smtplib.SMTP | None = None
@@ -86,53 +85,24 @@ class EmailConnectionManager:
         self._validate_security()
 
     def _validate_security(self) -> None:
-        """Check the TLS and credential settings; the legacy ``auto`` mode only warns."""
-        half_set = bool(self.config.USERNAME) != bool(self.config.PASSWORD)
-        if self.config.TLS.MODE == "auto":
-            warnings.warn(
-                "EMAIL.TLS.MODE='auto' is deprecated: STARTTLS is opportunistic, the certificate is not verified "
-                "and a failed upgrade falls back to clear text. Set TLS.MODE to 'starttls' or 'implicit'.",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-            if half_set:
-                warnings.warn(
-                    "EMAIL.USERNAME and EMAIL.PASSWORD must be set together; login is skipped. "
-                    "This will be an error in a future release.",
-                    DeprecationWarning,
-                    stacklevel=3,
-                )
-        elif half_set:
+        """Require paired credentials and TLS for SMTP authentication."""
+        if bool(self.config.USERNAME) != bool(self.config.PASSWORD):
             raise ConfigurationError(
                 operation="email_credentials",
                 reason="USERNAME and PASSWORD must be set together",
             )
-        if self.config.TLS.MODE == "none" and self.config.USERNAME and self.config.PASSWORD:
-            warnings.warn(
-                "EMAIL.TLS.MODE='none' sends USERNAME and PASSWORD in clear text. "
-                "Set TLS.MODE to 'starttls' or 'implicit'; clear-text login will be rejected in a future release.",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-        if self.config.TLS.MODE in ("starttls", "implicit") and not self.config.TLS.VERIFY:
-            warnings.warn(
-                "EMAIL.TLS.VERIFY=False disables certificate and host name verification, which exposes the "
-                "session and credentials to interception. Use TLS.CA_FILE for a private CA; "
-                "TLS.VERIFY=False will be rejected in a future release.",
-                DeprecationWarning,
-                stacklevel=3,
+        if self.config.TLS.MODE == "none" and self.config.USERNAME:
+            raise ConfigurationError(
+                operation="email_credentials",
+                reason="SMTP authentication requires TLS.MODE 'starttls' or 'implicit'",
             )
 
     def _build_ssl_context(self) -> ssl.SSLContext:
-        """Build the TLS context from ``TLS.CA_FILE`` and ``TLS.VERIFY``."""
-        context = ssl.create_default_context(cafile=self.config.TLS.CA_FILE)
-        if not self.config.TLS.VERIFY:
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
-        return context
+        """Build the TLS context with certificate and hostname verification."""
+        return ssl.create_default_context(cafile=self.config.TLS.CA_FILE)
 
     def _open_session(self) -> tuple[smtplib.SMTP, str]:
-        """Open the SMTP session for ``TLS_MODE`` and return it with the TLS mode actually in use."""
+        """Open the SMTP session for ``TLS.MODE`` and return it with the TLS mode actually in use."""
         mode = self.config.TLS.MODE
         source_address = (self.config.SOURCE_ADDRESS, self.config.SOURCE_PORT) if self.config.SOURCE_ADDRESS else None
         common: dict[str, Any] = {
@@ -159,39 +129,38 @@ class EmailConnectionManager:
         return session, tls_mode
 
     def _negotiate_tls(self, session: smtplib.SMTP) -> str:
-        """Greet the server and upgrade with STARTTLS as ``TLS_MODE`` demands; return the TLS mode in use."""
+        """Greet the server and upgrade with STARTTLS as ``TLS.MODE`` demands; return the TLS mode in use."""
         mode = self.config.TLS.MODE
         session.ehlo()
-        offered = session.has_extn("starttls")
-        if mode == "starttls" and not offered:
+        if mode == "none":
+            return "none"
+        if not session.has_extn("starttls"):
             message = "STARTTLS is required but the server does not offer it"
             raise smtplib.SMTPNotSupportedError(message)
-        if mode == "none" or (mode == "auto" and not offered):
-            return "none"
-        session.starttls(context=self._build_ssl_context() if mode == "starttls" else None)
+        session.starttls(context=self._build_ssl_context())
         session.ehlo()
         return "starttls"
 
     def connect(self) -> None:
         """Establish the SMTP connection with the configured transport security and authentication.
 
-        ``TLS_MODE`` ``starttls`` fails when the server does not offer STARTTLS or the upgrade fails, and
+        ``TLS.MODE`` ``starttls`` fails when the server does not offer STARTTLS or the upgrade fails, and
         ``implicit`` opens a TLS connection from the start; neither falls back to clear text.
         Failures are captured and leave ``smtp_connection`` as ``None``; the cause is kept in ``last_error``.
 
         Raises:
             InvalidArgumentError: If no SMTP server is configured.
+            ConfigurationError: If the SMTP credentials or transport settings are incompatible.
         """
         if not self.config.SMTP_SERVER:
             raise InvalidArgumentError(argument_name="SMTP_SERVER")
+        self._validate_security()
 
         try:
             session, tls_mode = self._open_session()
             try:
                 _annotate_current_span({"email.tls_mode": tls_mode})
                 if self.config.USERNAME and self.config.PASSWORD:
-                    if tls_mode == "none":
-                        logger.warning("Logging in to the SMTP server without TLS: credentials are sent in clear text")
                     session.login(self.config.USERNAME, self.config.PASSWORD)
             except BaseException:
                 session.close()
@@ -200,7 +169,7 @@ class EmailConnectionManager:
             self.last_used = DatetimeUtils.get_datetime_now()
             self.last_error = None
         except (smtplib.SMTPException, OSError, TimeoutError) as e:
-            BaseUtils.capture_exception(e)
+            capture_exception(e)
             self.smtp_connection = None
             self.last_error = e
 
@@ -211,7 +180,7 @@ class EmailConnectionManager:
                 self.smtp_connection.quit()
                 self.smtp_connection = None
         except (smtplib.SMTPException, OSError, TimeoutError) as e:
-            BaseUtils.capture_exception(e)
+            capture_exception(e)
         finally:
             self.smtp_connection = None
 
@@ -576,7 +545,7 @@ class EmailAdapter(EmailPort):
                         additional_data={"reason": "invalid_header", "detail": str(e)},
                     ) from e
                 except (smtplib.SMTPException, OSError, TimeoutError) as e:
-                    BaseUtils.capture_exception(e)
+                    capture_exception(e)
                     last_error = e
                     connection.disconnect()  # Close the broken session; reconnect on next attempt
                     if isinstance(e, smtplib.SMTPResponseException) and e.smtp_code >= _PERMANENT_FAILURE_CODE:
@@ -584,7 +553,7 @@ class EmailAdapter(EmailPort):
 
             raise UnavailableError(resource_type="SMTP") from last_error
         except (smtplib.SMTPException, OSError, TimeoutError) as e:
-            BaseUtils.capture_exception(e)
+            capture_exception(e)
             raise UnavailableError(resource_type="SMTP") from e
         finally:
             if connection:

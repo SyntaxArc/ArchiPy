@@ -64,10 +64,9 @@ uv run pre-commit run --all-files
 ## Documentation
 
 ```bash
-make docs-serve        # Live-reload local server (balanced)
-make docs-serve-fast   # Fast rebuild (skip heavy API gen)
+make docs-serve        # Live-reload local server
 make docs-build        # Build static site
-make docs-deploy       # Deploy to GitHub Pages
+make docs-check        # Clean, strict production build
 ```
 
 ## Dependency Updates

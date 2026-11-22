@@ -1,19 +1,7 @@
 """Database-related error types."""
 
-from typing import TYPE_CHECKING, Any, ClassVar
-
-if TYPE_CHECKING:
-    from http import HTTPStatus
-
-else:
-    HTTPStatus = None
-
-try:
-    from http import HTTPStatus
-
-    HTTP_AVAILABLE = True
-except ImportError:
-    HTTP_AVAILABLE = False
+from http import HTTPStatus
+from typing import Any, ClassVar
 
 from archipy.models.errors.base_error import BaseError
 from archipy.models.types.language_type import LanguageType
@@ -26,9 +14,7 @@ class DatabaseError(BaseError):
     retryable: ClassVar[bool] = False
     message_en: ClassVar[str] = "Database error occurred"
     message_fa: ClassVar[str] = "خطای پایگاه داده رخ داده است"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(
@@ -52,9 +38,7 @@ class DatabaseQueryError(DatabaseError):
     code: ClassVar[str] = "DATABASE_QUERY_ERROR"
     message_en: ClassVar[str] = "Error executing database query"
     message_fa: ClassVar[str] = "خطا در اجرای پرس و جوی پایگاه داده"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(
@@ -79,9 +63,7 @@ class DatabaseConnectionError(DatabaseQueryError):
     code: ClassVar[str] = "DATABASE_CONNECTION_ERROR"
     message_en: ClassVar[str] = "Failed to connect to the database"
     message_fa: ClassVar[str] = "خطا در اتصال به پایگاه داده"
-    http_status: ClassVar[int] = (
-        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
-    )
+    http_status: ClassVar[int] = HTTPStatus.SERVICE_UNAVAILABLE.value
     grpc_status: ClassVar[int] = 14
 
 
@@ -91,9 +73,7 @@ class DatabaseTransactionError(DatabaseError):
     code: ClassVar[str] = "DATABASE_TRANSACTION_ERROR"
     message_en: ClassVar[str] = "Error in database transaction"
     message_fa: ClassVar[str] = "خطا در تراکنش پایگاه داده"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(
@@ -118,7 +98,7 @@ class DatabaseTimeoutError(DatabaseQueryError):
     code: ClassVar[str] = "DATABASE_TIMEOUT_ERROR"
     message_en: ClassVar[str] = "Database operation timed out"
     message_fa: ClassVar[str] = "عملیات پایگاه داده با تایم‌اوت مواجه شد"
-    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value if HTTP_AVAILABLE and HTTPStatus is not None else 408
+    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value
     grpc_status: ClassVar[int] = 4
 
     def __init__(
@@ -143,7 +123,7 @@ class DatabaseConstraintError(DatabaseQueryError):
     code: ClassVar[str] = "DATABASE_CONSTRAINT_ERROR"
     message_en: ClassVar[str] = "Database constraint violation"
     message_fa: ClassVar[str] = "نقض محدودیت پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 9
 
     def __init__(
@@ -168,7 +148,7 @@ class DatabaseIntegrityError(DatabaseQueryError):
     code: ClassVar[str] = "DATABASE_INTEGRITY_ERROR"
     message_en: ClassVar[str] = "Database integrity violation"
     message_fa: ClassVar[str] = "نقض یکپارچگی پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 9
 
 
@@ -179,7 +159,7 @@ class DatabaseDeadlockError(DatabaseQueryError):
     retryable: ClassVar[bool] = True
     message_en: ClassVar[str] = "Database deadlock detected"
     message_fa: ClassVar[str] = "قفل‌شدگی پایگاه داده تشخیص داده شد"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 10
 
 
@@ -190,7 +170,7 @@ class DatabaseSerializationError(DatabaseQueryError):
     retryable: ClassVar[bool] = True
     message_en: ClassVar[str] = "Database serialization failure"
     message_fa: ClassVar[str] = "خطای سریال‌سازی پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 10
 
 
@@ -204,9 +184,7 @@ class DatabaseResourceExhaustedError(DatabaseQueryError):
     retryable: ClassVar[bool] = True
     message_en: ClassVar[str] = "Database resources exhausted"
     message_fa: ClassVar[str] = "منابع پایگاه داده تمام شده است"
-    http_status: ClassVar[int] = (
-        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
-    )
+    http_status: ClassVar[int] = HTTPStatus.SERVICE_UNAVAILABLE.value
     grpc_status: ClassVar[int] = 8
 
 
@@ -227,9 +205,7 @@ class DatabaseConfigurationError(DatabaseError):
     code: ClassVar[str] = "DATABASE_CONFIGURATION_ERROR"
     message_en: ClassVar[str] = "Database configuration error"
     message_fa: ClassVar[str] = "خطای پیکربندی پایگاه داده"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
 
@@ -239,9 +215,7 @@ class CacheError(BaseError):
     code: ClassVar[str] = "CACHE_ERROR"
     message_en: ClassVar[str] = "Error accessing cache"
     message_fa: ClassVar[str] = "خطا در دسترسی به حافظه نهان"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(
@@ -265,7 +239,7 @@ class CacheMissError(BaseError):
     code: ClassVar[str] = "CACHE_MISS"
     message_en: ClassVar[str] = "Requested data not found in cache: {cache_key}"
     message_fa: ClassVar[str] = "داده درخواستی در حافظه نهان یافت نشد: {cache_key}"
-    http_status: ClassVar[int] = HTTPStatus.NOT_FOUND.value if HTTP_AVAILABLE and HTTPStatus is not None else 404
+    http_status: ClassVar[int] = HTTPStatus.NOT_FOUND.value
     grpc_status: ClassVar[int] = 5
 
     def __init__(

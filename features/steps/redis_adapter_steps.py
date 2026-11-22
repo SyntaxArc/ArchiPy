@@ -127,7 +127,7 @@ def step_given_configured_cluster_mock(context):
     scenario_context = get_current_scenario_context(context)
     redis_config = RedisConfig(
         MODE=RedisMode.CLUSTER,
-        CLUSTER_NODES=["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"],
+        CLUSTER={"NODES": ["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"]},
         DECODE_RESPONSES=True,
     )
     scenario_context.adapter = RedisMock(redis_config=redis_config)
@@ -139,7 +139,7 @@ def step_given_configured_async_cluster_mock(context):
     scenario_context = get_current_scenario_context(context)
     redis_config = RedisConfig(
         MODE=RedisMode.CLUSTER,
-        CLUSTER_NODES=["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"],
+        CLUSTER={"NODES": ["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"]},
         DECODE_RESPONSES=True,
     )
     scenario_context.async_adapter = AsyncRedisMock(redis_config=redis_config)
@@ -3665,13 +3665,10 @@ def step_given_tls_config(context, mode, user):
     scenario_context = get_current_scenario_context(context)
     extra = {}
     if mode == "sentinel":
-        extra = {"MODE": "SENTINEL", "SENTINEL_NODES": ["localhost:26379"], "SENTINEL_SERVICE_NAME": "mymaster"}
+        extra = {"MODE": "SENTINEL", "SENTINEL": {"NODES": ["localhost:26379"], "SERVICE_NAME": "mymaster"}}
     scenario_context.tls_config = RedisConfig(
         USERNAME=user,
-        SSL=True,
-        SSL_CA_CERTS="/certs/ca.pem",
-        SSL_CERTFILE="/certs/client.pem",
-        SSL_KEYFILE="/certs/client.key",
+        TLS={"IS_ENABLED": True, "CA_CERTS": "/certs/ca.pem", "CERTFILE": "/certs/client.pem", "KEYFILE": "/certs/client.key"},
         **extra,
     )
 
@@ -3708,7 +3705,8 @@ def step_then_client_username(context, user):
 def _resilience_config(mode, **extra):
     """Build a Redis config for the given mode with extra settings."""
     if mode == "sentinel":
-        extra.update(MODE="SENTINEL", SENTINEL_NODES=["localhost:26379"], SENTINEL_SERVICE_NAME="mymaster")
+        sentinel = extra.pop("SENTINEL", {})
+        extra.update(MODE="SENTINEL", SENTINEL={"NODES": ["localhost:26379"], "SERVICE_NAME": "mymaster", **sentinel})
     return RedisConfig(**extra)
 
 
@@ -3721,11 +3719,10 @@ def step_given_resilience_config(context, mode, retries, name, user):
     scenario_context = get_current_scenario_context(context)
     scenario_context.tls_config = _resilience_config(
         mode,
-        RETRY_ATTEMPTS=int(retries),
-        RETRY_ON_TIMEOUT=True,
+        RETRY={"ATTEMPTS": int(retries), "ON_TIMEOUT": True},
         SOCKET_KEEPALIVE=True,
         CLIENT_NAME=name,
-        SENTINEL_USERNAME=user,
+        SENTINEL={"USERNAME": user},
     )
     scenario_context.resilience_mode = mode
 
@@ -3797,9 +3794,9 @@ def step_when_invalid_tls_config(context, settings):
     """Try to build an invalid Redis config and keep the outcome."""
     scenario_context = get_current_scenario_context(context)
     kwargs = (
-        {"SSL": True, "SSL_CERTFILE": "/certs/client.pem"}
+        {"TLS": {"IS_ENABLED": True, "CERTFILE": "/certs/client.pem"}}
         if settings.startswith("a client")
-        else {"SSL": False, "SSL_CA_CERTS": "/certs/ca.pem"}
+        else {"TLS": {"IS_ENABLED": False, "CA_CERTS": "/certs/ca.pem"}}
     )
     try:
         RedisConfig(**kwargs)
@@ -3954,9 +3951,9 @@ def step_when_invalid_node_config(context, mode, node):
     """Try to build a config with a malformed node address and keep the outcome."""
     scenario_context = get_current_scenario_context(context)
     kwargs = (
-        {"MODE": "SENTINEL", "SENTINEL_NODES": [node], "SENTINEL_SERVICE_NAME": "mymaster"}
+        {"MODE": "SENTINEL", "SENTINEL": {"NODES": [node], "SERVICE_NAME": "mymaster"}}
         if mode == "sentinel"
-        else {"MODE": "CLUSTER", "CLUSTER_NODES": [node]}
+        else {"MODE": "CLUSTER", "CLUSTER": {"NODES": [node]}}
     )
     try:
         RedisConfig(**kwargs)
@@ -3983,8 +3980,8 @@ def step_when_credential_config(context, password, settings):
     config_logger = logging.getLogger("archipy.configs.sections.redis")
     config_logger.addHandler(handler)
     try:
-        kwargs = {"SSL": False} if settings == "TLS disabled" else {"SSL": True, "SSL_CHECK_HOSTNAME": False}
-        config = RedisConfig(PASSWORD=password, **kwargs)
+        kwargs = {"IS_ENABLED": False} if settings == "TLS disabled" else {"IS_ENABLED": True, "CHECK_HOSTNAME": False}
+        config = RedisConfig(PASSWORD=password, TLS=kwargs)
     finally:
         config_logger.removeHandler(handler)
     store_result(context, "credential_config", config)
@@ -4008,27 +4005,18 @@ def step_then_config_warning(context, text):
     assert any(text in message for message in messages), messages
 
 
-@when(r'I upsert the hash document "(?P<doc_id>[^"]+)" with replace (?P<replace>True|False)')
-def step_when_upsert_hash_replace(context, doc_id, replace):
-    """Upsert a hash document and record any DeprecationWarning."""
-    import warnings
+@when(r'I upsert a hash document "(?P<doc_id>[^"]+)" twice with different fields')
+def step_when_upsert_hash_merge(context, doc_id):
+    scenario_context = get_current_scenario_context(context)
+    handle = scenario_context.adapter.search_index(scenario_context.get("last_index_name"))
+    handle.upsert_hash(doc_id, {"title": "T"})
+    handle.upsert_hash(doc_id, {"category": "c"})
 
+
+@then(r'the hash document "(?P<doc_id>[^"]+)" contains both fields')
+def step_then_upsert_hash_merge(context, doc_id):
     adapter = get_current_scenario_context(context).adapter
-    handle = adapter.search_index(get_current_scenario_context(context).get("last_index_name"))
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        handle.upsert_hash(doc_id, {"title": "T", "category": "c"}, replace=replace == "True")
-    store_result(context, "deprecations", [w for w in caught if issubclass(w.category, DeprecationWarning)])
-
-
-@then(
-    r'the hash document "(?P<doc_id>[^"]+)" should be stored and the deprecation warning should be (?P<warned>absent|raised)',
-)
-def step_then_upsert_hash(context, doc_id, warned):
-    """Assert the document exists and the deprecation matches."""
-    adapter = get_current_scenario_context(context).adapter
-    assert adapter.hgetall(doc_id).get("title") == "T"
-    assert bool(get_result(context, "deprecations")) == (warned == "raised")
+    assert adapter.hgetall(doc_id) == {"title": "T", "category": "c"}
 
 
 @when(r'I increment the non-numeric key "(?P<key>[^"]+)" in (?P<adapter_type>mock|container|cluster)')

@@ -22,9 +22,6 @@ class _DropOtelInternalLogs(logging.Filter):
 def attach_logging_handler(level: int, logger_provider: OwnedLoggerProvider) -> logging.Handler:
     """Attach an OpenTelemetry ``LoggingHandler`` to the root logger.
 
-    Uses the handler from ``opentelemetry-instrumentation-logging`` (the SDK's own ``LoggingHandler`` is deprecated
-    since OpenTelemetry 1.40) and falls back to the SDK handler when that package is not installed.
-
     Args:
         level: Minimum level the handler forwards.
         logger_provider: Provider the handler exports through.
@@ -32,10 +29,7 @@ def attach_logging_handler(level: int, logger_provider: OwnedLoggerProvider) -> 
     Returns:
         The attached handler.
     """
-    try:
-        from opentelemetry.instrumentation.logging.handler import LoggingHandler
-    except ImportError:
-        from opentelemetry.sdk._logs import LoggingHandler  # deprecated; kept for installs without the new package
+    from opentelemetry.instrumentation.logging.handler import LoggingHandler
 
     handler: logging.Handler = LoggingHandler(level=level, logger_provider=logger_provider)
     handler.addFilter(_DropOtelInternalLogs())

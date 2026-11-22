@@ -1,10 +1,8 @@
 """Email configuration."""
 
-from typing import Literal, Self
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EmailTlsConfig(BaseModel):
@@ -12,22 +10,16 @@ class EmailTlsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    MODE: Literal["auto", "none", "starttls", "implicit"] = Field(
-        default="auto",
+    MODE: Literal["none", "starttls", "implicit"] = Field(
+        default="starttls",
         description=(
             "Transport security. 'starttls' requires a successful STARTTLS upgrade, 'implicit' opens a TLS "
-            "connection from the start (SMTPS, port 465), 'none' sends in clear text. 'auto' (default, deprecated) "
-            "upgrades only when the server offers STARTTLS, without verifying the certificate, and continues in "
-            "clear text otherwise"
+            "connection from the start (SMTPS, port 465), and 'none' allows unauthenticated clear-text SMTP"
         ),
     )
     CA_FILE: str | None = Field(
         default=None,
-        description="PEM file with the CA certificates that verify the server (TLS_MODE 'starttls' or 'implicit')",
-    )
-    VERIFY: bool = Field(
-        default=True,
-        description="Verify the server certificate and host name (TLS_MODE 'starttls' or 'implicit')",
+        description="PEM file with the CA certificates that verify the server (MODE 'starttls' or 'implicit')",
     )
 
 
@@ -85,89 +77,3 @@ class EmailConfig(BaseModel):
     TLS: EmailTlsConfig = Field(default_factory=EmailTlsConfig, description="TLS settings of the SMTP connection")
     POOL: EmailPoolConfig = Field(default_factory=EmailPoolConfig, description="Connection pool settings")
     ATTACHMENTS: EmailAttachmentsConfig = Field(default_factory=EmailAttachmentsConfig, description="Attachment limits")
-
-    TLS_MODE: Literal["auto", "none", "starttls", "implicit"] = Field(
-        default="auto",
-        description=(
-            "Transport security. 'starttls' requires a successful STARTTLS upgrade, 'implicit' opens a TLS "
-            "connection from the start (SMTPS, port 465), 'none' sends in clear text. 'auto' (default, deprecated) "
-            "upgrades only when the server offers STARTTLS, without verifying the certificate, and continues in "
-            "clear text otherwise"
-        ),
-        deprecated=deprecated_flat_message("EMAIL", "TLS_MODE", "TLS", "MODE"),
-    )
-    TLS_CA_FILE: str | None = Field(
-        default=None,
-        description="PEM file with the CA certificates that verify the server (TLS_MODE 'starttls' or 'implicit')",
-        deprecated=deprecated_flat_message("EMAIL", "TLS_CA_FILE", "TLS", "CA_FILE"),
-    )
-    TLS_VERIFY: bool = Field(
-        default=True,
-        description="Verify the server certificate and host name (TLS_MODE 'starttls' or 'implicit')",
-        deprecated=deprecated_flat_message("EMAIL", "TLS_VERIFY", "TLS", "VERIFY"),
-    )
-    POOL_SIZE: int = Field(
-        default=5,
-        ge=1,
-        description="Connection pool size",
-        deprecated=deprecated_flat_message("EMAIL", "POOL_SIZE", "POOL", "SIZE"),
-    )
-    CONNECTION_TIMEOUT: int = Field(
-        default=30,
-        gt=0,
-        description="Connection timeout in seconds",
-        deprecated=deprecated_flat_message("EMAIL", "CONNECTION_TIMEOUT", "POOL", "CONNECTION_TIMEOUT"),
-    )
-    CONNECTION_REFRESH_SECONDS: int = Field(
-        default=300,
-        ge=1,
-        description="Idle seconds after which a pooled SMTP connection is reconnected",
-        deprecated=deprecated_flat_message("EMAIL", "CONNECTION_REFRESH_SECONDS", "POOL", "CONNECTION_REFRESH_SECONDS"),
-    )
-    ATTACHMENT_URL_TIMEOUT: int = Field(
-        default=30,
-        gt=0,
-        description="Timeout in seconds for downloading URL attachments",
-        deprecated=deprecated_flat_message("EMAIL", "ATTACHMENT_URL_TIMEOUT", "ATTACHMENTS", "URL_TIMEOUT"),
-    )
-    ATTACHMENT_URL_ALLOWED_HOSTS: list[str] | None = Field(
-        default=None,
-        description="Host names URL attachments may be downloaded from; None allows any host (http and https only)",
-        deprecated=deprecated_flat_message("EMAIL", "ATTACHMENT_URL_ALLOWED_HOSTS", "ATTACHMENTS", "URL_ALLOWED_HOSTS"),
-    )
-    ATTACHMENT_MAX_SIZE: int = Field(
-        default=5 * 1024 * 1024,
-        description="Maximum attachment size in bytes",
-        deprecated=deprecated_flat_message("EMAIL", "ATTACHMENT_MAX_SIZE", "ATTACHMENTS", "MAX_SIZE"),
-    )
-
-    @model_validator(mode="after")
-    def fold_deprecated_flat_fields(self) -> Self:
-        """Copy deprecated flat settings into their groups."""
-        fold_flat_fields(
-            self,
-            "TLS",
-            EmailTlsConfig,
-            {"TLS_MODE": "MODE", "TLS_CA_FILE": "CA_FILE", "TLS_VERIFY": "VERIFY"},
-        )
-        fold_flat_fields(
-            self,
-            "POOL",
-            EmailPoolConfig,
-            {
-                "POOL_SIZE": "SIZE",
-                "CONNECTION_TIMEOUT": "CONNECTION_TIMEOUT",
-                "CONNECTION_REFRESH_SECONDS": "CONNECTION_REFRESH_SECONDS",
-            },
-        )
-        fold_flat_fields(
-            self,
-            "ATTACHMENTS",
-            EmailAttachmentsConfig,
-            {
-                "ATTACHMENT_URL_TIMEOUT": "URL_TIMEOUT",
-                "ATTACHMENT_URL_ALLOWED_HOSTS": "URL_ALLOWED_HOSTS",
-                "ATTACHMENT_MAX_SIZE": "MAX_SIZE",
-            },
-        )
-        return self

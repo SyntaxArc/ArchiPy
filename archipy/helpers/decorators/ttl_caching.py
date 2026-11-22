@@ -10,7 +10,6 @@ import threading
 from functools import wraps
 from typing import TYPE_CHECKING, Final, cast
 
-from archipy.helpers._deprecation import deprecated_alias
 from archipy.models.errors import ConfigurationError
 
 if TYPE_CHECKING:
@@ -293,6 +292,3 @@ def ttl_cache[**P, R](
         )
 
     return decorator
-
-
-ttl_cache_decorator = deprecated_alias("ttl_cache_decorator", ttl_cache)

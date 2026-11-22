@@ -34,7 +34,6 @@ from archipy.adapters.base.sqlalchemy.driver_errors import (
     log_driver_error,
 )
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
-from archipy.helpers._deprecation import deprecated_alias, warn_deprecated_name
 from archipy.models.errors import (
     BaseError,
     DatabaseConfigurationError,
@@ -807,58 +806,3 @@ def mysql_sqlalchemy_atomic[**P, R](
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
     """
     return _atomic_for("mysql", function, registry, savepoint)
-
-
-def sqlalchemy_atomic_decorator(
-    db_type: str,
-    is_async: bool = False,
-    function: Callable[..., Any] | None = None,
-) -> Callable[..., Any]:
-    """Deprecated: use :func:`sqlalchemy_atomic`, which detects async functions itself.
-
-    Args:
-        db_type (str): The database type ("postgres", "sqlite", "starrocks", or "mysql").
-        is_async (bool): Ignored; the function kind is detected automatically.
-        function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
-
-    Returns:
-        Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
-    """
-    del is_async
-    warn_deprecated_name("sqlalchemy_atomic_decorator", "sqlalchemy_atomic")
-    return sqlalchemy_atomic(db_type, function)
-
-
-postgres_sqlalchemy_atomic_decorator = deprecated_alias(
-    "postgres_sqlalchemy_atomic_decorator",
-    postgres_sqlalchemy_atomic,
-)
-
-async_postgres_sqlalchemy_atomic_decorator = deprecated_alias(
-    "async_postgres_sqlalchemy_atomic_decorator",
-    postgres_sqlalchemy_atomic,
-)
-
-sqlite_sqlalchemy_atomic_decorator = deprecated_alias("sqlite_sqlalchemy_atomic_decorator", sqlite_sqlalchemy_atomic)
-
-async_sqlite_sqlalchemy_atomic_decorator = deprecated_alias(
-    "async_sqlite_sqlalchemy_atomic_decorator",
-    sqlite_sqlalchemy_atomic,
-)
-
-starrocks_sqlalchemy_atomic_decorator = deprecated_alias(
-    "starrocks_sqlalchemy_atomic_decorator",
-    starrocks_sqlalchemy_atomic,
-)
-
-async_starrocks_sqlalchemy_atomic_decorator = deprecated_alias(
-    "async_starrocks_sqlalchemy_atomic_decorator",
-    starrocks_sqlalchemy_atomic,
-)
-
-mysql_sqlalchemy_atomic_decorator = deprecated_alias("mysql_sqlalchemy_atomic_decorator", mysql_sqlalchemy_atomic)
-
-async_mysql_sqlalchemy_atomic_decorator = deprecated_alias(
-    "async_mysql_sqlalchemy_atomic_decorator",
-    mysql_sqlalchemy_atomic,
-)

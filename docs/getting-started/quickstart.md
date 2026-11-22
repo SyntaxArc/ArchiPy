@@ -12,6 +12,7 @@ with a typed config, a Redis adapter, and a TTL cache backed by Redis in under f
 
 - Python 3.14 or later
 - `uv` package manager ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
+- A running Redis instance. The example uses `localhost:6379` by default.
 
 > **Tip:** Check your Python version:
 >
@@ -29,7 +30,7 @@ uv init
 ## Step 2 — Install ArchiPy
 
 ```bash
-uv add "archipy[redis]"
+uv add "archipy[redis]" click
 ```
 
 ## Step 3 — Define the Configuration
@@ -70,7 +71,7 @@ logger.info("Config loaded for %s (env=%s)", config.APP_NAME, config.ENVIRONMENT
 
 ## Step 4 — Connect to Redis
 
-Create a Redis adapter using the global config:
+Create a Redis adapter using the global config. Set `REDIS__MASTER_HOST` and `REDIS__PORT` if Redis is running elsewhere.
 
 ```python
 # adapters/cache_adapter.py
@@ -116,13 +117,6 @@ def get_user_name(user_id: str) -> str:
     name = f"User-{user_id}"  # replace with a real DB call
     redis.set(cache_key, name, ex=_CACHE_TTL)
     return name
-
-
-# First call: cache miss — hits the database and stores in Redis
-name = get_user_name("42")
-
-# Second call within 60 seconds: cache hit — returns from Redis instantly
-name = get_user_name("42")
 ```
 
 ## Step 6 — Run the App
@@ -146,10 +140,11 @@ def cli():
 
 
 @cli.command()
-def run() -> None:
+@click.argument("user_id", default="42")
+def run(user_id: str) -> None:
     """Run a quick cache demonstration."""
-    logger.info(get_user_name("42"))
-    logger.info(get_user_name("42"))  # returns from cache
+    logger.info("%s", get_user_name(user_id))
+    logger.info("%s", get_user_name(user_id))  # returns from cache
 
 
 if __name__ == "__main__":
@@ -157,7 +152,7 @@ if __name__ == "__main__":
 ```
 
 ```bash
-python manage.py run
+uv run python manage.py run
 ```
 
 You should see:
@@ -168,7 +163,8 @@ INFO:__main__:User-42
 INFO:__main__:User-42
 ```
 
-The second call is served from Redis without hitting the database.
+The first call caches the result for 60 seconds. The second call reads it from Redis. If you rerun the example
+within that window, both calls can hit the cache. Pass a different user ID to see a fresh miss.
 
 ---
 

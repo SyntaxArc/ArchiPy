@@ -310,13 +310,6 @@ Feature: App Utilities
 
     Examples:
       | settings                                  | outcome  |
-      | TLS_ENABLED                               | rejected |
-      | TLS_ENABLED,TLS_CERT_FILE                 | rejected |
-      | TLS_ENABLED,TLS_CERT_FILE,TLS_KEY_FILE    | accepted |
-      | TLS_REQUIRE_CLIENT_AUTH                   | rejected |
-      | TLS_REQUIRE_CLIENT_AUTH,TLS_CA_FILE       | accepted |
-      | STUB_TLS_CERT_FILE                        | rejected |
-      | STUB_TLS_CERT_FILE,STUB_TLS_KEY_FILE      | accepted |
       | TLS.IS_ENABLED                            | rejected |
       | TLS.IS_ENABLED,TLS.CERT_FILE              | rejected |
       | TLS.IS_ENABLED,TLS.CERT_FILE,TLS.KEY_FILE | accepted |
@@ -371,7 +364,7 @@ Feature: App Utilities
     And the uvicorn arguments leave out "forwarded_allow_ips"
     And no deprecation warning is raised
 
-  Scenario: A UVICORN setting wins over the deprecated FASTAPI setting without a warning
+  Scenario: A UVICORN setting overrides the Uvicorn default
     Given a configuration built from:
       """
       {
@@ -384,24 +377,7 @@ Feature: App Utilities
     Then the uvicorn argument "timeout_keep_alive" is 30
     And no deprecation warning is raised
 
-  Scenario: A deprecated FASTAPI uvicorn setting still applies and warns
-    Given a configuration built from:
-      """
-      {
-        "FASTAPI": {
-          "TIMEOUT_KEEP_ALIVE": 9,
-          "FORWARDED_ALLOW_IPS": [
-            "10.0.0.1"
-          ]
-        }
-      }
-      """
-    When the uvicorn arguments are built
-    Then the uvicorn argument "timeout_keep_alive" is 9
-    And the uvicorn argument "forwarded_allow_ips" is ["10.0.0.1"]
-    And a deprecation warning mentions "UVICORN.TIMEOUT_KEEP_ALIVE"
-
-  Scenario: Grouped UVICORN settings reach the uvicorn arguments and win over the FASTAPI mirror
+  Scenario: Grouped UVICORN settings reach the uvicorn arguments
     Given a configuration built from:
       """
       {
@@ -413,9 +389,6 @@ Feature: App Utilities
             "BACKLOG": 10,
             "CONCURRENCY": 5
           }
-        },
-        "FASTAPI": {
-          "WS_MAX_SIZE": 2048
         }
       }
       """
@@ -424,25 +397,6 @@ Feature: App Utilities
     And the uvicorn argument "backlog" is 10
     And the uvicorn argument "limit_concurrency" is 5
     And no deprecation warning is raised
-
-  Scenario: A deprecated FASTAPI WebSocket setting applies when the UVICORN group leaves it unset
-    Given a configuration built from:
-      """
-      {
-        "UVICORN": {
-          "WEBSOCKET": {
-            "PING_INTERVAL": 5.0
-          }
-        },
-        "FASTAPI": {
-          "WS_MAX_SIZE": 2048
-        }
-      }
-      """
-    When the uvicorn arguments are built
-    Then the uvicorn argument "ws_max_size" is 2048
-    And the uvicorn argument "ws_ping_interval" is 5.0
-    And a deprecation warning mentions "UVICORN.WS_MAX_SIZE"
 
   Scenario: Reload leaves the worker count out
     Given a configuration built from:
@@ -462,9 +416,11 @@ Feature: App Utilities
       """
       {
         "UVICORN": {
-          "SSL_KEYFILE": "/tls/key.pem",
-          "SSL_CERTFILE": "/tls/cert.pem",
-          "SSL_CA_CERTS": "/tls/ca.pem"
+          "TLS": {
+            "KEYFILE": "/tls/key.pem",
+            "CERTFILE": "/tls/cert.pem",
+            "CA_CERTS": "/tls/ca.pem"
+          }
         }
       }
       """
@@ -478,60 +434,9 @@ Feature: App Utilities
       """
       {
         "UVICORN": {
-          "SSL_KEYFILE": "/tls/key.pem"
+          "TLS": {
+            "KEYFILE": "/tls/key.pem"
+          }
         }
       }
       """
-
-  Scenario: Building a FASTAPI section with a deprecated uvicorn field warns
-    When the FASTAPI section is built with a deprecated uvicorn field
-    Then a deprecation warning mentions "UVICORN"
-
-  Scenario Outline: Reading a deprecated FASTAPI uvicorn field warns and names its replacement
-    Given a configuration built from:
-      """
-      {}
-      """
-    When the FASTAPI field "<field>" is read
-    Then a deprecation warning mentions "UVICORN.<field>"
-
-    Examples:
-      | field                     |
-      | TIMEOUT_KEEP_ALIVE        |
-      | FORWARDED_ALLOW_IPS       |
-      | RELOAD                    |
-      | TIMEOUT_GRACEFUL_SHUTDOWN |
-
-  Scenario: Reading the UVICORN field and dumping the FASTAPI section do not warn
-    Given a configuration built from:
-      """
-      {
-        "FASTAPI": {
-          "TIMEOUT_KEEP_ALIVE": 9
-        }
-      }
-      """
-    When the UVICORN field "TIMEOUT_KEEP_ALIVE" is read and the FASTAPI section is dumped
-    Then no deprecation warning is raised
-
-  Scenario: The deprecated FASTAPI fields are marked deprecated in the JSON schema
-    Then the JSON schema of the FASTAPI section marks "TIMEOUT_KEEP_ALIVE" as deprecated
-
-  Scenario Outline: Reading a deprecated ScyllaDB pool field warns, loading the config does not
-    Given a configuration built from:
-      """
-      {
-        "SCYLLADB": {
-          "MAX_CONNECTIONS_PER_HOST": 4
-        }
-      }
-      """
-    When the SCYLLADB field "<field>" is read
-    Then a deprecation warning mentions "no per-host connection pool sizing"
-
-    Examples:
-      | field                       |
-      | MAX_CONNECTIONS_PER_HOST    |
-      | MIN_CONNECTIONS_PER_HOST    |
-      | CORE_CONNECTIONS_PER_HOST   |
-      | MAX_REQUESTS_PER_CONNECTION |

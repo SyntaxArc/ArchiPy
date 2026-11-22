@@ -27,8 +27,8 @@ Configure the SQLite adapter via environment variables or a `SQLiteSQLAlchemyCon
 ```bash
 SQLITE_SQLALCHEMY__DATABASE=./app.db
 SQLITE_SQLALCHEMY__ECHO=false
-SQLITE_SQLALCHEMY__POOL_SIZE=20
-SQLITE_SQLALCHEMY__POOL_TIMEOUT=30
+SQLITE_SQLALCHEMY__POOL__SIZE=20
+SQLITE_SQLALCHEMY__POOL__TIMEOUT=30
 ```
 
 ### Busy Timeout and Thread Check

@@ -1,0 +1,51 @@
+{% extends "main.html" %}
+
+{% block htmltitle %}
+<title>Page not found · {{ config.site_name }}</title>
+{% endblock %}
+
+{% block extrahead %}
+{{ super() }}
+<meta name="robots" content="noindex">
+{% endblock %}
+
+{% block content %}
+<h1>Page not found</h1>
+<p>This page may have moved. Use the site search or choose a destination below.</p>
+
+<nav id="docs-recovery" aria-label="Find documentation">
+  <p><a class="md-button md-button--primary" href="{{ '.' | url }}">Documentation home</a></p>
+
+  <h2>Browse the docs</h2>
+  <div class="grid cards">
+    <ul>
+      <li>
+        <a href="{{ 'getting-started/installation/' | url }}"><strong>Installation</strong></a>
+        <p>Install ArchiPy and its optional extras.</p>
+      </li>
+      <li>
+        <a href="{{ 'getting-started/quickstart/' | url }}"><strong>Quickstart</strong></a>
+        <p>Run a small app with Redis caching.</p>
+      </li>
+      <li>
+        <a href="{{ 'getting-started/concepts/' | url }}"><strong>Concepts</strong></a>
+        <p>Understand the layers and import rules.</p>
+      </li>
+      <li>
+        <a href="{{ 'tutorials/' | url }}"><strong>Tutorials</strong></a>
+        <p>Find examples for adapters and helpers.</p>
+      </li>
+      <li>
+        <a href="{{ 'api_reference/' | url }}"><strong>API Reference</strong></a>
+        <p>Look up public classes and functions.</p>
+      </li>
+      <li>
+        <a href="{{ 'community/faq/' | url }}"><strong>FAQ</strong></a>
+        <p>Find answers to common questions.</p>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<p>Followed a link here? <a href="{{ config.repo_url }}/issues/new?template=documentation_improvement.yml">Report the broken link</a>.</p>
+{% endblock %}

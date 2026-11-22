@@ -5,6 +5,27 @@ used in the application, including databases, message brokers, authentication se
 and more.
 """
 
+__lazy_modules__ = [
+    "archipy.configs.sections.auth",
+    "archipy.configs.sections.elasticsearch",
+    "archipy.configs.sections.email",
+    "archipy.configs.sections.fastapi",
+    "archipy.configs.sections.general",
+    "archipy.configs.sections.grpc",
+    "archipy.configs.sections.kafka",
+    "archipy.configs.sections.keycloak",
+    "archipy.configs.sections.minio",
+    "archipy.configs.sections.otel",
+    "archipy.configs.sections.payment",
+    "archipy.configs.sections.pydantic_ai",
+    "archipy.configs.sections.redis",
+    "archipy.configs.sections.scylladb",
+    "archipy.configs.sections.sqlalchemy",
+    "archipy.configs.sections.temporal",
+    "archipy.configs.sections.uvicorn",
+    "archipy.configs.sections.vault",
+]
+
 from archipy.configs.sections.auth import (
     AuthConfig,
 )
@@ -65,7 +86,6 @@ from archipy.configs.sections.sqlalchemy import (
     _extract_postgres_host_port_from_url,  # noqa: F401
 )
 from archipy.configs.sections.temporal import (
-    TLS_CERT_PARTS_REQUIRED,
     TemporalConfig,
 )
 from archipy.configs.sections.uvicorn import UvicornConfig
@@ -74,7 +94,6 @@ from archipy.configs.sections.vault import (
 )
 
 __all__ = [
-    "TLS_CERT_PARTS_REQUIRED",
     "AuthConfig",
     "DatetimeConfig",
     "ElasticsearchConfig",

@@ -205,18 +205,6 @@ def step_when_auth_config_leeway(context, leeway):
         scenario_context.store("config_error", e)
 
 
-@when("an authentication configuration is built with the deprecated flat leeway of {leeway:d}")
-def step_when_auth_config_flat_leeway(context, leeway):
-    from pydantic import ValidationError
-
-    from archipy.configs.config_template import AuthConfig
-
-    scenario_context = get_current_scenario_context(context)
-    try:
-        AuthConfig(JWT_LEEWAY=leeway)
-        scenario_context.store("config_error", None)
-    except ValidationError as e:
-        scenario_context.store("config_error", e)
 
 
 @then("the configuration is rejected")

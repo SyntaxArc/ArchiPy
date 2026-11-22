@@ -70,7 +70,7 @@ class KeycloakOrganizationGroupsMixin(SyncKeycloakMixinBase):
     def create_organization_group(
         self,
         organization_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a top-level group in an organization.
 
@@ -145,7 +145,7 @@ class KeycloakOrganizationGroupsMixin(SyncKeycloakMixinBase):
         self,
         organization_id: str,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an organization group.
 
@@ -219,7 +219,7 @@ class KeycloakOrganizationGroupsMixin(SyncKeycloakMixinBase):
         self,
         organization_id: str,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a child group under an organization group.
 
@@ -477,7 +477,7 @@ class KeycloakOrganizationGroupsMixin(SyncKeycloakMixinBase):
         self,
         organization_id: str,
         group_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Assign realm roles to an organization group.
 
@@ -504,7 +504,7 @@ class KeycloakOrganizationGroupsMixin(SyncKeycloakMixinBase):
         self,
         organization_id: str,
         group_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from an organization group.
 
@@ -610,7 +610,7 @@ class KeycloakOrganizationGroupsMixin(SyncKeycloakMixinBase):
         organization_id: str,
         group_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Assign client roles to an organization group.
 
@@ -639,7 +639,7 @@ class KeycloakOrganizationGroupsMixin(SyncKeycloakMixinBase):
         organization_id: str,
         group_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from an organization group.
 
@@ -709,7 +709,7 @@ class AsyncKeycloakOrganizationGroupsMixin(AsyncKeycloakMixinBase):
     async def create_organization_group(
         self,
         organization_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a top-level group in an organization.
 
@@ -784,7 +784,7 @@ class AsyncKeycloakOrganizationGroupsMixin(AsyncKeycloakMixinBase):
         self,
         organization_id: str,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an organization group.
 
@@ -858,7 +858,7 @@ class AsyncKeycloakOrganizationGroupsMixin(AsyncKeycloakMixinBase):
         self,
         organization_id: str,
         group_id: str,
-        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        payload: KeycloakGroupRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Create a child group under an organization group.
 
@@ -1120,7 +1120,7 @@ class AsyncKeycloakOrganizationGroupsMixin(AsyncKeycloakMixinBase):
         self,
         organization_id: str,
         group_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Assign realm roles to an organization group.
 
@@ -1147,7 +1147,7 @@ class AsyncKeycloakOrganizationGroupsMixin(AsyncKeycloakMixinBase):
         self,
         organization_id: str,
         group_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from an organization group.
 
@@ -1253,7 +1253,7 @@ class AsyncKeycloakOrganizationGroupsMixin(AsyncKeycloakMixinBase):
         organization_id: str,
         group_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Assign client roles to an organization group.
 
@@ -1282,7 +1282,7 @@ class AsyncKeycloakOrganizationGroupsMixin(AsyncKeycloakMixinBase):
         organization_id: str,
         group_id: str,
         client_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from an organization group.
 

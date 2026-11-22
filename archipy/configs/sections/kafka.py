@@ -3,11 +3,10 @@
 __lazy_modules__ = ["archipy.models.errors"]
 
 import logging
-from typing import Literal, Self
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
-from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.models.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -118,14 +117,6 @@ class KafkaConfig(BaseModel):
         default=None,
         description="Consumer enable.auto.offset.store; None keeps the librdkafka default (true)",
     )
-    EMPTY_KEY_FOR_MISSING_KEY: bool = Field(
-        default=True,
-        description=(
-            "Deprecated legacy behavior: send messages produced without a key with an empty key (b''), so keyless "
-            "messages share one key and consumers read b'' instead of None. Set to False to send no key; False "
-            "becomes the default in a future release"
-        ),
-    )
     ENABLE_IDEMPOTENCE: bool = Field(default=False, description="Enable idempotent producer for exactly-once delivery")
     TRANSACTIONAL_ID: str | None = Field(default=None, description="Transactional ID for the producer")
     TRANSACTION_TIMEOUT_MS: int | None = Field(
@@ -181,77 +172,10 @@ class KafkaConfig(BaseModel):
     SASL: KafkaSaslConfig = Field(default_factory=KafkaSaslConfig, description="SASL authentication settings")
     SSL: KafkaSslConfig = Field(default_factory=KafkaSslConfig, description="SSL and TLS file settings")
 
-    SASL_MECHANISM: str | None = Field(
-        default=None,
-        description="SASL mechanism for authentication",
-        deprecated=deprecated_flat_message("KAFKA", "SASL_MECHANISM", "SASL", "MECHANISM"),
-    )
-    USERNAME: str | None = Field(
-        default=None,
-        description="Username for SASL authentication",
-        deprecated=deprecated_flat_message("KAFKA", "USERNAME", "SASL", "USERNAME"),
-    )
-    PASSWORD: SecretStr | None = Field(
-        default=None,
-        description="Password for SASL authentication",
-        deprecated=deprecated_flat_message("KAFKA", "PASSWORD", "SASL", "PASSWORD"),
-    )
-    SSL_CA_FILE: str | None = Field(
-        default=None,
-        description="Path to SSL CA certificate file",
-        deprecated=deprecated_flat_message("KAFKA", "SSL_CA_FILE", "SSL", "CA_FILE"),
-    )
-    SSL_CERT_FILE: str | None = Field(
-        default=None,
-        description="Path to SSL certificate file",
-        deprecated=deprecated_flat_message("KAFKA", "SSL_CERT_FILE", "SSL", "CERT_FILE"),
-    )
-    SSL_KEY_FILE: str | None = Field(
-        default=None,
-        description="Path to SSL key file",
-        deprecated=deprecated_flat_message("KAFKA", "SSL_KEY_FILE", "SSL", "KEY_FILE"),
-    )
-    SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: Literal["https", "none"] = Field(
-        default="https",
-        description=(
-            "Broker hostname verification for SSL connections. 'https' checks the broker certificate against the "
-            "broker hostname; 'none' turns the check off and should only be used for brokers whose certificates "
-            "do not match their address"
-        ),
-        deprecated=deprecated_flat_message(
-            "KAFKA",
-            "SSL_ENDPOINT_IDENTIFICATION_ALGORITHM",
-            "SSL",
-            "ENDPOINT_IDENTIFICATION_ALGORITHM",
-        ),
-    )
-
-    @model_validator(mode="after")
-    def fold_deprecated_flat_fields(self) -> Self:
-        """Copy deprecated flat settings into their groups."""
-        fold_flat_fields(
-            self,
-            "SASL",
-            KafkaSaslConfig,
-            {"SASL_MECHANISM": "MECHANISM", "USERNAME": "USERNAME", "PASSWORD": "PASSWORD"},
-        )
-        fold_flat_fields(
-            self,
-            "SSL",
-            KafkaSslConfig,
-            {
-                "SSL_CA_FILE": "CA_FILE",
-                "SSL_CERT_FILE": "CERT_FILE",
-                "SSL_KEY_FILE": "KEY_FILE",
-                "SSL_ENDPOINT_IDENTIFICATION_ALGORITHM": "ENDPOINT_IDENTIFICATION_ALGORITHM",
-            },
-        )
-        return self
-
-    @field_validator("SECURITY_PROTOCOL", "SASL_MECHANISM", mode="before")
+    @field_validator("SECURITY_PROTOCOL", mode="before")
     @classmethod
     def normalize_security_names(cls, value: object) -> object:
-        """Uppercase the security protocol and the SASL mechanism, so ``ssl`` and ``plain`` behave like ``SSL``.
+        """Normalize the security protocol to uppercase.
 
         Args:
             value: The raw setting.
@@ -316,7 +240,7 @@ class KafkaConfig(BaseModel):
             logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
         if self.SSL.ENDPOINT_IDENTIFICATION_ALGORITHM == "none":
             logger.warning(
-                "Kafka broker hostname verification is disabled (SSL_ENDPOINT_IDENTIFICATION_ALGORITHM='none'); "
+                "Kafka broker hostname verification is disabled (SSL.ENDPOINT_IDENTIFICATION_ALGORITHM='none'); "
                 "SSL connections will not check that the broker certificate matches its hostname.",
             )
         return self

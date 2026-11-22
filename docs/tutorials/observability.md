@@ -209,9 +209,9 @@ OTEL__METRICS_PULL_PORT=8200
 # Prometheus Pushgateway (no local /metrics server)
 OTEL__METRICS_ENABLED=true
 OTEL__METRICS_EXPORTER=pushgateway
-OTEL__METRICS_PUSHGATEWAY_URL=http://pushgateway.monitoring:9091
-OTEL__METRICS_PUSHGATEWAY_JOB=my-service
-OTEL__METRICS_PUSHGATEWAY_INTERVAL_SECONDS=60
+OTEL__PUSHGATEWAY__URL=http://pushgateway.monitoring:9091
+OTEL__PUSHGATEWAY__JOB=my-service
+OTEL__PUSHGATEWAY__INTERVAL_SECONDS=60
 ```
 
 `OtelUtils.metrics_registry()` returns the Prometheus `CollectorRegistry` when

@@ -824,7 +824,7 @@ def step_when_grpc_config_built(context, settings):
     for key in keys:
         group, _, name = key.rpartition(".")
         target = values.setdefault(group, {}) if group else values
-        if name in {"IS_ENABLED", "TLS_ENABLED", "REQUIRE_CLIENT_AUTH", "TLS_REQUIRE_CLIENT_AUTH"}:
+        if name in {"IS_ENABLED", "REQUIRE_CLIENT_AUTH"}:
             target[name] = True
         elif name.endswith("_FILE"):
             target[name] = "/nonexistent/x.pem"
@@ -980,10 +980,6 @@ def step_then_no_deprecation_warning(context):
     assert get_current_scenario_context(context).get("caught_warnings") == []
 
 
-@then('a deprecation warning mentions "{text}"')
-def step_then_deprecation_warning_mentions(context, text):
-    messages = get_current_scenario_context(context).get("caught_warnings")
-    assert any(text in message for message in messages), messages
 
 
 @then('building a configuration from the following fails with "{reason}":')
@@ -994,49 +990,6 @@ def step_then_config_build_fails(context, reason):
         assert error.additional_data["reason"] == reason, error.additional_data
     else:
         raise AssertionError("the config was accepted")
-
-
-@when("the FASTAPI section is built with a deprecated uvicorn field")
-def step_when_fastapi_section_built(context):
-    scenario_context = get_current_scenario_context(context)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        FastAPIConfig(TIMEOUT_KEEP_ALIVE=9)
-    scenario_context.store("caught_warnings", [str(item.message) for item in caught if item.category is DeprecationWarning])
-
-
-@when('the {section} field "{name}" is read')
-def step_when_config_field_read(context, section, name):
-    scenario_context = get_current_scenario_context(context)
-    config = scenario_context.get("built_config")
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        getattr(getattr(config, section), name)
-    scenario_context.store(
-        "caught_warnings",
-        [str(item.message) for item in caught if item.category is DeprecationWarning],
-    )
-
-
-@when('the UVICORN field "{name}" is read and the FASTAPI section is dumped')
-def step_when_uvicorn_field_read_and_fastapi_dumped(context, name):
-    scenario_context = get_current_scenario_context(context)
-    config = scenario_context.get("built_config")
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        getattr(config.UVICORN, name)
-        config.FASTAPI.model_dump()
-        repr(config.FASTAPI)
-    scenario_context.store(
-        "caught_warnings",
-        [str(item.message) for item in caught if item.category is DeprecationWarning],
-    )
-
-
-@then('the JSON schema of the FASTAPI section marks "{name}" as deprecated')
-def step_then_fastapi_schema_deprecated(context, name):
-    schema = FastAPIConfig.model_json_schema()
-    assert schema["properties"][name].get("deprecated") is True, schema["properties"][name]
 
 
 def _compression_grpc_config(compression: str) -> BaseConfig:

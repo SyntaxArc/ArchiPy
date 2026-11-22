@@ -9,7 +9,6 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
-from archipy.configs.sections._common import deprecated_flat_message, fold_flat_fields
 from archipy.models.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -414,73 +413,6 @@ class OpentelemetryConfig(BaseModel):
         default_factory=OtelPushgatewayConfig,
         description="Prometheus Pushgateway settings (METRICS_EXPORTER=pushgateway)",
     )
-
-    METRICS_PUSHGATEWAY_URL: str | None = Field(
-        default=None,
-        description="Prometheus Pushgateway base URL when METRICS_EXPORTER=pushgateway (e.g. http://host:9091)",
-        deprecated=deprecated_flat_message("OTEL", "METRICS_PUSHGATEWAY_URL", "PUSHGATEWAY", "URL"),
-    )
-    METRICS_PUSHGATEWAY_JOB: str | None = Field(
-        default=None,
-        description="Pushgateway job label (defaults to SERVICE_NAME when unset)",
-        deprecated=deprecated_flat_message("OTEL", "METRICS_PUSHGATEWAY_JOB", "PUSHGATEWAY", "JOB"),
-    )
-    METRICS_PUSHGATEWAY_INTERVAL_SECONDS: int = Field(
-        default=60,
-        ge=1,
-        description="Interval between Pushgateway pushes when METRICS_EXPORTER=pushgateway",
-        deprecated=deprecated_flat_message(
-            "OTEL",
-            "METRICS_PUSHGATEWAY_INTERVAL_SECONDS",
-            "PUSHGATEWAY",
-            "INTERVAL_SECONDS",
-        ),
-    )
-    METRICS_PUSHGATEWAY_TIMEOUT_SECONDS: float = Field(
-        default=10.0,
-        gt=0,
-        description="HTTP timeout in seconds for Pushgateway push/delete calls",
-        deprecated=deprecated_flat_message(
-            "OTEL",
-            "METRICS_PUSHGATEWAY_TIMEOUT_SECONDS",
-            "PUSHGATEWAY",
-            "TIMEOUT_SECONDS",
-        ),
-    )
-    METRICS_PUSHGATEWAY_GROUPING_KEY: dict[str, str] = Field(
-        default_factory=dict,
-        max_length=16,
-        description="Extra Pushgateway grouping labels (instance, component, ...)",
-        deprecated=deprecated_flat_message("OTEL", "METRICS_PUSHGATEWAY_GROUPING_KEY", "PUSHGATEWAY", "GROUPING_KEY"),
-    )
-    METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN: bool = Field(
-        default=True,
-        description="Delete the Pushgateway grouping key on graceful OTel shutdown",
-        deprecated=deprecated_flat_message(
-            "OTEL",
-            "METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN",
-            "PUSHGATEWAY",
-            "DELETE_ON_SHUTDOWN",
-        ),
-    )
-
-    @model_validator(mode="after")
-    def fold_deprecated_flat_fields(self) -> Self:
-        """Copy deprecated flat settings into their groups."""
-        fold_flat_fields(
-            self,
-            "PUSHGATEWAY",
-            OtelPushgatewayConfig,
-            {
-                "METRICS_PUSHGATEWAY_URL": "URL",
-                "METRICS_PUSHGATEWAY_JOB": "JOB",
-                "METRICS_PUSHGATEWAY_INTERVAL_SECONDS": "INTERVAL_SECONDS",
-                "METRICS_PUSHGATEWAY_TIMEOUT_SECONDS": "TIMEOUT_SECONDS",
-                "METRICS_PUSHGATEWAY_GROUPING_KEY": "GROUPING_KEY",
-                "METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN": "DELETE_ON_SHUTDOWN",
-            },
-        )
-        return self
 
     def _fit_batch_sizes_to_queues(self) -> None:
         """Keep each batch no larger than its queue.

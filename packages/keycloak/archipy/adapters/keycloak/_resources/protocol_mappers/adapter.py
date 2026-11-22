@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -46,7 +45,7 @@ class KeycloakProtocolMappersMixin(SyncKeycloakMixinBase):
     def add_mapper_to_client_scope(
         self,
         client_scope_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add a protocol mapper to a client scope."""
         return with_created_id(
@@ -77,7 +76,7 @@ class KeycloakProtocolMappersMixin(SyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         protocol_mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a protocol mapper in a client scope."""
         return to_mutation_result(
@@ -112,7 +111,7 @@ class KeycloakProtocolMappersMixin(SyncKeycloakMixinBase):
     def add_mapper_to_client(
         self,
         client_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add a protocol mapper to a client."""
         return with_created_id(
@@ -143,7 +142,7 @@ class KeycloakProtocolMappersMixin(SyncKeycloakMixinBase):
         self,
         client_id: str,
         mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a protocol mapper on a client."""
         return to_mutation_result(
@@ -191,7 +190,7 @@ class KeycloakProtocolMappersMixin(SyncKeycloakMixinBase):
     def add_client_scope_protocol_mappers(
         self,
         client_scope_id: str,
-        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+        mappers: list[KeycloakProtocolMapperRequestDTO],
     ) -> KeycloakCreateResultDTO:
         """Add several protocol mappers to a client scope in one call.
 
@@ -264,7 +263,7 @@ class KeycloakProtocolMappersMixin(SyncKeycloakMixinBase):
     def add_client_protocol_mappers(
         self,
         client_uuid: str,
-        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+        mappers: list[KeycloakProtocolMapperRequestDTO],
     ) -> KeycloakCreateResultDTO:
         """Add several protocol mappers to a client in one call.
 
@@ -439,7 +438,7 @@ class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
     async def add_mapper_to_client_scope(
         self,
         client_scope_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add a protocol mapper to a client scope."""
         return await with_created_id_async(
@@ -470,7 +469,7 @@ class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         protocol_mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a protocol mapper in a client scope."""
         return to_mutation_result(
@@ -505,7 +504,7 @@ class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
     async def add_mapper_to_client(
         self,
         client_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakCreateResultDTO:
         """Add a protocol mapper to a client."""
         return await with_created_id_async(
@@ -536,7 +535,7 @@ class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+        payload: KeycloakProtocolMapperRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a protocol mapper on a client."""
         return to_mutation_result(
@@ -587,7 +586,7 @@ class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
     async def add_client_scope_protocol_mappers(
         self,
         client_scope_id: str,
-        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+        mappers: list[KeycloakProtocolMapperRequestDTO],
     ) -> KeycloakCreateResultDTO:
         """Add several protocol mappers to a client scope in one call.
 
@@ -660,7 +659,7 @@ class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
     async def add_client_protocol_mappers(
         self,
         client_uuid: str,
-        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+        mappers: list[KeycloakProtocolMapperRequestDTO],
     ) -> KeycloakCreateResultDTO:
         """Add several protocol mappers to a client in one call.
 

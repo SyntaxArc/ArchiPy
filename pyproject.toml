@@ -157,9 +157,6 @@ name = "ArchiPy layers: adapters -> helpers -> configs -> models"
 type = "layers"
 layers = ["archipy.adapters", "archipy.helpers", "archipy.configs", "archipy.models"]
 ignore_imports = [
-    # Deprecated import paths of moved code (atomic decorators, Keycloak auth); remove with the shim modules in 6.0.0
-    "archipy.helpers.decorators.sqlalchemy_transaction -> archipy.adapters.base.sqlalchemy.atomic",
-    "archipy.helpers.utils.keycloak_utils -> archipy.adapters.keycloak.auth",
     # Function-scoped import of the default Redis store; helpers-configs.mdc allows it and a store= argument replaces it
     "archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor -> archipy.adapters.redis.adapters",
 ]

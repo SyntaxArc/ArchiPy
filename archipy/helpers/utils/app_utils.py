@@ -2,16 +2,34 @@
 
 from __future__ import annotations
 
-__lazy_modules__ = ["archipy.configs.base_config", "archipy.models.errors"]
+__lazy_modules__ = [
+    "archipy.configs.base_config",
+    "archipy.helpers.utils._app_fastapi",
+    "archipy.helpers.utils._app_grpc",
+    "archipy.models.errors",
+]
 
 import logging
 import re
-import warnings
 from concurrent import futures
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils._app_fastapi import (
+    FASTAPI_APP,  # noqa: F401  # Preserve availability flag
+    CORSMiddleware,
+    FastAPI,
+    GZipMiddleware,
+    HTTPSRedirectMiddleware,
+    TrustedHostMiddleware,
+)
+from archipy.helpers.utils._app_grpc import (
+    GRPC_APP,  # noqa: F401  # Preserve availability flag
+    create_grpc_server,
+    grpc,
+    grpc_aio,
+)
 from archipy.models.errors import (
     ConfigurationError,
     InvalidArgumentError,
@@ -40,28 +58,6 @@ else:
     )
 
 logger = logging.getLogger(__name__)
-
-try:
-    import grpc
-    from grpc import aio as grpc_aio
-
-    create_grpc_server: CreateGrpcServerType = grpc_aio.server
-    GRPC_APP = True
-except ImportError:
-    GRPC_APP = False
-    grpc_aio = None
-    create_grpc_server: CreateGrpcServerType | None = None
-
-try:
-    from fastapi import FastAPI
-    from fastapi.middleware.gzip import GZipMiddleware
-    from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-    from fastapi.middleware.trustedhost import TrustedHostMiddleware
-    from starlette.middleware.cors import CORSMiddleware
-
-    FASTAPI_APP = True
-except ImportError:
-    FASTAPI_APP = False
 
 
 class FastAPIUtils:
@@ -434,10 +430,8 @@ class AppUtils:
     def uvicorn_config(config: BaseConfig | None = None, **overrides: Any) -> dict[str, Any]:  # noqa: ANN401
         """Build the keyword arguments of ``uvicorn.run`` or ``uvicorn.Config`` from the configuration.
 
-        Each setting comes from ``UVICORN`` when it is set there, else from the deprecated field of the same name on
-        ``FASTAPI`` when that is set (with a ``DeprecationWarning``), else from the ``UVICORN`` default. Unset
-        optional settings are left out so uvicorn keeps its own defaults. ``host`` and ``port`` come from
-        ``FASTAPI.SERVE_HOST`` and ``FASTAPI.SERVE_PORT``.
+        Optional settings with no value are left out so uvicorn keeps its defaults. ``host`` and ``port``
+        come from ``FASTAPI.SERVE_HOST`` and ``FASTAPI.SERVE_PORT``.
 
         Args:
             config (BaseConfig | None, optional): Custom configuration. If not provided, uses global config.
@@ -446,56 +440,33 @@ class AppUtils:
         Returns:
             dict[str, Any]: Keyword arguments for uvicorn. Pass the application separately.
         """
-        from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI, UVICORN_GROUPED_FIELDS
-
         config = config or BaseConfig.global_config()
         uvicorn_section, fastapi_section = config.UVICORN, config.FASTAPI
-
-        def uvicorn_value(name: str) -> tuple[Any, bool]:
-            """Return the ``UVICORN`` value of a setting and whether it was set explicitly."""
-            if name in UVICORN_GROUPED_FIELDS:
-                group_name, field = UVICORN_GROUPED_FIELDS[name]
-                group = getattr(uvicorn_section, group_name)
-                return getattr(group, field), field in group.model_fields_set
-            return getattr(uvicorn_section, name), name in uvicorn_section.model_fields_set
-
-        def resolve(name: str) -> Any:  # noqa: ANN401
-            value, is_set = uvicorn_value(name)
-            if is_set or name not in UVICORN_FIELDS_ON_FASTAPI:
-                return value
-            if name in fastapi_section.model_fields_set:
-                warnings.warn(
-                    f"FASTAPI.{name} is deprecated and will be removed in 6.0.0; set UVICORN.{name} instead",
-                    DeprecationWarning,
-                    stacklevel=3,
-                )
-                return vars(fastapi_section)[name]  # read without the pydantic deprecation warning
-            return value
 
         values = {
             "host": fastapi_section.SERVE_HOST,
             "port": fastapi_section.SERVE_PORT,
-            "reload": resolve("RELOAD"),
-            "backlog": resolve("BACKLOG"),
-            "access_log": resolve("ACCESS_LOG"),
-            "date_header": resolve("DATE_HEADER"),
-            "server_header": resolve("SERVER_HEADER"),
-            "proxy_headers": resolve("PROXY_HEADERS"),
-            "forwarded_allow_ips": resolve("FORWARDED_ALLOW_IPS"),
-            "limit_concurrency": resolve("LIMIT_CONCURRENCY"),
-            "limit_max_requests": resolve("LIMIT_MAX_REQUESTS"),
-            "timeout_keep_alive": resolve("TIMEOUT_KEEP_ALIVE"),
-            "timeout_graceful_shutdown": resolve("TIMEOUT_GRACEFUL_SHUTDOWN"),
-            "ws_max_size": resolve("WS_MAX_SIZE"),
-            "ws_per_message_deflate": resolve("WS_PER_MESSAGE_DEFLATE"),
-            "ws_ping_interval": resolve("WS_PING_INTERVAL"),
-            "ws_ping_timeout": resolve("WS_PING_TIMEOUT"),
+            "reload": uvicorn_section.RELOAD,
+            "backlog": uvicorn_section.LIMITS.BACKLOG,
+            "access_log": uvicorn_section.ACCESS_LOG,
+            "date_header": uvicorn_section.DATE_HEADER,
+            "server_header": uvicorn_section.SERVER_HEADER,
+            "proxy_headers": uvicorn_section.PROXY_HEADERS,
+            "forwarded_allow_ips": uvicorn_section.FORWARDED_ALLOW_IPS,
+            "limit_concurrency": uvicorn_section.LIMITS.CONCURRENCY,
+            "limit_max_requests": uvicorn_section.LIMITS.MAX_REQUESTS,
+            "timeout_keep_alive": uvicorn_section.TIMEOUT_KEEP_ALIVE,
+            "timeout_graceful_shutdown": uvicorn_section.TIMEOUT_GRACEFUL_SHUTDOWN,
+            "ws_max_size": uvicorn_section.WEBSOCKET.MAX_SIZE,
+            "ws_per_message_deflate": uvicorn_section.WEBSOCKET.PER_MESSAGE_DEFLATE,
+            "ws_ping_interval": uvicorn_section.WEBSOCKET.PING_INTERVAL,
+            "ws_ping_timeout": uvicorn_section.WEBSOCKET.PING_TIMEOUT,
             "ssl_keyfile": uvicorn_section.TLS.KEYFILE,
             "ssl_certfile": uvicorn_section.TLS.CERTFILE,
             "ssl_ca_certs": uvicorn_section.TLS.CA_CERTS,
         }
         if not values["reload"]:
-            values["workers"] = resolve("WORKERS_COUNT")
+            values["workers"] = uvicorn_section.WORKERS_COUNT
         result = {name: value for name, value in values.items() if value is not None}
         result.update(overrides)
         return result

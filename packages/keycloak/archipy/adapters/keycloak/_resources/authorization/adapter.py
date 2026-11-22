@@ -44,7 +44,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def create_client_authz_resource(
         self,
         client_id: str,
-        payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzResourceRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakAuthzResourceDTO:
         """Create an authorization resource for a client."""
@@ -84,7 +84,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
         self,
         client_id: str,
         resource_id: str,
-        payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzResourceRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an authorization resource."""
         return to_mutation_result(
@@ -112,7 +112,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def create_client_authz_scopes(
         self,
         client_id: str,
-        payload: KeycloakAuthzScopeRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzScopeRequestDTO,
     ) -> KeycloakAuthzScopeDTO:
         """Create authorization scopes for a client."""
         return to_dto(
@@ -139,7 +139,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def create_client_authz_role_based_policy(
         self,
         client_id: str,
-        payload: KeycloakAuthzRolePolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzRolePolicyRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakAuthzRolePolicyDTO:
         """Create a role-based authorization policy."""
@@ -157,7 +157,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
 
     def create_client_authz_client_policy(
         self,
-        payload: KeycloakAuthzClientPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzClientPolicyRequestDTO,
         client_id: str,
     ) -> KeycloakAuthzClientPolicyDTO:
         """Create a client-based authorization policy."""
@@ -175,7 +175,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def create_client_authz_policy(
         self,
         client_id: str,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakAuthzPolicyDTO:
         """Create an authorization policy."""
@@ -224,7 +224,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def create_client_authz_resource_based_permission(
         self,
         client_id: str,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakAuthzPolicyDTO:
         """Create a resource-based permission."""
@@ -242,7 +242,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
 
     def create_client_authz_scope_permission(
         self,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         client_id: str,
     ) -> KeycloakAuthzPolicyDTO:
         """Create a scope-based permission."""
@@ -279,7 +279,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
 
     def update_client_authz_scope_permission(
         self,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         client_id: str,
         scope_id: str,
     ) -> KeycloakUpdateResultDTO:
@@ -298,7 +298,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
 
     def update_client_authz_resource_permission(
         self,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         client_id: str,
         resource_id: str,
     ) -> KeycloakUpdateResultDTO:
@@ -375,7 +375,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def import_client_authz_config(
         self,
         client_id: str,
-        payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzSettingsRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Import authorization configuration for a client."""
         return to_mutation_result(
@@ -392,7 +392,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def update_client_authz_settings(
         self,
         client_id: str,
-        settings: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
+        settings: KeycloakAuthzSettingsRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update the resource server settings of a client.
 
@@ -588,7 +588,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
         self,
         client_id: str,
         scope_id: str,
-        payload: KeycloakAuthzScopeRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzScopeRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a scope.
 
@@ -807,7 +807,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def evaluate_client_authz_policies(
         self,
         client_id: str,
-        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO | dict[str, Any],
+        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO,
     ) -> KeycloakAuthzPolicyEvaluationResponseDTO:
         """Evaluate the policies for a user and resources, as the admin console's evaluation tool does.
 
@@ -832,7 +832,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def evaluate_client_authz_permissions(
         self,
         client_id: str,
-        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO | dict[str, Any],
+        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO,
     ) -> KeycloakAuthzPolicyEvaluationResponseDTO:
         """Evaluate the permissions for a user and resources.
 
@@ -861,7 +861,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_resource(
         self,
         client_id: str,
-        payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzResourceRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakAuthzResourceDTO:
         """Create an authorization resource for a client."""
@@ -901,7 +901,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         resource_id: str,
-        payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzResourceRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update an authorization resource."""
         return to_mutation_result(
@@ -929,7 +929,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_scopes(
         self,
         client_id: str,
-        payload: KeycloakAuthzScopeRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzScopeRequestDTO,
     ) -> KeycloakAuthzScopeDTO:
         """Create authorization scopes for a client."""
         return to_dto(
@@ -956,7 +956,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_role_based_policy(
         self,
         client_id: str,
-        payload: KeycloakAuthzRolePolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzRolePolicyRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakAuthzRolePolicyDTO:
         """Create a role-based authorization policy."""
@@ -974,7 +974,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
 
     async def create_client_authz_client_policy(
         self,
-        payload: KeycloakAuthzClientPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzClientPolicyRequestDTO,
         client_id: str,
     ) -> KeycloakAuthzClientPolicyDTO:
         """Create a client-based authorization policy."""
@@ -992,7 +992,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_policy(
         self,
         client_id: str,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakAuthzPolicyDTO:
         """Create an authorization policy."""
@@ -1041,7 +1041,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_resource_based_permission(
         self,
         client_id: str,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         skip_exists: bool = False,
     ) -> KeycloakAuthzPolicyDTO:
         """Create a resource-based permission."""
@@ -1059,7 +1059,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
 
     async def create_client_authz_scope_permission(
         self,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         client_id: str,
     ) -> KeycloakAuthzPolicyDTO:
         """Create a scope-based permission."""
@@ -1096,7 +1096,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
 
     async def update_client_authz_scope_permission(
         self,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         client_id: str,
         scope_id: str,
     ) -> KeycloakUpdateResultDTO:
@@ -1115,7 +1115,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
 
     async def update_client_authz_resource_permission(
         self,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzPolicyRequestDTO,
         client_id: str,
         resource_id: str,
     ) -> KeycloakUpdateResultDTO:
@@ -1195,7 +1195,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def import_client_authz_config(
         self,
         client_id: str,
-        payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzSettingsRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Import authorization configuration for a client."""
         return to_mutation_result(
@@ -1212,7 +1212,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def update_client_authz_settings(
         self,
         client_id: str,
-        settings: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
+        settings: KeycloakAuthzSettingsRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update the resource server settings of a client.
 
@@ -1412,7 +1412,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         scope_id: str,
-        payload: KeycloakAuthzScopeRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzScopeRequestDTO,
     ) -> KeycloakUpdateResultDTO:
         """Update a scope.
 
@@ -1631,7 +1631,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def evaluate_client_authz_policies(
         self,
         client_id: str,
-        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO | dict[str, Any],
+        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO,
     ) -> KeycloakAuthzPolicyEvaluationResponseDTO:
         """Evaluate the policies for a user and resources, as the admin console's evaluation tool does.
 
@@ -1656,7 +1656,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def evaluate_client_authz_permissions(
         self,
         client_id: str,
-        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO | dict[str, Any],
+        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO,
     ) -> KeycloakAuthzPolicyEvaluationResponseDTO:
         """Evaluate the permissions for a user and resources.
 

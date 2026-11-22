@@ -10,7 +10,6 @@ import asyncio
 import logging
 import re
 import time
-import warnings
 from typing import Any, Final, Literal, NoReturn, TypedDict, override
 
 from async_lru import alru_cache
@@ -82,34 +81,6 @@ _UNCONFIGURED_TABLE_PATTERN = re.compile(r"unconfigured table\s+\"?([A-Za-z0-9_.
 # Fixed texts: probe responses must not reveal driver messages, hosts or addresses; details go to the log.
 _HEALTH_CHECK_FAILED: Final = "unavailable"
 _POOL_STATS_FAILED: Final = "unavailable"
-
-
-_POOL_SETTING_DEFAULTS: Final = {
-    "MAX_CONNECTIONS_PER_HOST": 2,
-    "MIN_CONNECTIONS_PER_HOST": 1,
-    "CORE_CONNECTIONS_PER_HOST": 1,
-    "MAX_REQUESTS_PER_CONNECTION": 100,
-}
-
-
-def _warn_ignored_pool_settings(config: ScyllaDBConfig) -> None:
-    """Warn about connection pool settings that scylla-driver does not apply.
-
-    scylla-driver (protocol v3+) keeps one connection per host (per shard when shard-aware); it has no per-host pool
-    size or per-connection request limit, so these settings never had an effect.
-
-    Args:
-        config (ScyllaDBConfig): The ScyllaDB configuration.
-    """
-    values = vars(config)  # read without the pydantic deprecation warning
-    ignored = [name for name, default in _POOL_SETTING_DEFAULTS.items() if values[name] != default]
-    if ignored:
-        warnings.warn(
-            f"{', '.join(ignored)} {'has' if len(ignored) == 1 else 'have'} no effect: scylla-driver does not support "
-            "per-host connection pool sizing, and the setting will be removed in a future release",
-            DeprecationWarning,
-            stacklevel=3,
-        )
 
 
 _SERIAL_CONSISTENCY_LEVELS: Final = {
@@ -731,7 +702,6 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             Cluster: Configured cluster instance.
         """
         cluster = _build_cluster(self.config)
-        _warn_ignored_pool_settings(self.config)
         _warn_insecure_connection(self.config)
         return cluster
 
@@ -1243,7 +1213,6 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             Cluster: Configured cluster instance.
         """
         cluster = _build_cluster(self.config)
-        _warn_ignored_pool_settings(self.config)
         _warn_insecure_connection(self.config)
         return cluster
 

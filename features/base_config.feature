@@ -183,24 +183,24 @@ Feature: Base Configuration System
     And the error should mention "<fragment>"
 
     Examples: Incomplete Vault settings
-      | auth_method | problem                          | fragment              |
-      | token       | no token is set                  | TOKEN or TOKEN_FILE   |
-      | token       | the token file cannot be read    | Failed to read secret |
-      | approle     | no role id is set                | APPROLE_ROLE_ID       |
-      | approle     | no secret id is set              | APPROLE_SECRET_ID     |
-      | userpass    | no username is set               | USERNAME              |
-      | userpass    | no password is set               | PASSWORD              |
-      | kubernetes  | no role is set                   | KUBERNETES_ROLE       |
-      | jwt         | no role is set                   | JWT_ROLE              |
-      | jwt         | no jwt is set                    | JWT or JWT_FILE       |
-      | aws         | no access key is set             | AWS_ACCESS_KEY        |
-      | azure       | no role is set                   | AZURE_ROLE            |
-      | azure       | no jwt is set                    | AZURE_JWT             |
-      | gcp         | no role is set                   | GCP_ROLE              |
-      | gcp         | no jwt is set                    | GCP_JWT               |
-      | github      | no github token is set           | GITHUB_TOKEN          |
-      | token       | no address is set                | VAULT.ADDR            |
-      | token       | only a client certificate is set | CLIENT_KEY_PATH       |
+      | auth_method | problem                          | fragment                          |
+      | token       | no token is set                  | TOKEN or TOKEN_FILE               |
+      | token       | the token file cannot be read    | Failed to read secret             |
+      | approle     | no role id is set                | APPROLE.ROLE_ID                   |
+      | approle     | no secret id is set              | APPROLE.SECRET_ID                 |
+      | userpass    | no username is set               | USERNAME                          |
+      | userpass    | no password is set               | PASSWORD                          |
+      | kubernetes  | no role is set                   | KUBERNETES.ROLE                   |
+      | jwt         | no role is set                   | JWT_AUTH.ROLE                     |
+      | jwt         | no jwt is set                    | JWT_AUTH.JWT or JWT_AUTH.JWT_FILE |
+      | aws         | no access key is set             | AWS.ACCESS_KEY                    |
+      | azure       | no role is set                   | AZURE.ROLE                        |
+      | azure       | no jwt is set                    | AZURE.JWT                         |
+      | gcp         | no role is set                   | GCP.ROLE                          |
+      | gcp         | no jwt is set                    | GCP.JWT                           |
+      | github      | no github token is set           | GITHUB.TOKEN                      |
+      | token       | no address is set                | VAULT.ADDR                        |
+      | token       | only a client certificate is set | TLS.CLIENT_KEY_PATH               |
 
   Scenario Outline: A Vault client logs in with <method>
     Given Vault accepts <method> logins for a test identity
@@ -239,8 +239,6 @@ Feature: Base Configuration System
       | Kafka         | auto commit and no offset reset                    | rejected |
       | Kafka         | a heartbeat longer than the session                | rejected |
       | Redis         | cluster mode without nodes                         | rejected |
-      | Redis         | cluster mode with nodes                            | accepted |
-      | Redis         | sentinel mode without a service name               | rejected |
       | Redis         | standalone mode without a host                     | rejected |
       | Redis         | grouped cluster mode without nodes                 | rejected |
       | Redis         | grouped cluster mode with nodes                    | accepted |
@@ -249,18 +247,12 @@ Feature: Base Configuration System
       | Redis         | grouped CA file with TLS disabled                  | rejected |
       | ScyllaDB      | no contact points                                  | rejected |
       | ScyllaDB      | a username without a password                      | rejected |
-      | ScyllaDB      | a minimum pool above the maximum                   | rejected |
       | ScyllaDB      | a client certificate without a key                 | rejected |
       | ScyllaDB      | a CA file with TLS disabled                        | rejected |
       | ScyllaDB      | TLS enabled with a CA file                         | accepted |
       | ScyllaDB      | an exponential reconnection base above the maximum | rejected |
       | ScyllaDB      | an exponential reconnection within bounds          | accepted |
-      | ScyllaDB      | a grouped client certificate without a key         | rejected |
-      | ScyllaDB      | a grouped CA file with TLS disabled                | rejected |
-      | ScyllaDB      | a grouped exponential reconnection above the max   | rejected |
       | ScyllaDB      | a grouped replication without datacenters          | rejected |
-      | ScyllaDB      | grouped TLS enabled with a CA file                 | accepted |
-      | Elasticsearch | only a username                                    | rejected |
       | Elasticsearch | grouped username without a password                | rejected |
       | Elasticsearch | grouped client cert without a key                  | rejected |
       | Elasticsearch | grouped CA file with verification disabled         | rejected |
@@ -277,12 +269,9 @@ Feature: Base Configuration System
       | OpenTelemetry | a pushgateway exporter with a grouped URL          | accepted |
       | Temporal      | only a CA certificate                              | accepted |
       | Temporal      | a client key without a certificate                 | rejected |
-      | Temporal      | a run timeout above the execution one              | rejected |
-      | Temporal      | a keep alive timeout above the interval            | rejected |
       | Temporal      | a task timeout above the run timeout               | accepted |
       | Temporal      | a verification name without a CA                   | rejected |
       | Temporal      | a verification name with a CA                      | accepted |
-      | Temporal      | a grouped client certificate without a key         | rejected |
       | Temporal      | a grouped run timeout above the execution one      | rejected |
       | Temporal      | a grouped keep alive timeout above the interval    | rejected |
       | Temporal      | a grouped client certificate with a key            | accepted |
@@ -305,19 +294,19 @@ Feature: Base Configuration System
 
     Examples: Temporal defaults
       | field                                  | expected |
-      | ACTIVITY_HEARTBEAT_TIMEOUT             | None     |
-      | WORKER_POLLER_AUTOSCALING              | False    |
-      | WORKFLOW_RETRY_ENABLED                 | False    |
+      | ACTIVITY.HEARTBEAT_TIMEOUT             | None     |
+      | WORKER.POLLER_AUTOSCALING              | False    |
+      | WORKFLOW.RETRY_ENABLED                 | False    |
       | PYDANTIC_DATA_CONVERTER                | True     |
-      | WORKFLOW_EXECUTION_TIMEOUT             | None     |
-      | WORKFLOW_RUN_TIMEOUT                   | None     |
+      | WORKFLOW.EXECUTION_TIMEOUT             | None     |
+      | WORKFLOW.RUN_TIMEOUT                   | None     |
       | CONNECT_TIMEOUT                        | None     |
-      | TLS_VERIFICATION_SERVER_NAME           | None     |
+      | TLS.VERIFICATION_SERVER_NAME           | None     |
       | GRPC_COMPRESSION                       | None     |
       | PAYLOADS_WARN_SIZE                     | None     |
       | MEMO_WARN_SIZE                         | None     |
       | RUNTIME_DISABLE_ENVIRONMENT_INFO       | False    |
-      | WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS | None     |
+      | WORKER.MAX_EAGER_ACTIVITY_RESERVATIONS | None     |
 
   Scenario Outline: The <kind> SQLAlchemy session factory follows EXPIRE_ON_COMMIT <value>
     When I build a <kind> sqlite session manager with EXPIRE_ON_COMMIT <value>
@@ -420,15 +409,15 @@ Feature: Base Configuration System
       | sync  | sqlite  | CHECK_SAME_THREAD | false | {"check_same_thread": false} |
       | async | sqlite  | CHECK_SAME_THREAD | false | {}                           |
 
-  Scenario Outline: Deprecated flat settings fold into a nested group
-    Given a test section with flat "<flat>" set to <flat_value> and group "<group>" set to <group_value>
-    When the test section is validated
-    Then the group value should be <expected>
-    And <warnings> deprecation warning should be raised
+  Scenario Outline: Removed config keys are absent from the section model
+    Then the "<section>" configuration has no "<field>" field
 
     Examples:
-      | flat | flat_value | group | group_value | expected | warnings |
-      | NAME | "old"      | none  | none        | "old"    | 1        |
-      | NAME | "old"      | NAME  | "new"       | "new"    | 1        |
-      | none | none       | NAME  | "new"       | "new"    | 0        |
-      | none | none       | none  | none        | null     | 0        |
+      | section  | field                     |
+      | AUTH     | JWT_ISSUER                |
+      | ELASTIC  | MAP_ERRORS                |
+      | FASTAPI  | ACCESS_LOG                |
+      | KAFKA    | EMPTY_KEY_FOR_MISSING_KEY |
+      | SCYLLADB | MAX_CONNECTIONS_PER_HOST  |
+      | UVICORN  | SSL_KEYFILE               |
+      | VAULT    | APPROLE_ROLE_ID           |

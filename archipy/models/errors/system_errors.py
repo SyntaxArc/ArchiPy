@@ -2,23 +2,13 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
 
-if TYPE_CHECKING:
-    from http import HTTPStatus
-
-    from archipy.models.types.language_type import LanguageType
-else:
-    HTTPStatus = None
-
-try:
-    from http import HTTPStatus
-
-    HTTP_AVAILABLE = True
-except ImportError:
-    HTTP_AVAILABLE = False
-
 from archipy.models.errors.base_error import BaseError
+
+if TYPE_CHECKING:
+    from archipy.models.types.language_type import LanguageType
 
 
 class InternalError(BaseError):
@@ -31,9 +21,7 @@ class InternalError(BaseError):
     code: ClassVar[str] = "INTERNAL_ERROR"
     message_en: ClassVar[str] = "Internal system error occurred"
     message_fa: ClassVar[str] = "خطای داخلی سیستم رخ داده است."
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(
@@ -61,9 +49,7 @@ class ConfigurationError(BaseError):
     code: ClassVar[str] = "CONFIGURATION_ERROR"
     message_en: ClassVar[str] = "Error in system configuration"
     message_fa: ClassVar[str] = "خطا در پیکربندی سیستم"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(
@@ -94,9 +80,7 @@ class UnavailableError(BaseError):
     code: ClassVar[str] = "UNAVAILABLE"
     message_en: ClassVar[str] = "Service is currently unavailable"
     message_fa: ClassVar[str] = "سرویس در حال حاضر در دسترس نیست."
-    http_status: ClassVar[int] = (
-        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
-    )
+    http_status: ClassVar[int] = HTTPStatus.SERVICE_UNAVAILABLE.value
     grpc_status: ClassVar[int] = 14
 
     def __init__(
@@ -124,9 +108,7 @@ class UnknownError(BaseError):
     code: ClassVar[str] = "UNKNOWN_ERROR"
     message_en: ClassVar[str] = "An unknown error occurred"
     message_fa: ClassVar[str] = "خطای ناشناخته‌ای رخ داده است."
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 2
 
     def __init__(
@@ -154,7 +136,7 @@ class AbortedError(BaseError):
     code: ClassVar[str] = "ABORTED"
     message_en: ClassVar[str] = "Operation was aborted"
     message_fa: ClassVar[str] = "عملیات متوقف شد."
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value
     grpc_status: ClassVar[int] = 10
 
     def __init__(
@@ -185,9 +167,7 @@ class DeadlockDetectedError(BaseError):
     code: ClassVar[str] = "DEADLOCK"
     message_en: ClassVar[str] = "Deadlock detected"
     message_fa: ClassVar[str] = "خطای قفل‌شدگی (Deadlock) تشخیص داده شد."
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(
@@ -218,7 +198,7 @@ class DeadlineExceededError(BaseError):
     code: ClassVar[str] = "DEADLINE_EXCEEDED"
     message_en: ClassVar[str] = "Operation exceeded its deadline"
     message_fa: ClassVar[str] = "عملیات از مهلت زمانی مجاز تجاوز کرد"
-    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value if HTTP_AVAILABLE and HTTPStatus is not None else 408
+    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value
     grpc_status: ClassVar[int] = 4
 
     def __init__(
@@ -256,7 +236,7 @@ class DeprecationError(BaseError):
     code: ClassVar[str] = "DEPRECATED_FEATURE"
     message_en: ClassVar[str] = "This feature is deprecated and should no longer be used"
     message_fa: ClassVar[str] = "این ویژگی منسوخ شده و دیگر نباید استفاده شود"
-    http_status: ClassVar[int] = HTTPStatus.GONE.value if HTTP_AVAILABLE and HTTPStatus is not None else 410
+    http_status: ClassVar[int] = HTTPStatus.GONE.value
     grpc_status: ClassVar[int] = 14
 
     def __init__(

@@ -4,20 +4,8 @@ This module defines custom exception classes for Temporal worker operations,
 extending the base ArchiPy error handling patterns.
 """
 
-from typing import TYPE_CHECKING, Any, ClassVar
-
-if TYPE_CHECKING:
-    from http import HTTPStatus
-
-else:
-    HTTPStatus = None
-
-try:
-    from http import HTTPStatus
-
-    HTTP_AVAILABLE = True
-except ImportError:
-    HTTP_AVAILABLE = False
+from http import HTTPStatus
+from typing import Any, ClassVar
 
 from archipy.models.errors.base_error import BaseError
 
@@ -32,9 +20,7 @@ class TemporalError(BaseError):
     code: ClassVar[str] = "TEMPORAL_ERROR"
     message_en: ClassVar[str] = "Temporal error occurred"
     message_fa: ClassVar[str] = "خطای Temporal رخ داده است"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
 
@@ -44,9 +30,7 @@ class WorkerConnectionError(TemporalError):
     code: ClassVar[str] = "WORKER_CONNECTION_ERROR"
     message_en: ClassVar[str] = "Failed to connect to Temporal server"
     message_fa: ClassVar[str] = "خطا در اتصال به سرور Temporal"
-    http_status: ClassVar[int] = (
-        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
-    )
+    http_status: ClassVar[int] = HTTPStatus.SERVICE_UNAVAILABLE.value
     grpc_status: ClassVar[int] = 14
 
     def __init__(
@@ -63,9 +47,7 @@ class WorkerShutdownError(TemporalError):
     code: ClassVar[str] = "WORKER_SHUTDOWN_ERROR"
     message_en: ClassVar[str] = "Failed to shutdown Temporal worker gracefully"
     message_fa: ClassVar[str] = "خطا در خاموش‌سازی صحیح کارگر Temporal"
-    http_status: ClassVar[int] = (
-        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
-    )
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value
     grpc_status: ClassVar[int] = 13
 
     def __init__(

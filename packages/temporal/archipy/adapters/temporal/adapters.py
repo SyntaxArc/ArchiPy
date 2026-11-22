@@ -12,7 +12,6 @@ __lazy_modules__ = ["archipy.configs.base_config"]
 import asyncio
 import contextlib
 import logging
-import warnings
 from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, override
@@ -854,23 +853,6 @@ class TemporalAdapter(TemporalPort):
             )
 
             await client.create_schedule(schedule_id, sched)
-
-    @override
-    async def stop_schedule(self, schedule_id: str) -> None:
-        """Delete a schedule.
-
-        Deprecated: the name hides that the schedule is deleted; use ``delete_schedule``, or ``pause_schedule`` to
-        stop it while keeping it.
-
-        Args:
-            schedule_id (str): The schedule ID.
-        """
-        warnings.warn(
-            "stop_schedule() deletes the schedule and is deprecated; use delete_schedule() or pause_schedule()",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        await self.delete_schedule(schedule_id)
 
     @override
     async def delete_schedule(self, schedule_id: str) -> None:

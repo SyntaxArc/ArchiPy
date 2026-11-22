@@ -5,7 +5,6 @@ __lazy_modules__ = ["archipy.models.errors"]
 import re
 
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
-from archipy.helpers.utils.error_utils import ErrorUtils
 from archipy.helpers.utils.file_utils import FileUtils
 from archipy.helpers.utils.jwt_utils import JWTUtils
 from archipy.helpers.utils.password_utils import PasswordUtils
@@ -23,7 +22,7 @@ NATIONAL_CODE_CHECKSUM_THRESHOLD = 2
 NATIONAL_CODE_MODULUS = 11
 
 
-class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, FileUtils, StringUtils):
+class BaseUtils(DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, FileUtils, StringUtils):
     """A utility class that combines multiple utility functionalities into a single class.
 
     This class inherits from various utility classes to provide a centralized place for common utility methods.

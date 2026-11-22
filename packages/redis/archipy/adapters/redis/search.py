@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import struct
-import warnings
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, cast, override
 
@@ -606,28 +605,22 @@ class RedisSearchHandle(RedisSearchHandlePort):
         fields: dict[str, str | int | float],
         vector_field: str | None = None,
         vector: list[float] | None = None,
-        *,
-        replace: bool = True,
     ) -> bool:
         """Upsert a HASH document and index it.
 
-        The write is a single atomic ``HSET``. ``replace`` is ignored (fields are merged into the hash) and
-        ``replace=False`` is deprecated.
+        The write merges fields into the hash in a single atomic ``HSET``.
         """
-        if not replace:
-            warnings.warn("upsert_hash(replace=False) is ignored and deprecated", DeprecationWarning, stacklevel=2)
         _write_hash_document(self._client, doc_id, fields, vector_field, vector)
         return True
 
     @override
-    def upsert_hash_dto(self, document: HashDocumentUpsertDTO, *, replace: bool = True) -> bool:
+    def upsert_hash_dto(self, document: HashDocumentUpsertDTO) -> bool:
         """Upsert a HASH document from a DTO."""
         return self.upsert_hash(
             document.doc_id,
             document.fields,
             vector_field=document.vector_field,
             vector=document.vector,
-            replace=replace,
         )
 
     @override
@@ -805,16 +798,11 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
         fields: dict[str, str | int | float],
         vector_field: str | None = None,
         vector: list[float] | None = None,
-        *,
-        replace: bool = True,
     ) -> bool:
         """Upsert a HASH document and index it asynchronously.
 
-        The write is a single atomic ``HSET``. ``replace`` is ignored (fields are merged into the hash) and
-        ``replace=False`` is deprecated.
+        The write merges fields into the hash in a single atomic ``HSET``.
         """
-        if not replace:
-            warnings.warn("upsert_hash(replace=False) is ignored and deprecated", DeprecationWarning, stacklevel=2)
         mapping: dict[str, Any] = dict(fields)
         if vector_field is not None and vector is not None:
             mapping[vector_field] = pack_vector(vector)
@@ -823,14 +811,13 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
         return True
 
     @override
-    async def upsert_hash_dto(self, document: HashDocumentUpsertDTO, *, replace: bool = True) -> bool:
+    async def upsert_hash_dto(self, document: HashDocumentUpsertDTO) -> bool:
         """Upsert a HASH document from a DTO asynchronously."""
         return await self.upsert_hash(
             document.doc_id,
             document.fields,
             vector_field=document.vector_field,
             vector=document.vector,
-            replace=replace,
         )
 
     @override

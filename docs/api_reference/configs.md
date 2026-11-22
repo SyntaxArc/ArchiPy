@@ -42,8 +42,7 @@ from archipy.configs.config_template import RedisConfig
 RedisConfig(TLS={"IS_ENABLED": True, "CA_CERTS": "/certs/ca.pem"})
 ```
 
-The flat names they replace (`REDIS__SSL`, `VAULT__APPROLE_ROLE_ID`, `AUTH__JWT_ISSUER`) still work, emit a
-`DeprecationWarning`, and are removed in 6.0.0. A value set on a group wins over the flat one.
+See the [6.0 upgrade guide](../community/deprecations.md#configuration) for the former flat field names.
 
 Grouped sections: `VAULT`, `SCYLLADB`, `TEMPORAL`, `REDIS`, `ELASTIC`, `SQLALCHEMY` (`POOL`, `COUNT_CACHE`), `AUTH`,
 `KEYCLOAK`, `EMAIL`, `GRPC` (`TLS`, `STUB_TLS`), `KAFKA` (`SASL`, `SSL`), and `FASTAPI` (`CORS`, `GZIP`,

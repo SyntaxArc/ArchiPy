@@ -11,7 +11,6 @@ __lazy_modules__ = ["archipy.configs.base_config"]
 
 import asyncio
 import logging
-import warnings
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 from uuid import uuid7
@@ -26,7 +25,6 @@ from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import TemporalConfig
-from archipy.models.errors import InvalidArgumentError
 from archipy.models.errors.temporal_errors import (
     WorkerConnectionError,
     WorkerShutdownError,
@@ -357,7 +355,6 @@ class TemporalWorkerManager(WorkerPort):
         task_queue: str,
         workflows: list[type] | None = None,
         activities: list[Callable[..., Any]] | None = None,
-        build_id: str | None = None,
         identity: str | None = None,
         max_concurrent_workflow_tasks: int | None = None,
         max_concurrent_activities: int | None = None,
@@ -375,8 +372,6 @@ class TemporalWorkerManager(WorkerPort):
                 Defaults to None.
             activities (list[Callable], optional): List of activity callables to register.
                 Defaults to None.
-            build_id (str, optional): Deprecated, use ``deployment_config``. Build identifier for worker
-                versioning. Defaults to None.
             identity (str, optional): Unique worker identity. If None, auto-generated.
                 Defaults to None.
             max_concurrent_workflow_tasks (int, optional): Maximum concurrent workflow tasks.
@@ -388,7 +383,7 @@ class TemporalWorkerManager(WorkerPort):
             activity_executor (Executor, optional): Executor that runs synchronous (non-async) activities.
                 Required when registering sync activities. Defaults to None.
             deployment_config (WorkerDeploymentConfig, optional): Worker Deployment version this worker belongs
-                to, replacing ``build_id``. Defaults to None.
+                to. Defaults to None.
             workflow_failure_exception_types (Sequence[type[BaseException]], optional): Exception types that fail
                 the workflow instead of retrying the workflow task (e.g. ``[Exception]`` to fail on any error).
                 Defaults to () (only ``FailureError`` subclasses fail it).
@@ -409,18 +404,6 @@ class TemporalWorkerManager(WorkerPort):
                 },
             )
 
-        if build_id is not None:
-            if deployment_config is not None:
-                raise InvalidArgumentError(
-                    argument_name="build_id",
-                    additional_data={"reason": "build_id and deployment_config are mutually exclusive"},
-                )
-            warnings.warn(
-                "start_worker(build_id=...) is deprecated; pass deployment_config=WorkerDeploymentConfig(...) instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
         client = await self._get_client()
         worker_id = str(uuid7())
         # uuid7 starts with the timestamp, so the random tail keeps identities of workers started together apart.
@@ -434,7 +417,6 @@ class TemporalWorkerManager(WorkerPort):
                 task_queue=task_queue,
                 workflows=workflows or [],
                 activities=activities or [],
-                build_id=build_id,
                 deployment_config=deployment_config,
                 workflow_failure_exception_types=workflow_failure_exception_types,
                 workflow_runner=workflow_runner or SandboxedWorkflowRunner(),
@@ -462,7 +444,7 @@ class TemporalWorkerManager(WorkerPort):
                 task_queue=task_queue,
                 workflows=workflows,
                 activities=activities,
-                build_id=build_id or (deployment_config.version.build_id if deployment_config else None),
+                build_id=deployment_config.version.build_id if deployment_config else None,
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
                 max_concurrent_activities=max_concurrent_activities,

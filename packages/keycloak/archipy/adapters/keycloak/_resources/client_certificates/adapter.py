@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -65,7 +64,7 @@ class KeycloakClientCertificatesMixin(SyncKeycloakMixinBase):
         self,
         client_uuid: str,
         attribute: str,
-        config: KeycloakKeyStoreConfigRequestDTO | dict[str, Any],
+        config: KeycloakKeyStoreConfigRequestDTO,
     ) -> bytes:
         """Download the client attribute's key and certificate as a key store.
 
@@ -89,7 +88,7 @@ class KeycloakClientCertificatesMixin(SyncKeycloakMixinBase):
         self,
         client_uuid: str,
         attribute: str,
-        config: KeycloakKeyStoreConfigRequestDTO | dict[str, Any],
+        config: KeycloakKeyStoreConfigRequestDTO,
     ) -> bytes:
         """Generate a new key pair for a client attribute and download it as a key store.
 
@@ -157,7 +156,7 @@ class AsyncKeycloakClientCertificatesMixin(AsyncKeycloakMixinBase):
         self,
         client_uuid: str,
         attribute: str,
-        config: KeycloakKeyStoreConfigRequestDTO | dict[str, Any],
+        config: KeycloakKeyStoreConfigRequestDTO,
     ) -> bytes:
         """Download the client attribute's key and certificate as a key store.
 
@@ -181,7 +180,7 @@ class AsyncKeycloakClientCertificatesMixin(AsyncKeycloakMixinBase):
         self,
         client_uuid: str,
         attribute: str,
-        config: KeycloakKeyStoreConfigRequestDTO | dict[str, Any],
+        config: KeycloakKeyStoreConfigRequestDTO,
     ) -> bytes:
         """Generate a new key pair for a client attribute and download it as a key store.
 

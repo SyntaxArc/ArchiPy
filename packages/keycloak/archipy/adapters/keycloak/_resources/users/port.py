@@ -54,12 +54,12 @@ class KeycloakUsersPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_user(self, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> str | None:
+    def create_user(self, user_data: KeycloakUserRequestDTO) -> str | None:
         """Create a new user in Keycloak."""
         raise NotImplementedError
 
     @abstractmethod
-    def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> None:
+    def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO) -> None:
         """Update user details."""
         raise NotImplementedError
 
@@ -101,7 +101,7 @@ class KeycloakUsersPort:
     @abstractmethod
     def update_user_profile_config(
         self,
-        config: KeycloakUserProfileConfigRequestDTO | dict[str, Any],
+        config: KeycloakUserProfileConfigRequestDTO,
     ) -> KeycloakUserProfileConfigDTO:
         """Replace the realm's user profile configuration."""
         raise NotImplementedError
@@ -176,7 +176,7 @@ class KeycloakUsersPort:
         self,
         user_id: str,
         provider: str,
-        payload: KeycloakFederatedIdentityRequestDTO | dict[str, Any],
+        payload: KeycloakFederatedIdentityRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Link a user to an identity provider account."""
         raise NotImplementedError
@@ -250,12 +250,12 @@ class AsyncKeycloakUsersPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def create_user(self, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> str | None:
+    async def create_user(self, user_data: KeycloakUserRequestDTO) -> str | None:
         """Create a new user in Keycloak."""
         raise NotImplementedError
 
     @abstractmethod
-    async def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> None:
+    async def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO) -> None:
         """Update user details."""
         raise NotImplementedError
 
@@ -297,7 +297,7 @@ class AsyncKeycloakUsersPort:
     @abstractmethod
     async def update_user_profile_config(
         self,
-        config: KeycloakUserProfileConfigRequestDTO | dict[str, Any],
+        config: KeycloakUserProfileConfigRequestDTO,
     ) -> KeycloakUserProfileConfigDTO:
         """Replace the realm's user profile configuration."""
         raise NotImplementedError
@@ -372,7 +372,7 @@ class AsyncKeycloakUsersPort:
         self,
         user_id: str,
         provider: str,
-        payload: KeycloakFederatedIdentityRequestDTO | dict[str, Any],
+        payload: KeycloakFederatedIdentityRequestDTO,
     ) -> KeycloakAssignResultDTO:
         """Link a user to an identity provider account."""
         raise NotImplementedError

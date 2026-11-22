@@ -61,9 +61,6 @@ class KeycloakAttackDetectionMixin(SyncKeycloakMixinBase):
     def clear_all_brute_force(self) -> KeycloakDeleteResultDTO:
         """Clear the failed login counters of every user in the realm.
 
-        Args:
-            (none)
-
         Returns:
             The delete result.
         """
@@ -121,9 +118,6 @@ class AsyncKeycloakAttackDetectionMixin(AsyncKeycloakMixinBase):
 
     async def clear_all_brute_force(self) -> KeycloakDeleteResultDTO:
         """Clear the failed login counters of every user in the realm.
-
-        Args:
-            (none)
 
         Returns:
             The delete result.

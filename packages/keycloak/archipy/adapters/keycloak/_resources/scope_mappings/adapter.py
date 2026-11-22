@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
@@ -100,7 +99,7 @@ class KeycloakScopeMappingsMixin(SyncKeycloakMixinBase):
     def add_client_scope_realm_scope_mappings(
         self,
         client_scope_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the scope mappings of a client scope.
 
@@ -125,7 +124,7 @@ class KeycloakScopeMappingsMixin(SyncKeycloakMixinBase):
     def delete_client_scope_realm_scope_mappings(
         self,
         client_scope_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the scope mappings of a client scope.
 
@@ -219,7 +218,7 @@ class KeycloakScopeMappingsMixin(SyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the scope mappings of a client scope.
 
@@ -246,7 +245,7 @@ class KeycloakScopeMappingsMixin(SyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the scope mappings of a client scope.
 
@@ -348,7 +347,7 @@ class KeycloakScopeMappingsMixin(SyncKeycloakMixinBase):
     def add_client_realm_scope_mappings(
         self,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the scope mappings of a client.
 
@@ -373,7 +372,7 @@ class KeycloakScopeMappingsMixin(SyncKeycloakMixinBase):
     def delete_client_realm_scope_mappings(
         self,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the scope mappings of a client.
 
@@ -467,7 +466,7 @@ class KeycloakScopeMappingsMixin(SyncKeycloakMixinBase):
         self,
         client_uuid: str,
         owner_client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the scope mappings of a client.
 
@@ -494,7 +493,7 @@ class KeycloakScopeMappingsMixin(SyncKeycloakMixinBase):
         self,
         client_uuid: str,
         owner_client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the scope mappings of a client.
 
@@ -600,7 +599,7 @@ class AsyncKeycloakScopeMappingsMixin(AsyncKeycloakMixinBase):
     async def add_client_scope_realm_scope_mappings(
         self,
         client_scope_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the scope mappings of a client scope.
 
@@ -625,7 +624,7 @@ class AsyncKeycloakScopeMappingsMixin(AsyncKeycloakMixinBase):
     async def delete_client_scope_realm_scope_mappings(
         self,
         client_scope_id: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the scope mappings of a client scope.
 
@@ -723,7 +722,7 @@ class AsyncKeycloakScopeMappingsMixin(AsyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the scope mappings of a client scope.
 
@@ -750,7 +749,7 @@ class AsyncKeycloakScopeMappingsMixin(AsyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the scope mappings of a client scope.
 
@@ -852,7 +851,7 @@ class AsyncKeycloakScopeMappingsMixin(AsyncKeycloakMixinBase):
     async def add_client_realm_scope_mappings(
         self,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add realm roles to the scope mappings of a client.
 
@@ -877,7 +876,7 @@ class AsyncKeycloakScopeMappingsMixin(AsyncKeycloakMixinBase):
     async def delete_client_realm_scope_mappings(
         self,
         client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from the scope mappings of a client.
 
@@ -971,7 +970,7 @@ class AsyncKeycloakScopeMappingsMixin(AsyncKeycloakMixinBase):
         self,
         client_uuid: str,
         owner_client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakAssignResultDTO:
         """Add client roles to the scope mappings of a client.
 
@@ -998,7 +997,7 @@ class AsyncKeycloakScopeMappingsMixin(AsyncKeycloakMixinBase):
         self,
         client_uuid: str,
         owner_client_uuid: str,
-        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+        roles: list[KeycloakRoleDTO],
     ) -> KeycloakDeleteResultDTO:
         """Remove client roles from the scope mappings of a client.
 

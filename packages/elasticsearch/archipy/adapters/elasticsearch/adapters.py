@@ -7,7 +7,6 @@ __lazy_modules__ = ["archipy.configs.base_config"]
 import functools
 import inspect
 import logging
-import warnings
 from functools import cache
 from typing import TYPE_CHECKING, Any, NoReturn, override
 
@@ -69,11 +68,6 @@ _STATUS_ERRORS: dict[int, type[BaseError]] = {
 # Elasticsearch error types that are more specific than their status code (409 covers both)
 _ERROR_TYPE_ERRORS: dict[str, type[BaseError]] = {"resource_already_exists_exception": AlreadyExistsError}
 
-_ERROR_MAPPING_DEPRECATION = (
-    "Elasticsearch adapters currently raise raw elasticsearch-py exceptions. "
-    "Set ELASTIC.MAP_ERRORS=True to raise ArchiPy errors instead; this will become the default in a future release."
-)
-
 
 def _to_archipy_error(error: Exception) -> BaseError | None:
     """Translate an elasticsearch-py exception into an ArchiPy error.
@@ -115,22 +109,14 @@ def _raise_mapped(error: Exception) -> NoReturn:
     raise mapped from error
 
 
-def _errors_mapped(adapter: object) -> bool:
-    """Return whether the adapter was configured to map client errors."""
-    return bool(getattr(adapter, "_map_errors", False))
-
-
 def _map_sync_errors[**P, R](function: Callable[P, R]) -> Callable[P, R]:
-    """Map client exceptions to ArchiPy errors when the adapter has MAP_ERRORS enabled."""
+    """Map client exceptions to ArchiPy errors."""
 
     @functools.wraps(function)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        adapter = args[0]
         try:
             return function(*args, **kwargs)
-        except Exception as error:
-            if not _errors_mapped(adapter):
-                raise
+        except (ApiError, TransportError) as error:
             _raise_mapped(error)
 
     return wrapper
@@ -141,12 +127,9 @@ def _map_sync_gen_errors[**P, R](function: Callable[P, Iterable[R]]) -> Callable
 
     @functools.wraps(function)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Iterator[R]:
-        adapter = args[0]
         try:
             yield from function(*args, **kwargs)
-        except Exception as error:
-            if not _errors_mapped(adapter):
-                raise
+        except (ApiError, TransportError) as error:
             _raise_mapped(error)
 
     return wrapper
@@ -157,12 +140,9 @@ def _map_async_errors[**P, R](function: Callable[P, Awaitable[R]]) -> Callable[P
 
     @functools.wraps(function)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        adapter = args[0]
         try:
             return await function(*args, **kwargs)
-        except Exception as error:
-            if not _errors_mapped(adapter):
-                raise
+        except (ApiError, TransportError) as error:
             _raise_mapped(error)
 
     return wrapper
@@ -173,30 +153,13 @@ def _map_async_gen_errors[**P, R](function: Callable[P, AsyncIterator[R]]) -> Ca
 
     @functools.wraps(function)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> AsyncIterator[R]:
-        adapter = args[0]
         try:
             async for item in function(*args, **kwargs):
                 yield item
-        except Exception as error:
-            if not _errors_mapped(adapter):
-                raise
+        except (ApiError, TransportError) as error:
             _raise_mapped(error)
 
     return wrapper
-
-
-def _warn_error_mapping_disabled(configs: ElasticsearchConfig) -> bool:
-    """Return the MAP_ERRORS flag and warn when it is off.
-
-    Args:
-        configs (ElasticsearchConfig): Configuration settings for Elasticsearch.
-
-    Returns:
-        bool: Whether ArchiPy error mapping is enabled.
-    """
-    if not configs.MAP_ERRORS:
-        warnings.warn(_ERROR_MAPPING_DEPRECATION, DeprecationWarning, stacklevel=3)
-    return configs.MAP_ERRORS
 
 
 def _apply_optional_client_kwargs(kwargs: dict[str, Any], configs: ElasticsearchConfig) -> None:
@@ -291,7 +254,6 @@ class ElasticsearchAdapter(ElasticsearchPort):
                 If None, retrieves from global config. Defaults to None.
         """
         configs: ElasticsearchConfig = elasticsearch_config or BaseConfig.global_config().ELASTIC
-        self._map_errors = _warn_error_mapping_disabled(configs)
         self.client = self._get_client(configs)
 
     @staticmethod
@@ -614,7 +576,6 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
                 If None, retrieves from global config. Defaults to None.
         """
         configs: ElasticsearchConfig = elasticsearch_config or BaseConfig.global_config().ELASTIC
-        self._map_errors = _warn_error_mapping_disabled(configs)
         self.client = self._get_client(configs)
 
     @staticmethod
