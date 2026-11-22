@@ -34,9 +34,6 @@ class KeycloakRequiredActionsMixin(SyncKeycloakMixinBase):
     def get_required_actions(self) -> list[KeycloakRequiredActionProviderDTO]:
         """List the required actions registered in the realm.
 
-        Args:
-            (none)
-
         Returns:
             The required actions.
         """
@@ -140,9 +137,6 @@ class KeycloakRequiredActionsMixin(SyncKeycloakMixinBase):
 
     def get_unregistered_required_actions(self) -> list[KeycloakUnregisteredRequiredActionDTO]:
         """List the required action providers that are not registered in the realm.
-
-        Args:
-            (none)
 
         Returns:
             The unregistered providers.
@@ -284,9 +278,6 @@ class AsyncKeycloakRequiredActionsMixin(AsyncKeycloakMixinBase):
     async def get_required_actions(self) -> list[KeycloakRequiredActionProviderDTO]:
         """List the required actions registered in the realm.
 
-        Args:
-            (none)
-
         Returns:
             The required actions.
         """
@@ -390,9 +381,6 @@ class AsyncKeycloakRequiredActionsMixin(AsyncKeycloakMixinBase):
 
     async def get_unregistered_required_actions(self) -> list[KeycloakUnregisteredRequiredActionDTO]:
         """List the required action providers that are not registered in the realm.
-
-        Args:
-            (none)
 
         Returns:
             The unregistered providers.

@@ -272,7 +272,7 @@ When including code examples:
 
 1. Include proper type hints using Python 3.14 syntax (`x: list[str]` not `List[str]`)
 2. Demonstrate proper error handling with exception chaining
-3. Include docstrings with Args, Returns, and Raises sections
+3. Use Google-style docstrings. Include Args, Returns, and Raises sections where applicable.
 4. Show realistic use cases that align with ArchiPy's patterns
 5. Keep examples concise but complete enough to understand usage
 

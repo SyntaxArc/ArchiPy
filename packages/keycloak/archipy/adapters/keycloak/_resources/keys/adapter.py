@@ -18,9 +18,6 @@ class KeycloakKeysMixin(SyncKeycloakMixinBase):
     def get_realm_keys(self) -> KeycloakKeysMetadataDTO:
         """Get the active key ids and the metadata of every key of the realm.
 
-        Args:
-            (none)
-
         Returns:
             The keys.
         """
@@ -40,9 +37,6 @@ class AsyncKeycloakKeysMixin(AsyncKeycloakMixinBase):
 
     async def get_realm_keys(self) -> KeycloakKeysMetadataDTO:
         """Get the active key ids and the metadata of every key of the realm.
-
-        Args:
-            (none)
 
         Returns:
             The keys.

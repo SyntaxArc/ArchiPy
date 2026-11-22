@@ -363,7 +363,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             Token response
 
         Raises:
-            Various application errors mapped from the Keycloak response (e.g. when exchange is not permitted).
+            BaseError: If Keycloak rejects the token exchange or the request fails.
         """
         try:
             return to_dto_or_none(
@@ -515,7 +515,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             The issued token and its type.
 
         Raises:
-            Mapped application errors when the exchange is not permitted or the request is invalid.
+            BaseError: If Keycloak rejects the token exchange or the request fails.
         """
         return to_dto(
             KeycloakTokenExchangeResponseDTO,
@@ -539,7 +539,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             The access token. Keycloak issues no refresh token for this grant.
 
         Raises:
-            Mapped application errors when the assertion or the client setup is rejected.
+            BaseError: If Keycloak rejects the assertion or client configuration, or the request fails.
         """
         return to_dto(
             KeycloakTokenDTO,
@@ -568,7 +568,9 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             The RPT in ``access_token``.
 
         Raises:
-            Mapped application errors; ``InsufficientPermissionsError`` when no requested permission is granted.
+            InsufficientPermissionsError: If Keycloak denies the request, including when it grants no requested
+                permissions.
+            BaseError: If the request fails for another reason.
         """
         form: dict[str, Any] = {"grant_type": UMA_TICKET_GRANT, "audience": audience}
         if permissions:
@@ -804,7 +806,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             Token response
 
         Raises:
-            Various application errors mapped from the Keycloak response (e.g. when exchange is not permitted).
+            BaseError: If Keycloak rejects the token exchange or the request fails.
         """
         try:
             return to_dto_or_none(
@@ -956,7 +958,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             The issued token and its type.
 
         Raises:
-            Mapped application errors when the exchange is not permitted or the request is invalid.
+            BaseError: If Keycloak rejects the token exchange or the request fails.
         """
         return to_dto(
             KeycloakTokenExchangeResponseDTO,
@@ -980,7 +982,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             The access token. Keycloak issues no refresh token for this grant.
 
         Raises:
-            Mapped application errors when the assertion or the client setup is rejected.
+            BaseError: If Keycloak rejects the assertion or client configuration, or the request fails.
         """
         return to_dto(
             KeycloakTokenDTO,
@@ -1009,7 +1011,9 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             The RPT in ``access_token``.
 
         Raises:
-            Mapped application errors; ``InsufficientPermissionsError`` when no requested permission is granted.
+            InsufficientPermissionsError: If Keycloak denies the request, including when it grants no requested
+                permissions.
+            BaseError: If the request fails for another reason.
         """
         form: dict[str, Any] = {"grant_type": UMA_TICKET_GRANT, "audience": audience}
         if permissions:
