@@ -475,6 +475,13 @@ def _build_aggregate_request(aggregation: AggregationDTO) -> AggregateRequest:
             if aggregation.collect_sort_by:
                 sort_cls = Asc if aggregation.collect_sort_direction == "ASC" else Desc
                 sort_by = sort_cls(_normalize_search_field_ref(aggregation.collect_sort_by))
+            if fields == "*":
+                request.load()
+            else:
+                load_fields = [*fields, *[_normalize_search_field_ref(field) for field in aggregation.group_by or []]]
+                if aggregation.collect_sort_by:
+                    load_fields.append(_normalize_search_field_ref(aggregation.collect_sort_by))
+                request.load(*dict.fromkeys(load_fields))
             reducers.append(agg_collect(fields, sort_by=sort_by, limit=aggregation.collect_limit).alias(alias))
         group_by = [_normalize_search_field_ref(field) for field in aggregation.group_by or []]
         request.group_by(group_by, *reducers)

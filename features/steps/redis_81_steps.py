@@ -3,6 +3,7 @@
 import asyncio
 import inspect
 import socket
+from time import monotonic
 from uuid import uuid4
 
 from behave import then, use_step_matcher, when
@@ -15,7 +16,12 @@ from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.sections.redis import RedisConfig, RedisMode
 from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
-from archipy.models.dtos.redis.search.index_schema_dto import IndexSchemaDTO, TagFieldConfig, TextFieldConfig
+from archipy.models.dtos.redis.search.index_schema_dto import (
+    IndexSchemaDTO,
+    NumericFieldConfig,
+    TagFieldConfig,
+    TextFieldConfig,
+)
 from features.test_containers import ContainerManager
 from features.test_helpers import get_current_scenario_context
 
@@ -157,11 +163,19 @@ def alias_and_collect(context):
     async def exercise(adapter, token):
         prefix = f"{{{token}}}:doc:"
         handle = adapter.search_index(token)
-        schema = IndexSchemaDTO(fields=[TagFieldConfig(name="kind"), TextFieldConfig(name="value")])
+        schema = IndexSchemaDTO(
+            fields=[TagFieldConfig(name="kind"), TextFieldConfig(name="value"), NumericFieldConfig(name="rank")]
+        )
         assert await _call(handle.create_index, schema, prefix)
         try:
-            for suffix, value in (("a", "article"), ("b", "video"), ("c", "audiobook")):
-                assert await _call(handle.upsert_hash, prefix + suffix, {"kind": "book", "value": value})
+            values = ("article", "audiobook", "video")
+            for rank, value in enumerate(values):
+                assert await _call(
+                    handle.upsert_hash, prefix + str(rank), {"kind": "book", "value": value, "rank": rank}
+                )
+            deadline = monotonic() + 3
+            while int((await _call(handle.info))["num_docs"]) < len(values):
+                assert monotonic() < deadline, "RediSearch did not index all three documents"
             alias = f"alias-{token}"
             assert await _call(handle.add_alias, alias)
             aliases = await _call(handle.list_aliases)
@@ -172,7 +186,7 @@ def alias_and_collect(context):
                     reduce_field="entries",
                     reduce_function="COLLECT",
                     collect_fields=["value"],
-                    collect_sort_by="value",
+                    collect_sort_by="rank",
                     collect_sort_direction="DESC",
                     collect_limit=(0, 2),
                 ),
