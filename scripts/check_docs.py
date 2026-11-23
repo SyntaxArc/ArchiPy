@@ -9,7 +9,7 @@
 # ]
 # ///
 
-"""Build the documentation and verify the generated error page and redirects."""
+"""Build the documentation and verify generated diagrams, redirects, and the error page."""
 
 import json
 import os
@@ -38,14 +38,17 @@ class PageLinks(HTMLParser):
         self.links: set[str] = set()
         self.recovery_links: set[str] = set()
         self.assets: set[str] = set()
+        self.mermaid_count = 0
         self.theme_config = ""
         self._in_recovery_navigation = False
         self._in_theme_config = False
         self.feed(source.read_text(encoding="utf-8"))
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        """Record canonical, refresh, and visible fallback links."""
+        """Record the markup needed by the output checks."""
         attributes = dict(attrs)
+        if tag == "pre" and "mermaid" in (attributes.get("class") or "").split():
+            self.mermaid_count += 1
         if tag == "nav" and attributes.get("id") == "docs-recovery":
             self._in_recovery_navigation = True
         if tag == "a" and (href := attributes.get("href")):
@@ -116,13 +119,19 @@ def check_404(site: Path, site_url: str) -> None:
 
 
 def check_output(config_path: Path) -> None:
-    """Verify each page redirect and the custom 404."""
+    """Verify Mermaid diagrams, page redirects, and the custom 404."""
     with config_path.open("rb") as file:
         project = tomllib.load(file)["project"]
     site = config_path.parent / project.get("site_dir", "site")
     site_url = f"{project['site_url'].rstrip('/')}/"
     directory_urls = project.get("use_directory_urls", True)
     redirects = project["plugins"]["redirects"]["redirect_maps"]
+
+    for source, expected in (("index.md", 1), ("getting-started/concepts.md", 2)):
+        url = urljoin(site_url, markdown_url(source, directory_urls))
+        count = PageLinks(site_file(site, site_url, url)).mermaid_count
+        if count != expected:
+            raise SystemExit(f"{source}: expected {expected} Mermaid diagrams, found {count}")
 
     for old, new in redirects.items():
         if urlsplit(old).fragment:
@@ -147,7 +156,7 @@ def check_output(config_path: Path) -> None:
             raise SystemExit(f"Invalid generated redirect: {old} -> {new}")
 
     check_404(site, site_url)
-    print(f"Verified generated redirects, 404 links, and 404 assets under {site_url}")
+    print(f"Verified Mermaid diagram markup, redirects, and 404 links and assets under {site_url}")
 
 
 @contextmanager

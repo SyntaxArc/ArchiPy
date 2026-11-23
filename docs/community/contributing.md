@@ -12,34 +12,33 @@ contributing to ArchiPy.
 
 1. **Fork the Repository**
 
-   Fork the [ArchiPy repository](https://github.com/SyntaxArc/ArchiPy) on GitHub.
+    Fork the [ArchiPy repository](https://github.com/SyntaxArc/ArchiPy) on GitHub.
 
 2. **Clone Your Fork**
 
-   ```bash
-   git clone https://github.com/YOUR-USERNAME/ArchiPy.git
-   cd ArchiPy
-   ```
+    ```bash
+    git clone https://github.com/YOUR-USERNAME/ArchiPy.git
+    cd ArchiPy
+    ```
 
 3. **Set Up Development Environment**
 
-   ```bash
-   make setup
-   make install
-   make install-dev
-   ```
+    ```bash
+    make setup
+    make install
+    make install-dev
+    ```
 
-   !!! tip "Pre-commit Hooks"
-   Running `make install-dev` sets up pre-commit hooks that automatically run linting, formatting, and type checking on
-   every commit. Use `make pre-commit` to run all hooks manually before opening a pull request.
+    > **Tip:** Running `make install-dev` sets up pre-commit hooks that automatically run linting, formatting, and
+    > type checking on every commit. Use `make pre-commit` to run all hooks manually before opening a pull request.
 
 4. **Create a Branch**
 
-   Create a branch for your feature or bugfix:
+    Create a branch for your feature or bugfix:
 
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
 
 ## Development Installation
 
@@ -129,39 +128,39 @@ Common types:
 
 1. **Update Your Branch**
 
-   Before submitting a pull request, make sure your branch is up to date with the master branch:
+    Before submitting a pull request, make sure your branch is up to date with the master branch:
 
-   ```bash
-   git checkout master
-   git pull origin master
-   git checkout your-branch
-   git rebase master
-   ```
+    ```bash
+    git checkout master
+    git pull origin master
+    git checkout your-branch
+    git rebase master
+    ```
 
 2. **Run All Checks**
 
-   Ensure all checks pass:
+    Ensure all checks pass:
 
-   ```bash
-   make check
-   make behave
-   ```
+    ```bash
+    make check
+    make behave
+    ```
 
 3. **Submit Your Pull Request**
 
-   Push your branch to your fork and create a pull request:
+    Push your branch to your fork and create a pull request:
 
-   ```bash
-   git push origin your-branch
-   ```
+    ```bash
+    git push origin your-branch
+    ```
 
 4. **Code Review**
 
-   Your pull request will be reviewed by the maintainers. They may suggest changes or improvements.
+    Your pull request will be reviewed by the maintainers. They may suggest changes or improvements.
 
 5. **Merge**
 
-   Once your pull request is approved, it will be merged into the master branch.
+    Once your pull request is approved, it will be merged into the master branch.
 
 ## Bug Reports and Feature Requests
 
@@ -190,41 +189,41 @@ New adapters follow a consistent checklist. Use this as your guide when contribu
 
 1. **Create the adapter package**
 
-   ```text
-   packages/<name>/
-   ├── pyproject.toml   # dist `archipy-<name>`, depends on `archipy==<version>` + the client library
-   └── archipy/adapters/<name>/
-       ├── __init__.py
-       ├── ports.py      # Abstract interface (plain class with @abstractmethod)
-       ├── adapters.py   # Concrete implementation
-       └── mocks.py      # In-memory test double
-   ```
+    ```text
+    packages/<name>/
+    ├── pyproject.toml   # dist `archipy-<name>`, depends on `archipy==<version>` + the client library
+    └── archipy/adapters/<name>/
+        ├── __init__.py
+        ├── ports.py      # Abstract interface (plain class with @abstractmethod)
+        ├── adapters.py   # Concrete implementation
+        └── mocks.py      # In-memory test double
+    ```
 
 2. **Define the port** (`ports.py`)
 
-   Create a plain class with `@abstractmethod` methods that describes what the adapter can do. Your business logic and
-   repositories
-   must depend only on this interface.
+    Create a plain class with `@abstractmethod` methods that describes what the adapter can do. Your business logic and
+    repositories
+    must depend only on this interface.
 
 3. **Implement the adapter** (`adapters.py`)
 
-   Implement the port against the real external service. Lazy-import the third-party library inside
-   methods (not at module level) to avoid `ImportError` when the optional extra is not installed.
+    Implement the port against the real external service. Lazy-import the third-party library inside
+    methods (not at module level) to avoid `ImportError` when the optional extra is not installed.
 
 4. **Write the mock** (`mocks.py`)
 
-   Implement the port using an in-memory data structure. The mock must behave consistently with the
-   real adapter for all methods exercised in tests.
+    Implement the port using an in-memory data structure. The mock must behave consistently with the
+    real adapter for all methods exercised in tests.
 
 5. **Add the optional extra** to `pyproject.toml`
 
-   ```toml
-   [project.optional-dependencies]
-   myservice = ["myservice-client>=1.0"]
-   ```
+    ```toml
+    [project.optional-dependencies]
+    myservice = ["myservice-client>=1.0"]
+    ```
 
 6. **Write tests** — BDD tests using the mock for fast scenarios, integration tests using `testcontainers` for
-   real-service scenarios.
+    real-service scenarios.
 
 7. **Document the adapter** — create both:
     - `docs/tutorials/adapters/<name>.md` — example guide (5 required sections)
@@ -278,18 +277,34 @@ When including code examples:
 
 ### Admonitions
 
-Use admonitions to highlight important information:
+Use block quote callouts to highlight important information.
 
 ```markdown
-!!! note
-This is a note.
+> **Note:** This is a note.
 
-!!! warning
-This is a warning.
+> **Warning:** This is a warning.
 
-!!! tip
-This is a tip.
+> **Tip:** This is a tip.
 ```
+
+#### GitHub callout types
+
+Start a GitHub callout with an uppercase marker such as `> [!NOTE]`. Prefix each line of the message with `>`.
+
+> [!NOTE]
+> Read the Docs and GitHub Pages build from the same documentation sources.
+
+> [!TIP]
+> Use `make docs-serve` to preview edits locally before opening a pull request.
+
+> [!WARNING]
+> Add a redirect when moving a published page so existing links keep working.
+
+> [!IMPORTANT]
+> Update the `nav` array in `zensical.toml` when adding a page to the site navigation.
+
+> [!CAUTION]
+> Remove real credentials and personal data from examples before committing.
 
 ### Building and Previewing Documentation
 
