@@ -23,6 +23,7 @@ from features.test_containers import (
     ApmForwardingCollectorTestContainer,
     ApmServerTestContainer,
     OtelCollectorTestContainer,
+    pull_image_with_retry,
 )
 
 
@@ -48,14 +49,17 @@ def main(argv: list[str]) -> int:
         if arguments.collector:
             collector = OtelCollectorTestContainer()
             started.append(collector)
+            pull_image_with_retry(collector.image)
             collector.start()
             endpoints["otel_collector"] = _collector_entry(collector)
         if arguments.apm:
             apm_server = ApmServerTestContainer()
             started.append(apm_server)
+            pull_image_with_retry(apm_server.image)
             apm_server.start()
             forwarder = ApmForwardingCollectorTestContainer()
             started.append(forwarder)
+            pull_image_with_retry(forwarder.image)
             forwarder.start()
             endpoints.update(
                 elasticsearch_url=apm_server.elasticsearch_url,
