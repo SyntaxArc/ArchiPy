@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING
 
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
@@ -13,9 +14,101 @@ from archipy.adapters.redis.adapter_mixins._shared import (
 from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 from archipy.models.errors import InternalError, InvalidArgumentError
 
+if TYPE_CHECKING:
+    from redis.commands.core import SetDataPersistOptions
+    from redis.typing import AbsExpiryT, ExpiryT, FieldT, KeyT
+
 
 class RedisSetsMixin(SyncRedisMixinBase):
     """Sync Redis mixin for sets operations."""
+
+    def saddex(
+        self,
+        name: KeyT,
+        *members: FieldT,
+        ex: ExpiryT | str | None = None,
+        px: ExpiryT | str | None = None,
+        exat: AbsExpiryT | None = None,
+        pxat: AbsExpiryT | None = None,
+        data_persist_option: SetDataPersistOptions | None = None,
+        keepttl: bool = False,
+    ) -> int:
+        """Add set members with optional expiration and existence conditions."""
+        return self.client.saddex(
+            name, *members, ex=ex, px=px, exat=exat, pxat=pxat, data_persist_option=data_persist_option, keepttl=keepttl
+        )
+
+    def sexpire(
+        self,
+        name: KeyT,
+        seconds: ExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration in seconds and return per-member status codes."""
+        return self.client.sexpire(name, seconds, *members, nx=nx, xx=xx, gt=gt, lt=lt)
+
+    def spexpire(
+        self,
+        name: KeyT,
+        milliseconds: ExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration in milliseconds and return per-member status codes."""
+        return self.client.spexpire(name, milliseconds, *members, nx=nx, xx=xx, gt=gt, lt=lt)
+
+    def sexpireat(
+        self,
+        name: KeyT,
+        unix_time_seconds: AbsExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration at a Unix timestamp in seconds and return per-member status codes."""
+        return self.client.sexpireat(name, unix_time_seconds, *members, nx=nx, xx=xx, gt=gt, lt=lt)
+
+    def spexpireat(
+        self,
+        name: KeyT,
+        unix_time_milliseconds: AbsExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration at a Unix timestamp in milliseconds and return per-member status codes."""
+        return self.client.spexpireat(name, unix_time_milliseconds, *members, nx=nx, xx=xx, gt=gt, lt=lt)
+
+    def sttl(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's remaining lifetime in seconds."""
+        return self.read_only_client.sttl(name, *members)
+
+    def spttl(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's remaining lifetime in milliseconds."""
+        return self.read_only_client.spttl(name, *members)
+
+    def sexpiretime(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's expiration as a Unix timestamp in seconds."""
+        return self.read_only_client.sexpiretime(name, *members)
+
+    def spexpiretime(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's expiration as a Unix timestamp in milliseconds."""
+        return self.read_only_client.spexpiretime(name, *members)
+
+    def spersist(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Remove expiration from the members and return per-member status codes."""
+        return self.client.spersist(name, *members)
 
     def sdiffcard(
         self,
@@ -178,6 +271,94 @@ class RedisSetsMixin(SyncRedisMixinBase):
 
 class AsyncRedisSetsMixin(AsyncRedisMixinBase):
     """Async Redis mixin for sets operations."""
+
+    async def saddex(
+        self,
+        name: KeyT,
+        *members: FieldT,
+        ex: ExpiryT | str | None = None,
+        px: ExpiryT | str | None = None,
+        exat: AbsExpiryT | None = None,
+        pxat: AbsExpiryT | None = None,
+        data_persist_option: SetDataPersistOptions | None = None,
+        keepttl: bool = False,
+    ) -> int:
+        """Add set members with optional expiration and existence conditions."""
+        return await self.client.saddex(
+            name, *members, ex=ex, px=px, exat=exat, pxat=pxat, data_persist_option=data_persist_option, keepttl=keepttl
+        )
+
+    async def sexpire(
+        self,
+        name: KeyT,
+        seconds: ExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration in seconds and return per-member status codes."""
+        return await self.client.sexpire(name, seconds, *members, nx=nx, xx=xx, gt=gt, lt=lt)
+
+    async def spexpire(
+        self,
+        name: KeyT,
+        milliseconds: ExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration in milliseconds and return per-member status codes."""
+        return await self.client.spexpire(name, milliseconds, *members, nx=nx, xx=xx, gt=gt, lt=lt)
+
+    async def sexpireat(
+        self,
+        name: KeyT,
+        unix_time_seconds: AbsExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration at a Unix timestamp in seconds and return per-member status codes."""
+        return await self.client.sexpireat(name, unix_time_seconds, *members, nx=nx, xx=xx, gt=gt, lt=lt)
+
+    async def spexpireat(
+        self,
+        name: KeyT,
+        unix_time_milliseconds: AbsExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration at a Unix timestamp in milliseconds and return per-member status codes."""
+        return await self.client.spexpireat(name, unix_time_milliseconds, *members, nx=nx, xx=xx, gt=gt, lt=lt)
+
+    async def sttl(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's remaining lifetime in seconds."""
+        return await self.read_only_client.sttl(name, *members)
+
+    async def spttl(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's remaining lifetime in milliseconds."""
+        return await self.read_only_client.spttl(name, *members)
+
+    async def sexpiretime(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's expiration as a Unix timestamp in seconds."""
+        return await self.read_only_client.sexpiretime(name, *members)
+
+    async def spexpiretime(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's expiration as a Unix timestamp in milliseconds."""
+        return await self.read_only_client.spexpiretime(name, *members)
+
+    async def spersist(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Remove expiration from the members and return per-member status codes."""
+        return await self.client.spersist(name, *members)
 
     async def sdiffcard(
         self,

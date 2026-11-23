@@ -1748,3 +1748,152 @@ Feature: Redis Testing
   Scenario: An asynchronous Redis client refreshes slots on a maintenance notification
     When I migrate a cluster slot while an async RESP3 adapter is connected
     Then the adapter learns the new owner and can read the migrated key
+
+  @redis-sets @redis-member-expiration
+  Scenario Outline: Set and remove expiration on individual set members
+    Given a configured <adapter>
+    When I exercise the Redis set member expiration commands
+    Then Redis reports each member's expiration and preserves the persistent members
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | container |
+      | cluster   |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async container |
+      | async cluster   |
+
+  @redis-sorted-sets
+  Scenario Outline: Move sorted set members and preserve scores
+    Given a configured <adapter>
+    When I move sorted set members by rank, score and name
+    Then all members arrive in the destination with their original scores
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | container |
+      | cluster   |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async container |
+      | async cluster   |
+
+  @redis-bitmaps @redis-key-eviction @redis-connection @redis-sketches
+  Scenario Outline: Inspect bit positions, key flags, client records and sketch widths
+    Given a configured <adapter>
+    When I inspect bit positions, eviction flags, client records and sketch counter widths
+    Then Redis returns the expected positions, flags, client and counter widths
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | container |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async container |
+
+  @redis-search @redis-search-hybrid
+  Scenario Outline: Explain a hybrid search score
+    Given a configured <adapter>
+    When I run a hybrid Redis search with score explanations
+    Then the hybrid hit includes a numeric score and its explanation
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | container |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async container |
+
+  @redis-connection @redis-protocol @redis-retry @sync @async
+  Scenario: Negotiate RESP2 on a server without HELLO and fail fast on a missing socket
+    When I connect with RESP negotiation and check a missing Redis Unix socket
+    Then both Redis adapters fall back to RESP2 and reject the missing socket without backoff
+
+  @redis-client-cache @sync
+  Scenario: Cache selected keys in both tracking modes and invalidate writes
+    Given a configured container
+    When I cache selected Redis reads with both tracking modes
+    Then tracking invalidates cached values and ineligible reads still reach Redis
+
+  @redis-cluster @redis-routing
+  Scenario Outline: Route multi-key commands across cluster primaries
+    Given a configured <adapter>
+    When I read and delete keys spanning two Redis shards
+    Then both shards contribute to the Redis command replies
+
+    @sync
+    Examples: Sync
+      | adapter |
+      | cluster |
+
+    @async
+    Examples: Async
+      | adapter       |
+      | async cluster |
+
+  @redis-backup
+  Scenario Outline: Seal or abort a node backup and clean up
+    Given a configured <adapter>
+    When I start, seal, abort and clean up Redis backups
+    Then Redis reports one sealed backup followed by an aborted backup
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | container |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async container |
+
+  @redis-cluster @redis-routing @redis-topology
+  Scenario Outline: Apply custom metadata and topology refresh settings in cluster mode
+    Given a configured <adapter>
+    When I use custom command metadata and refresh pacing on Redis Cluster
+    Then the custom metadata keeps reads on the primary and the client uses the configured refresh interval
+
+    @sync
+    Examples: Sync
+      | adapter |
+      | cluster |
+
+    @async
+    Examples: Async
+      | adapter       |
+      | async cluster |
+
+  @redis-cluster @redis-pubsub @redis-sharded-pubsub
+  Scenario Outline: Deliver a message on a Redis shard channel
+    Given a configured <adapter>
+    When I subscribe and publish on a Redis shard channel
+    Then the shard subscriber receives the message
+
+    @sync
+    Examples: Sync
+      | adapter |
+      | cluster |
+
+    @async
+    Examples: Async
+      | adapter       |
+      | async cluster |
+
+  @redis-connection @redis-reconnect @async
+  Scenario: Replace a server-closed async connection
+    Given a configured async container
+    When Redis closes the connection held by the async adapter
+    Then the adapter reconnects and reads the stored value

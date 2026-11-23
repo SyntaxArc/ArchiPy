@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 from redis.asyncio.retry import Retry as AsyncRetry
 from redis.backoff import ExponentialBackoff
 from redis.exceptions import TimeoutError as RedisTimeoutError
-from redis.retry import Retry
+from redis.retry import Retry, is_retryable_connect_error
 
 if TYPE_CHECKING:
     from redis import RedisCluster
@@ -94,10 +94,12 @@ def _tls_acl_kwargs(configs: RedisConfig) -> dict[str, Any]:
 def _resilience_kwargs(configs: RedisConfig, *, is_async: bool = False) -> dict[str, Any]:
     """Build retry, keepalive and client-name kwargs; empty when none is configured."""
     kwargs: dict[str, Any] = {}
-    if configs.RETRY.ATTEMPTS is not None:
+    if configs.RETRY.ATTEMPTS is not None or configs.RETRY.FAIL_FAST_MISSING_SOCKET:
         backoff = ExponentialBackoff(cap=configs.RETRY.BACKOFF_CAP, base=configs.RETRY.BACKOFF_BASE)
         retry_class = AsyncRetry if is_async else Retry
-        kwargs["retry"] = retry_class(backoff, configs.RETRY.ATTEMPTS)
+        attempts = configs.RETRY.ATTEMPTS if configs.RETRY.ATTEMPTS is not None else 3
+        checker = is_retryable_connect_error if configs.RETRY.FAIL_FAST_MISSING_SOCKET else None
+        kwargs["retry"] = retry_class(backoff, attempts, is_retryable=checker)
     if configs.RETRY.ON_TIMEOUT:
         kwargs["retry_on_error"] = [RedisTimeoutError]
     if configs.SOCKET_KEEPALIVE is not None:

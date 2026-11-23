@@ -11,6 +11,7 @@ from redis.asyncio import RedisCluster as AsyncRedisCluster
 from redis.commands.search import Search
 from redis.commands.search.aggregation import AggregateRequest, Asc, Desc
 from redis.commands.search.field import NumericField, TagField, TextField, VectorField
+from redis.commands.search.hybrid_result import HybridResult
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
 from redis.commands.search.reducers import collect as agg_collect, count as agg_count
@@ -39,6 +40,13 @@ from archipy.models.types import JsonValue, RedisIndexType
 if TYPE_CHECKING:
     from redis.asyncio.client import Redis as AsyncRedis
     from redis.client import Redis
+    from redis.commands.search.hybrid_query import (
+        CombineResultsMethod,
+        HybridCursorQuery,
+        HybridPostProcessingConfig,
+        HybridQuery,
+    )
+    from redis.commands.search.hybrid_result import HybridCursorResult
 
     from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
     from archipy.models.dtos.redis.search.document_dto import (
@@ -710,6 +718,32 @@ class RedisSearchHandle(RedisSearchHandlePort):
         return _aggregate_result_to_dict(self._search.aggregate(request, **kwargs))
 
     @override
+    def hybrid_search(
+        self,
+        query: HybridQuery,
+        *,
+        combine_method: CombineResultsMethod | None = None,
+        post_processing: HybridPostProcessingConfig | None = None,
+        params_substitution: dict[str, str | int | float | bytes] | None = None,
+        timeout_ms: int | None = None,
+        cursor: HybridCursorQuery | None = None,
+        explain_score: bool = False,
+    ) -> HybridResult | HybridCursorResult:
+        """Search text and vectors together, optionally requesting score explanations."""
+        result = self._client.ft(self._index_name).hybrid_search(
+            query,
+            combine_method=combine_method,
+            post_processing=post_processing,
+            params_substitution=params_substitution,
+            timeout=timeout_ms,
+            cursor=cursor,
+            explain_score=explain_score,
+        )
+        if isinstance(result, dict):
+            return HybridResult(**result)
+        return cast("HybridResult | HybridCursorResult", result)
+
+    @override
     def list_aliases(self) -> list[str]:
         """List the aliases assigned to this index."""
         return sorted(_normalize_index_names(self._search.aliaslist()))
@@ -920,6 +954,32 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
                 await self._await_result(self._search.aggregate(request, **kwargs)),
             )
         return _aggregate_result_to_dict(await self._await_result(self._search.aggregate(request, **kwargs)))
+
+    @override
+    async def hybrid_search(
+        self,
+        query: HybridQuery,
+        *,
+        combine_method: CombineResultsMethod | None = None,
+        post_processing: HybridPostProcessingConfig | None = None,
+        params_substitution: dict[str, str | int | float | bytes] | None = None,
+        timeout_ms: int | None = None,
+        cursor: HybridCursorQuery | None = None,
+        explain_score: bool = False,
+    ) -> HybridResult | HybridCursorResult:
+        """Search text and vectors together, optionally requesting score explanations."""
+        result = await self._client.ft(self._index_name).hybrid_search(
+            query,
+            combine_method=combine_method,
+            post_processing=post_processing,
+            params_substitution=params_substitution,
+            timeout=timeout_ms,
+            cursor=cursor,
+            explain_score=explain_score,
+        )
+        if isinstance(result, dict):
+            return HybridResult(**result)
+        return cast("HybridResult | HybridCursorResult", result)
 
     @override
     async def list_aliases(self) -> list[str]:

@@ -6,6 +6,14 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from redis.commands.search.hybrid_query import (
+        CombineResultsMethod,
+        HybridCursorQuery,
+        HybridPostProcessingConfig,
+        HybridQuery,
+    )
+    from redis.commands.search.hybrid_result import HybridCursorResult, HybridResult
+
     from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
     from archipy.models.dtos.redis.search.document_dto import (
         HashDocumentUpsertDTO,
@@ -103,6 +111,21 @@ class RedisSearchHandlePort:
     @abstractmethod
     def aggregate(self, aggregation: AggregationDTO, **kwargs: Any) -> dict[str, Any]:
         """Execute a RediSearch aggregation."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def hybrid_search(  # noqa: PLR0913
+        self,
+        query: HybridQuery,
+        *,
+        combine_method: CombineResultsMethod | None = None,
+        post_processing: HybridPostProcessingConfig | None = None,
+        params_substitution: dict[str, str | int | float | bytes] | None = None,
+        timeout_ms: int | None = None,
+        cursor: HybridCursorQuery | None = None,
+        explain_score: bool = False,
+    ) -> HybridResult | HybridCursorResult:
+        """Search text and vectors together, optionally requesting score explanations."""
         raise NotImplementedError
 
     @abstractmethod
@@ -209,6 +232,21 @@ class AsyncRedisSearchHandlePort:
     @abstractmethod
     async def aggregate(self, aggregation: AggregationDTO, **kwargs: Any) -> dict[str, Any]:
         """Execute a RediSearch aggregation asynchronously."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def hybrid_search(  # noqa: PLR0913
+        self,
+        query: HybridQuery,
+        *,
+        combine_method: CombineResultsMethod | None = None,
+        post_processing: HybridPostProcessingConfig | None = None,
+        params_substitution: dict[str, str | int | float | bytes] | None = None,
+        timeout_ms: int | None = None,
+        cursor: HybridCursorQuery | None = None,
+        explain_score: bool = False,
+    ) -> HybridResult | HybridCursorResult:
+        """Search text and vectors together, optionally requesting score explanations."""
         raise NotImplementedError
 
     @abstractmethod

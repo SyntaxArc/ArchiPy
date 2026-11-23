@@ -86,6 +86,16 @@ REDIS__SENTINEL__USERNAME=sentinel-user  # sentinel ACL user, used with SENTINEL
 `SSL` or when `SSL_CHECK_HOSTNAME` is disabled. `SENTINEL_NODES` entries must be `host:port` and `CLUSTER_NODES` ports
 must be numeric; malformed entries raise `ConfigurationError`.
 
+### Protocol negotiation, Unix sockets, and cluster refresh
+
+Set `RedisConfig(PROTOCOL=None)` to negotiate RESP3 and allow redis-py to fall back to RESP2 when a
+server rejects `HELLO`. The default is explicit RESP3.
+
+Use `REDIS__UNIX_SOCKET_PATH` for a standalone Unix socket connection. Set
+`REDIS__RETRY__FAIL_FAST_MISSING_SOCKET=true` to skip backoff for a missing socket.
+Set `REDIS__CLUSTER__TOPOLOGY_REFRESH_MIN_INTERVAL` in seconds to control the minimum time between
+error-triggered cluster topology refreshes. The redis-py default applies when the option is unset.
+
 ## Basic Usage
 
 === "Sync"
@@ -189,6 +199,30 @@ On the async adapter, `scan_iter()` and `sscan_iter()` can be iterated directly 
 redis.scan_iter(match="user:*")`. The older `async for key in await redis.scan_iter(...)` form still works.
 
 ## Caching Patterns
+
+### Server-assisted client-side caching
+
+The sync standalone and cluster adapters accept redis-py's `CacheConfig`. Use explicit RESP3 and
+Redis 7.4 or newer. The tracking mode controls which reads Redis tracks, and a predicate can
+further limit cache eligibility.
+
+```python
+from redis.cache import CacheConfig, TrackingMode
+
+from archipy.adapters.redis.adapters import RedisAdapter
+
+with RedisAdapter(
+    cache_config=CacheConfig(
+        tracking_mode=TrackingMode.OPTIN,
+        cache_predicate=lambda command, keys: command == "GET" and keys[0].startswith("products:"),
+    ),
+) as redis:
+    product = redis.get("products:42")
+```
+
+`TrackingMode.OPTOUT` also tracks eligible cached reads. `TrackingMode.PLAIN` is the default.
+The sync adapter accepts a `MetadataResolver` to customize command eligibility and cluster
+routing. The async cluster adapter accepts an `AsyncMetadataResolver` for routing.
 
 ### Function Result Caching
 
@@ -300,6 +334,28 @@ no returned samples and is incompatible with `groupby`.
 
 The stream-limit and RediSearch integration scenarios run against real Redis.
 
+### Member expiration, sorted set moves, and maintenance
+
+Both adapters expose the redis-py 8.2 command families. The Redis server must support the
+command you call. The ArchiPy container suite uses Redis 8.12.
+
+| Capability | Adapter methods |
+| --- | --- |
+| Set-member expiration | `saddex`, `sexpire`, `spexpire`, `sexpireat`, `spexpireat`, `sttl`, `spttl`, `sexpiretime`, `spexpiretime`, `spersist` |
+| Sorted-set moves | `zmove`, `bzmove`, `zmovemember` |
+| Bitmap positions and key eviction flags | `bitrangeintarray`, `bless_get`, `bless_set`, `bless_clear`, `bless_scan` |
+| Client list | `client_list_iter`, with optional type or client IDs |
+| Count-Min Sketch counter widths | `cms_initbydim`, `cms_initbyprob` with `cell_size` in bytes |
+| Server backup | `backup_start`, `backup_status`, `backup_list`, `backup_seal`, `backup_abort`, `backup_cleanup` |
+
+Use a shared cluster hash tag for the source and destination of a sorted-set move. Set-member expiration
+methods return one status per requested member. An async call to `client_list_iter` is awaited once and
+returns an ordinary iterator.
+
+Backups are managed per Redis node. Connect directly to the node you intend to back up. Start the
+backup, check `backup_status` for the `incrementing` state, then seal and copy the files returned by
+`backup_list` before cleanup.
+
 ### Experimental hash fieldsets
 
 redis-py 8.1.0 exposes experimental `HIMPORT` fieldsets on Redis 8.10+. The upstream API can change.
@@ -316,6 +372,8 @@ finally:
 ```
 
 ### Publish/Subscribe
+
+For shard channels in Redis Cluster, call `spublish` on the adapter and `ssubscribe` on its Pub/Sub handle.
 
 The `publish` and `pubsub` methods are available through the port interface:
 
@@ -867,6 +925,10 @@ logger.info(f"Text hits: {text_result.total}, hybrid hits: {len(hybrid_result.hi
 
 Set `text_scorer` (for example `"BM25"` or `"TFIDF"`) on `SearchQueryDTO` or `from_hybrid()` to choose the full-text
 scoring function; it is sent to RediSearch as `SCORER`, and an unknown name is rejected by the server.
+
+Use `handle.hybrid_search(query, explain_score=True)` with a redis-py `HybridQuery` when you need
+the native `FT.HYBRID` score explanation. The returned `HybridResult` contains score details using
+Redis's response shape for the selected protocol. The async Search handle exposes the same method.
 
 ### Aggregations
 

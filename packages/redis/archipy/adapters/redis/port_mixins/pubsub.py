@@ -31,6 +31,11 @@ class RedisPubSubPort:
         raise NotImplementedError
 
     @abstractmethod
+    def spublish(self, channel: bytes | str, message: bytes | str) -> int:
+        """Publish a message to a Redis shard channel."""
+        raise NotImplementedError
+
+    @abstractmethod
     def pubsub_channels(self, pattern: bytes | str = "*", **kwargs: Any) -> list[bytes | str]:
         """Lists active channels matching a pattern.
 
@@ -80,6 +85,11 @@ class AsyncRedisPubSubPort:
         Raises:
             NotImplementedError: If not implemented by the subclass.
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def spublish(self, channel: bytes | str, message: bytes | str) -> int:
+        """Publish a message to a Redis shard channel."""
         raise NotImplementedError
 
     @abstractmethod
