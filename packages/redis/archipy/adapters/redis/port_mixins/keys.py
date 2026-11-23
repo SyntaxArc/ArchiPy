@@ -9,11 +9,41 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
     from datetime import datetime, timedelta
 
+    from redis.commands.core import BlessFlag
+    from redis.typing import KeyT, ScanResponse
+
     from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 
 
 class RedisKeysPort:
     """Sync Redis port for keys operations."""
+
+    @abstractmethod
+    def bitrangeintarray(
+        self, key: KeyT, start: int, end: int, *, mode: str | None = None, limit: int | None = None, zeros: bool = False
+    ) -> list[int]:
+        """Return positions of set or unset bits within a range."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def bless_get(self, name: KeyT) -> list[bytes | str]:
+        """Return the bless flags on a key."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def bless_set(self, name: KeyT, flag: BlessFlag) -> int:
+        """Set a bless flag on a key."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def bless_clear(self, name: KeyT, flag: BlessFlag) -> int:
+        """Remove a bless flag from a key."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def bless_scan(self, cursor: int, flag: BlessFlag, *, count: int | None = None) -> ScanResponse:
+        """Scan keys that have the specified bless flag."""
+        raise NotImplementedError
 
     @abstractmethod
     def pttl(self, name: bytes | str) -> int:
@@ -354,6 +384,33 @@ class RedisKeysPort:
 
 class AsyncRedisKeysPort:
     """Async Redis port for keys operations."""
+
+    @abstractmethod
+    async def bitrangeintarray(
+        self, key: KeyT, start: int, end: int, *, mode: str | None = None, limit: int | None = None, zeros: bool = False
+    ) -> list[int]:
+        """Return positions of set or unset bits within a range."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def bless_get(self, name: KeyT) -> list[bytes | str]:
+        """Return the bless flags on a key."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def bless_set(self, name: KeyT, flag: BlessFlag) -> int:
+        """Set a bless flag on a key."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def bless_clear(self, name: KeyT, flag: BlessFlag) -> int:
+        """Remove a bless flag from a key."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def bless_scan(self, cursor: int, flag: BlessFlag, *, count: int | None = None) -> ScanResponse:
+        """Scan keys that have the specified bless flag."""
+        raise NotImplementedError
 
     @abstractmethod
     async def pttl(self, name: bytes | str) -> int:

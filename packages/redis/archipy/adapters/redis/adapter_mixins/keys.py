@@ -15,9 +15,34 @@ from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
 
+    from redis.commands.core import BlessFlag
+    from redis.typing import KeyT, ScanResponse
+
 
 class RedisKeysMixin(SyncRedisMixinBase):
     """Sync Redis mixin for keys operations."""
+
+    def bitrangeintarray(
+        self, key: KeyT, start: int, end: int, *, mode: str | None = None, limit: int | None = None, zeros: bool = False
+    ) -> list[int]:
+        """Return positions of set or unset bits within a range."""
+        return self.read_only_client.bitrangeintarray(key, start, end, mode=mode, limit=limit, zeros=zeros)
+
+    def bless_get(self, name: KeyT) -> list[bytes | str]:
+        """Return the bless flags on a key."""
+        return self.read_only_client.bless_get(name)
+
+    def bless_set(self, name: KeyT, flag: BlessFlag) -> int:
+        """Set a bless flag on a key."""
+        return self.client.bless_set(name, flag)
+
+    def bless_clear(self, name: KeyT, flag: BlessFlag) -> int:
+        """Remove a bless flag from a key."""
+        return self.client.bless_clear(name, flag)
+
+    def bless_scan(self, cursor: int, flag: BlessFlag, *, count: int | None = None) -> ScanResponse:
+        """Scan keys that have the specified bless flag."""
+        return self.client.bless_scan(cursor, flag, count=count)
 
     def pttl(self, name: bytes | str) -> int:
         """Get the time to live in milliseconds for a key.
@@ -301,6 +326,28 @@ class RedisKeysMixin(SyncRedisMixinBase):
 
 class AsyncRedisKeysMixin(AsyncRedisMixinBase):
     """Async Redis mixin for keys operations."""
+
+    async def bitrangeintarray(
+        self, key: KeyT, start: int, end: int, *, mode: str | None = None, limit: int | None = None, zeros: bool = False
+    ) -> list[int]:
+        """Return positions of set or unset bits within a range."""
+        return await self.read_only_client.bitrangeintarray(key, start, end, mode=mode, limit=limit, zeros=zeros)
+
+    async def bless_get(self, name: KeyT) -> list[bytes | str]:
+        """Return the bless flags on a key."""
+        return await self.read_only_client.bless_get(name)
+
+    async def bless_set(self, name: KeyT, flag: BlessFlag) -> int:
+        """Set a bless flag on a key."""
+        return await self.client.bless_set(name, flag)
+
+    async def bless_clear(self, name: KeyT, flag: BlessFlag) -> int:
+        """Remove a bless flag from a key."""
+        return await self.client.bless_clear(name, flag)
+
+    async def bless_scan(self, cursor: int, flag: BlessFlag, *, count: int | None = None) -> ScanResponse:
+        """Scan keys that have the specified bless flag."""
+        return await self.client.bless_scan(cursor, flag, count=count)
 
     async def pttl(self, name: bytes | str) -> int:
         """Get the time to live in milliseconds for a key asynchronously.

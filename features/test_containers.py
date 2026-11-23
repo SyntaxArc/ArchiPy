@@ -386,7 +386,8 @@ _CLUSTER_NODE_ADDRESSES = [f"127.0.0.1:{port}" for port in _CLUSTER_PORTS]
 def _build_redis_cluster_node(image: str, port: int) -> DockerContainer:
     """Build a Redis cluster node container using host networking."""
     command = (
-        f"redis-server --port {port} --cluster-enabled yes "
+        f"redis-server --bind 127.0.0.1 --port {port} --cluster-enabled yes "
+        "--cluster-bus-port-protected-mode no "
         f"--cluster-config-file nodes.conf --cluster-node-timeout 5000 "
         f"--cluster-announce-ip 127.0.0.1 --appendonly no"
     )

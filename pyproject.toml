@@ -504,7 +504,7 @@ unused-type-ignore-comment = "error"
 pyproject_root_var = "pyproject"
 
 [tool.codespell]
-ignore-words-list = "exat,convertor"
+ignore-words-list = "exat,convertor,optin"
 skip = ".git,__pycache__,build,dist"
 
 [tool.bandit]

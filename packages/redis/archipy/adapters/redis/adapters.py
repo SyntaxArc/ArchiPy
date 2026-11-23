@@ -12,6 +12,7 @@ from archipy.adapters.redis.adapter_mixins import (
     AsyncRedisPubSubMixin,
     AsyncRedisSetsMixin,
     AsyncRedisSortedSetsMixin,
+    AsyncRedisStreamsMixin,
     RedisArraysMixin,
     RedisClusterMixin,
     RedisConnectionMixin,
@@ -21,6 +22,7 @@ from archipy.adapters.redis.adapter_mixins import (
     RedisPubSubMixin,
     RedisSetsMixin,
     RedisSortedSetsMixin,
+    RedisStreamsMixin,
 )
 from archipy.adapters.redis.error_mapping import map_redis_errors
 from archipy.adapters.redis.ports import AsyncRedisPort, RedisPort
@@ -38,6 +40,7 @@ class RedisAdapter(
     RedisListsMixin,
     RedisSetsMixin,
     RedisSortedSetsMixin,
+    RedisStreamsMixin,
     RedisArraysMixin,
     RedisHashesMixin,
     RedisPubSubMixin,
@@ -60,6 +63,7 @@ class AsyncRedisAdapter(
     AsyncRedisListsMixin,
     AsyncRedisSetsMixin,
     AsyncRedisSortedSetsMixin,
+    AsyncRedisStreamsMixin,
     AsyncRedisArraysMixin,
     AsyncRedisHashesMixin,
     AsyncRedisPubSubMixin,

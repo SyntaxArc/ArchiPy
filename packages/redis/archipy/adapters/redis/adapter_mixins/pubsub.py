@@ -30,6 +30,10 @@ class RedisPubSubMixin(SyncRedisMixinBase):
         """
         return self.client.publish(channel, message, **kwargs)
 
+    def spublish(self, channel: bytes | str, message: bytes | str) -> int:
+        """Publish a message to a Redis shard channel."""
+        return self.client.spublish(channel, message)
+
     def pubsub_channels(self, pattern: bytes | str = "*", **kwargs: Any) -> list[bytes | str]:
         """List active channels matching a pattern.
 
@@ -69,6 +73,10 @@ class AsyncRedisPubSubMixin(AsyncRedisMixinBase):
             RedisResponseType: Number of subscribers received message.
         """
         return await self.client.publish(channel, message, **kwargs)
+
+    async def spublish(self, channel: bytes | str, message: bytes | str) -> int:
+        """Publish a message to a Redis shard channel."""
+        return await self.client.spublish(channel, message)
 
     async def pubsub_channels(self, pattern: bytes | str = "*", **kwargs: Any) -> list[bytes | str]:
         """List active channels matching pattern asynchronously.

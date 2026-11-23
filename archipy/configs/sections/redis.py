@@ -28,6 +28,11 @@ class RedisClusterConfig(BaseModel):
 
     NODES: list[str] = Field(default=[], description="List of cluster node addresses (host:port)")
     REQUIRE_FULL_COVERAGE: bool = Field(default=True, description="Require full cluster coverage")
+    TOPOLOGY_REFRESH_MIN_INTERVAL: float | None = Field(
+        default=None,
+        ge=0,
+        description="Minimum seconds between error-triggered topology refreshes; None uses the client default",
+    )
     READ_FROM_REPLICAS: bool = Field(default=True, description="Allow reading from replica nodes")
 
 
@@ -79,6 +84,7 @@ class RedisRetryConfig(BaseModel):
     )
     BACKOFF_BASE: float = Field(default=0.008, gt=0, description="Exponential backoff base delay in seconds")
     BACKOFF_CAP: float = Field(default=0.512, gt=0, description="Exponential backoff maximum delay in seconds")
+    FAIL_FAST_MISSING_SOCKET: bool = Field(default=False, description="Skip retries when the Unix socket is missing")
     ON_TIMEOUT: bool = Field(default=False, description="Also retry commands that hit a socket timeout")
 
 
@@ -91,12 +97,13 @@ class RedisConfig(BaseModel):
     MODE: RedisMode = Field(default=RedisMode.STANDALONE, description="Redis deployment mode")
     MASTER_HOST: str | None = Field(default="localhost", description="Redis master host (standalone/sentinel)")
     SLAVE_HOST: str | None = Field(default=None, description="Redis slave host (standalone)")
+    UNIX_SOCKET_PATH: str | None = Field(default=None, min_length=1, description="Standalone Redis Unix socket path")
     PORT: int = Field(default=6379, description="Default Redis server port")
     DATABASE: int = Field(default=0, description="Redis database number (standalone and sentinel; ignored in cluster)")
     USERNAME: str | None = Field(default=None, description="Redis ACL username (Redis 6+); None uses the default user")
     PASSWORD: SecretStr | None = Field(default=None, description="Redis password")
     DECODE_RESPONSES: Literal[True] = Field(default=True, description="Whether to decode responses")
-    PROTOCOL: Literal[2, 3] = Field(default=3, description="RESP protocol version (2 or 3)")
+    PROTOCOL: Literal[2, 3] | None = Field(default=3, description="RESP protocol version; None enables negotiation")
     HEALTH_CHECK_INTERVAL: int = Field(default=10, description="Health check interval in seconds")
     SOCKET_KEEPALIVE: bool | None = Field(
         default=None,
@@ -136,8 +143,18 @@ class RedisConfig(BaseModel):
             for node in self.SENTINEL.NODES:
                 self._validate_node_address(node, port_required=True)
 
-        elif self.MODE == RedisMode.STANDALONE and not self.MASTER_HOST:
+        elif not (self.MASTER_HOST or self.UNIX_SOCKET_PATH):
             raise ConfigurationError(operation="redis", reason="master_host_required")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_unix_socket(self) -> Self:
+        """Validate options for a standalone Unix socket connection."""
+        if self.UNIX_SOCKET_PATH and (self.MODE != RedisMode.STANDALONE or self.TLS.IS_ENABLED or self.SLAVE_HOST):
+            raise ConfigurationError(operation="redis", reason="unix_socket_requires_standalone_without_tls_or_replica")
+        if self.RETRY.FAIL_FAST_MISSING_SOCKET and self.UNIX_SOCKET_PATH is None:
+            raise ConfigurationError(operation="redis", reason="missing_socket_fast_fail_requires_unix_socket")
 
         return self
 

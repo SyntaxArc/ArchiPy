@@ -4,13 +4,58 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Callable, Iterable, Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 RedisScoreCastType = type | Callable[..., Any]
 
 
+if TYPE_CHECKING:
+    from redis.typing import EncodableT, KeyT, ZMoveResponse, ZScoreBoundT
+
+
 class RedisSortedSetsPort:
     """Sync Redis port for sorted_sets operations."""
+
+    @abstractmethod
+    def zmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        *,
+        lowest: bool = False,
+        highest: bool = False,
+        byscore: tuple[ZScoreBoundT, ZScoreBoundT] | None = None,
+        count: int | None = None,
+    ) -> ZMoveResponse:
+        """Move sorted-set members selected by rank or score."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def bzmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        timeout_seconds: float,
+        *,
+        lowest: bool = False,
+        highest: bool = False,
+        count: int | None = None,
+    ) -> ZMoveResponse:
+        """Wait for source members and move them to the destination sorted set."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def zmovemember(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        members: EncodableT | Iterable[EncodableT],
+        *,
+        nx: bool = False,
+        xx: bool = False,
+    ) -> ZMoveResponse:
+        """Move named members from one sorted set to another."""
+        raise NotImplementedError
 
     @abstractmethod
     def zadd(
@@ -328,6 +373,47 @@ class RedisSortedSetsPort:
 
 class AsyncRedisSortedSetsPort:
     """Async Redis port for sorted_sets operations."""
+
+    @abstractmethod
+    async def zmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        *,
+        lowest: bool = False,
+        highest: bool = False,
+        byscore: tuple[ZScoreBoundT, ZScoreBoundT] | None = None,
+        count: int | None = None,
+    ) -> ZMoveResponse:
+        """Move sorted-set members selected by rank or score."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def bzmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        timeout_seconds: float,
+        *,
+        lowest: bool = False,
+        highest: bool = False,
+        count: int | None = None,
+    ) -> ZMoveResponse:
+        """Wait for source members and move them to the destination sorted set."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def zmovemember(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        members: EncodableT | Iterable[EncodableT],
+        *,
+        nx: bool = False,
+        xx: bool = False,
+    ) -> ZMoveResponse:
+        """Move named members from one sorted set to another."""
+        raise NotImplementedError
 
     @abstractmethod
     async def zadd(

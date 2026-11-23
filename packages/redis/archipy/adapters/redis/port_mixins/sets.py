@@ -6,7 +6,10 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
+
+    from redis.commands.core import SetDataPersistOptions
+    from redis.typing import AbsExpiryT, ExpiryT, FieldT, KeyT
 
     from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 
@@ -15,6 +18,123 @@ _set = set
 
 class RedisSetsPort:
     """Sync Redis port for sets operations."""
+
+    @abstractmethod
+    def saddex(
+        self,
+        name: KeyT,
+        *members: FieldT,
+        ex: ExpiryT | str | None = None,
+        px: ExpiryT | str | None = None,
+        exat: AbsExpiryT | None = None,
+        pxat: AbsExpiryT | None = None,
+        data_persist_option: SetDataPersistOptions | None = None,
+        keepttl: bool = False,
+    ) -> int:
+        """Add set members with optional expiration and existence conditions."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sexpire(
+        self,
+        name: KeyT,
+        seconds: ExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration in seconds and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def spexpire(
+        self,
+        name: KeyT,
+        milliseconds: ExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration in milliseconds and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sexpireat(
+        self,
+        name: KeyT,
+        unix_time_seconds: AbsExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration at a Unix timestamp in seconds and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def spexpireat(
+        self,
+        name: KeyT,
+        unix_time_milliseconds: AbsExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration at a Unix timestamp in milliseconds and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sttl(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's remaining lifetime in seconds."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def spttl(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's remaining lifetime in milliseconds."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sexpiretime(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's expiration as a Unix timestamp in seconds."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def spexpiretime(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's expiration as a Unix timestamp in milliseconds."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def spersist(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Remove expiration from the members and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sdiffcard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+    ) -> int:
+        """Return the cardinality of the set difference."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sunioncard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+        approx: bool = False,
+    ) -> int:
+        """Return the cardinality of the set union."""
+        raise NotImplementedError
 
     @abstractmethod
     def sscan(
@@ -175,6 +295,123 @@ class RedisSetsPort:
 
 class AsyncRedisSetsPort:
     """Async Redis port for sets operations."""
+
+    @abstractmethod
+    async def saddex(
+        self,
+        name: KeyT,
+        *members: FieldT,
+        ex: ExpiryT | str | None = None,
+        px: ExpiryT | str | None = None,
+        exat: AbsExpiryT | None = None,
+        pxat: AbsExpiryT | None = None,
+        data_persist_option: SetDataPersistOptions | None = None,
+        keepttl: bool = False,
+    ) -> int:
+        """Add set members with optional expiration and existence conditions."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def sexpire(
+        self,
+        name: KeyT,
+        seconds: ExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration in seconds and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def spexpire(
+        self,
+        name: KeyT,
+        milliseconds: ExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration in milliseconds and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def sexpireat(
+        self,
+        name: KeyT,
+        unix_time_seconds: AbsExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration at a Unix timestamp in seconds and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def spexpireat(
+        self,
+        name: KeyT,
+        unix_time_milliseconds: AbsExpiryT,
+        *members: FieldT,
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> list[int]:
+        """Set member expiration at a Unix timestamp in milliseconds and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def sttl(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's remaining lifetime in seconds."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def spttl(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's remaining lifetime in milliseconds."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def sexpiretime(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's expiration as a Unix timestamp in seconds."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def spexpiretime(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Return each member's expiration as a Unix timestamp in milliseconds."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def spersist(self, name: KeyT, *members: FieldT) -> list[int]:
+        """Remove expiration from the members and return per-member status codes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def sdiffcard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+    ) -> int:
+        """Return the cardinality of the set difference."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def sunioncard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+        approx: bool = False,
+    ) -> int:
+        """Return the cardinality of the set union."""
+        raise NotImplementedError
 
     @abstractmethod
     async def sscan(

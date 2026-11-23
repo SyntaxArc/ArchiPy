@@ -3,10 +3,48 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from typing import Literal
 
 
 class RedisListsPort:
     """Sync Redis port for lists operations."""
+
+    @abstractmethod
+    def lmovem(
+        self,
+        first_list: str,
+        second_list: str,
+        *,
+        src: Literal["LEFT", "RIGHT"] = "LEFT",
+        dest: Literal["LEFT", "RIGHT"] = "RIGHT",
+        count: int | None = None,
+        mode: Literal["COUNT", "EXACTLY"] | None = None,
+        ordering: Literal["OBO", "BULK"] | None = None,
+    ) -> list[bytes | str] | None:
+        """Atomically move elements from one list to another.
+
+        A count requires an ordering. In Cluster, both keys must share a slot.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def blmovem(
+        self,
+        first_list: str,
+        second_list: str,
+        timeout_seconds: float,
+        *,
+        src: Literal["LEFT", "RIGHT"] = "LEFT",
+        dest: Literal["LEFT", "RIGHT"] = "RIGHT",
+        count: int | None = None,
+        mode: Literal["COUNT", "EXACTLY"] | None = None,
+        ordering: Literal["OBO", "BULK"] | None = None,
+    ) -> list[bytes | str] | None:
+        """Wait for a source list and atomically move elements to a destination list.
+
+        A count requires an ordering. In Cluster, both keys must share a slot.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def llen(self, name: str) -> int:
@@ -141,6 +179,43 @@ class RedisListsPort:
 
 class AsyncRedisListsPort:
     """Async Redis port for lists operations."""
+
+    @abstractmethod
+    async def lmovem(
+        self,
+        first_list: str,
+        second_list: str,
+        *,
+        src: Literal["LEFT", "RIGHT"] = "LEFT",
+        dest: Literal["LEFT", "RIGHT"] = "RIGHT",
+        count: int | None = None,
+        mode: Literal["COUNT", "EXACTLY"] | None = None,
+        ordering: Literal["OBO", "BULK"] | None = None,
+    ) -> list[bytes | str] | None:
+        """Atomically move elements from one list to another.
+
+        A count requires an ordering. In Cluster, both keys must share a slot.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def blmovem(
+        self,
+        first_list: str,
+        second_list: str,
+        timeout_seconds: float,
+        *,
+        src: Literal["LEFT", "RIGHT"] = "LEFT",
+        dest: Literal["LEFT", "RIGHT"] = "RIGHT",
+        count: int | None = None,
+        mode: Literal["COUNT", "EXACTLY"] | None = None,
+        ordering: Literal["OBO", "BULK"] | None = None,
+    ) -> list[bytes | str] | None:
+        """Wait for a source list and atomically move elements to a destination list.
+
+        A count requires an ordering. In Cluster, both keys must share a slot.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     async def llen(self, name: str) -> int:

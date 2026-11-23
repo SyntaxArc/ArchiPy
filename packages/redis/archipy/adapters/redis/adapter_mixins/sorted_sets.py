@@ -13,11 +13,51 @@ from archipy.adapters.redis.adapter_mixins._shared import (
 )
 
 if TYPE_CHECKING:
+    from redis.typing import EncodableT, KeyT, ZMoveResponse, ZScoreBoundT
+
     from archipy.adapters.redis.port_mixins.sorted_sets import RedisScoreCastType
 
 
 class RedisSortedSetsMixin(SyncRedisMixinBase):
     """Sync Redis mixin for sorted_sets operations."""
+
+    def zmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        *,
+        lowest: bool = False,
+        highest: bool = False,
+        byscore: tuple[ZScoreBoundT, ZScoreBoundT] | None = None,
+        count: int | None = None,
+    ) -> ZMoveResponse:
+        """Move sorted-set members selected by rank or score."""
+        return self.client.zmove(source, destination, min=lowest, max=highest, byscore=byscore, count=count)
+
+    def bzmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        timeout_seconds: float,
+        *,
+        lowest: bool = False,
+        highest: bool = False,
+        count: int | None = None,
+    ) -> ZMoveResponse:
+        """Wait for source members and move them to the destination sorted set."""
+        return self.client.bzmove(source, destination, timeout_seconds, min=lowest, max=highest, count=count)
+
+    def zmovemember(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        members: EncodableT | Iterable[EncodableT],
+        *,
+        nx: bool = False,
+        xx: bool = False,
+    ) -> ZMoveResponse:
+        """Move named members from one sorted set to another."""
+        return self.client.zmovemember(source, destination, members, nx=nx, xx=xx)
 
     def zadd(
         self,
@@ -289,6 +329,44 @@ class RedisSortedSetsMixin(SyncRedisMixinBase):
 
 class AsyncRedisSortedSetsMixin(AsyncRedisMixinBase):
     """Async Redis mixin for sorted_sets operations."""
+
+    async def zmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        *,
+        lowest: bool = False,
+        highest: bool = False,
+        byscore: tuple[ZScoreBoundT, ZScoreBoundT] | None = None,
+        count: int | None = None,
+    ) -> ZMoveResponse:
+        """Move sorted-set members selected by rank or score."""
+        return await self.client.zmove(source, destination, min=lowest, max=highest, byscore=byscore, count=count)
+
+    async def bzmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        timeout_seconds: float,
+        *,
+        lowest: bool = False,
+        highest: bool = False,
+        count: int | None = None,
+    ) -> ZMoveResponse:
+        """Wait for source members and move them to the destination sorted set."""
+        return await self.client.bzmove(source, destination, timeout_seconds, min=lowest, max=highest, count=count)
+
+    async def zmovemember(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        members: EncodableT | Iterable[EncodableT],
+        *,
+        nx: bool = False,
+        xx: bool = False,
+    ) -> ZMoveResponse:
+        """Move named members from one sorted set to another."""
+        return await self.client.zmovemember(source, destination, members, nx=nx, xx=xx)
 
     async def zadd(
         self,

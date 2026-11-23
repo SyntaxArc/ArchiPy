@@ -86,6 +86,16 @@ REDIS__SENTINEL__USERNAME=sentinel-user  # sentinel ACL user, used with SENTINEL
 `SSL` or when `SSL_CHECK_HOSTNAME` is disabled. `SENTINEL_NODES` entries must be `host:port` and `CLUSTER_NODES` ports
 must be numeric; malformed entries raise `ConfigurationError`.
 
+### Protocol negotiation, Unix sockets, and cluster refresh
+
+Set `RedisConfig(PROTOCOL=None)` to negotiate RESP3 and allow redis-py to fall back to RESP2 when a
+server rejects `HELLO`. The default is explicit RESP3.
+
+Use `REDIS__UNIX_SOCKET_PATH` for a standalone Unix socket connection. Set
+`REDIS__RETRY__FAIL_FAST_MISSING_SOCKET=true` to skip backoff for a missing socket.
+Set `REDIS__CLUSTER__TOPOLOGY_REFRESH_MIN_INTERVAL` in seconds to control the minimum time between
+error-triggered cluster topology refreshes. The redis-py default applies when the option is unset.
+
 ## Basic Usage
 
 === "Sync"
@@ -179,12 +189,40 @@ async def run() -> None:
         await redis.set("key", "value")
 ```
 
+Sentinel adapters close their data clients and Sentinel discovery pools when the adapter closes. Async standalone
+and cluster clients use redis-py’s automatic RESP3 maintenance notifications on supported deployments.
+The Redis Open Source test image lacks this server capability. See [Redis smart client handoffs](https://redis.io/docs/latest/develop/clients/sch/).
+
 ### Async iteration
 
 On the async adapter, `scan_iter()` and `sscan_iter()` can be iterated directly with `async for key in
 redis.scan_iter(match="user:*")`. The older `async for key in await redis.scan_iter(...)` form still works.
 
 ## Caching Patterns
+
+### Server-assisted client-side caching
+
+The sync standalone and cluster adapters accept redis-py's `CacheConfig`. Use explicit RESP3 and
+Redis 7.4 or newer. The tracking mode controls which reads Redis tracks, and a predicate can
+further limit cache eligibility.
+
+```python
+from redis.cache import CacheConfig, TrackingMode
+
+from archipy.adapters.redis.adapters import RedisAdapter
+
+with RedisAdapter(
+    cache_config=CacheConfig(
+        tracking_mode=TrackingMode.OPTIN,
+        cache_predicate=lambda command, keys: command == "GET" and keys[0].startswith("products:"),
+    ),
+) as redis:
+    product = redis.get("products:42")
+```
+
+`TrackingMode.OPTOUT` also tracks eligible cached reads. `TrackingMode.PLAIN` is the default.
+The sync adapter accepts a `MetadataResolver` to customize command eligibility and cluster
+routing. The async cluster adapter accepts an `AsyncMetadataResolver` for routing.
 
 ### Function Result Caching
 
@@ -266,7 +304,67 @@ logger.info(f"Second call (cached): {result2}")
 
 ## Advanced Redis Features
 
+### List batches, set cardinality, and streams
+
+These operations require Redis 8.10+. They are available on both adapters. Use the same hash tag
+for keys in a multi-key list, set, or stream operation on Redis Cluster.
+
+```python
+redis_adapter.rpush("{tasks}:ready", "a", "b", "c")
+redis_adapter.lmovem("{tasks}:ready", "{tasks}:running", count=2, ordering="BULK")
+redis_adapter.blmovem("{tasks}:ready", "{tasks}:running", timeout_seconds=1)
+redis_adapter.sunioncard(["{tasks}:pending", "{tasks}:active"], limit=100)
+redis_adapter.sdiffcard(["{tasks}:pending", "{tasks}:active"])
+
+redis_adapter.xread({"{events}:new": "0-0"}, max_count=100, max_size=65536)
+redis_adapter.xreadgroup("workers", "worker-1", {"{events}:new": ">"}, max_count=100)
+```
+
+`MAXCOUNT` and `MAXSIZE` apply to the whole stream reply. `MAXSIZE` still permits one oversized entry.
+Create the consumer group before calling `xreadgroup`. Stream reply shapes follow the configured RESP version.
+
+The stream-limit and RediSearch integration scenarios run against real Redis.
+
+### Member expiration, sorted set moves, and maintenance
+
+Both adapters expose the redis-py 8.2 command families. The Redis server must support the
+command you call. The ArchiPy container suite uses Redis 8.12.
+
+| Capability | Adapter methods |
+| --- | --- |
+| Set-member expiration | `saddex`, `sexpire`, `spexpire`, `sexpireat`, `spexpireat`, `sttl`, `spttl`, `sexpiretime`, `spexpiretime`, `spersist` |
+| Sorted-set moves | `zmove`, `bzmove`, `zmovemember` |
+| Bitmap positions and key eviction flags | `bitrangeintarray`, `bless_get`, `bless_set`, `bless_clear`, `bless_scan` |
+| Client list | `client_list_iter`, with optional type or client IDs |
+| Count-Min Sketch counter widths | `cms_initbydim`, `cms_initbyprob` with `cell_size` in bytes |
+| Server backup | `backup_start`, `backup_status`, `backup_list`, `backup_seal`, `backup_abort`, `backup_cleanup` |
+
+Use a shared cluster hash tag for the source and destination of a sorted-set move. Set-member expiration
+methods return one status per requested member. An async call to `client_list_iter` is awaited once and
+returns an ordinary iterator.
+
+Backups are managed per Redis node. Connect directly to the node you intend to back up. Start the
+backup, check `backup_status` for the `incrementing` state, then seal and copy the files returned by
+`backup_list` before cleanup.
+
+### Experimental hash fieldsets
+
+redis-py 8.1.0 exposes experimental `HIMPORT` fieldsets on Redis 8.10+. The upstream API can change.
+Use the same adapter client to prepare the fieldset, write values in field order, and discard the fieldset.
+Await these calls when using the async adapter.
+
+```python
+client = redis_adapter.client
+client.himport_prepare("profile", ["name", "region"])
+try:
+    client.himport_set("profile:42", "profile", ["Avery", "west"])
+finally:
+    client.himport_discard("profile")
+```
+
 ### Publish/Subscribe
+
+For shard channels in Redis Cluster, call `spublish` on the adapter and `ssubscribe` on its Pub/Sub handle.
 
 The `publish` and `pubsub` methods are available through the port interface:
 
@@ -819,6 +917,10 @@ logger.info(f"Text hits: {text_result.total}, hybrid hits: {len(hybrid_result.hi
 Set `text_scorer` (for example `"BM25"` or `"TFIDF"`) on `SearchQueryDTO` or `from_hybrid()` to choose the full-text
 scoring function; it is sent to RediSearch as `SCORER`, and an unknown name is rejected by the server.
 
+Use `handle.hybrid_search(query, explain_score=True)` with a redis-py `HybridQuery` when you need
+the native `FT.HYBRID` score explanation. The returned `HybridResult` contains score details using
+Redis's response shape for the selected protocol. The async Search handle exposes the same method.
+
 ### Aggregations
 
 Group and count documents with `AggregationDTO`:
@@ -846,6 +948,23 @@ agg = handle.aggregate(
 logger.info(f"Aggregation rows: {agg['rows']}")
 ```
 
+Use `COLLECT` to return field values for each group on Redis 8.10+. `collect_fields` selects which fields to collect.
+Omit it to collect all fields. `collect_sort_by`, `collect_sort_direction`, and `collect_limit` select and order entries
+within each group. `COLLECT` is a preview feature and can require `search-enable-unstable-features` on the server.
+
+```python
+by_category = handle.aggregate(
+    AggregationDTO(
+        group_by=["category"],
+        reduce_function="COLLECT",
+        reduce_field="titles",
+        collect_fields=["title"],
+        collect_sort_by="title",
+        collect_limit=(0, 10),
+    ),
+)
+```
+
 ### Schema Changes, Aliases, and Index Lifecycle
 
 ```python
@@ -870,6 +989,8 @@ handle.drop_index(delete_documents=True)
 handle.delete_alias("products-view")
 ```
 
+Call `handle.list_aliases()` to list the aliases assigned to that index on Redis 8.10+.
+
 ### Untrusted Input and Escaping
 
 `SearchQueryDTO.query`, `filter_expr` and `AggregationDTO.query` are raw RediSearch syntax and are **not** escaped. Never
@@ -885,7 +1006,7 @@ hybrid = SearchQueryDTO.from_hybrid(quote_phrase(user_text), [0.1, 0.2, 0.3])
 ```
 
 Identifier-like fields (`vector_field`, `score_field`, `return_fields`, `group_by`, `sort_by`, `reduce_field`,
-`reduce_function`) are validated to letters, digits, `_`, `.`, `$` and `-` (with an optional leading `@`), and
+`collect_fields`) are validated to letters, digits, `_`, `.`, `$` and `-` (with an optional leading `@`), and
 `sort_direction` must be `ASC` or `DESC`; anything else raises a Pydantic `ValidationError`.
 
 ### Asynchronous RediSearch

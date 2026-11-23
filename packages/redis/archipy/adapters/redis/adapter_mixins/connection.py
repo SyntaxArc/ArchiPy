@@ -4,7 +4,7 @@ from __future__ import annotations
 
 __lazy_modules__ = ["archipy.configs.base_config"]
 
-from collections.abc import Awaitable, Iterable
+from collections.abc import Awaitable, Iterable, Iterator, Sequence
 from typing import TYPE_CHECKING, Any, Self
 
 from redis import RedisCluster, Sentinel
@@ -17,6 +17,7 @@ from redis.asyncio.cluster import (
 )
 from redis.client import Pipeline, Redis
 from redis.cluster import ClusterNode, LoadBalancingStrategy
+from redis.utils import check_protocol_version
 
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
@@ -42,6 +43,10 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
+    from redis.cache import CacheConfig
+    from redis.commands.metadata import AsyncMetadataResolver, MetadataResolver
+    from redis.typing import EncodableT, KeyT
+
     from archipy.adapters.redis.search_ports import (
         AsyncRedisSearchHandlePort,
         RedisSearchHandlePort,
@@ -51,15 +56,69 @@ if TYPE_CHECKING:
 class RedisConnectionMixin(SyncRedisMixinBase):
     """Sync Redis mixin for connection operations."""
 
-    def __init__(self, redis_config: RedisConfig | None = None) -> None:
+    def client_list_iter(
+        self, client_type: str | None = None, *, client_ids: Sequence[EncodableT] = ()
+    ) -> Iterator[dict[str, str]]:
+        """Iterate over parsed records from the server's client list."""
+        return self.client.client_list_iter(_type=client_type, client_id=list(client_ids))
+
+    def backup_start(self) -> bytes | str:
+        """Start a coordinated backup on the server."""
+        return self.client.backup_start()
+
+    def backup_status(self) -> dict[str | bytes, Any]:
+        """Return the server's current backup status."""
+        return self.client.backup_status()
+
+    def backup_list(self) -> list[bytes | str]:
+        """List files generated for the active backup."""
+        return self.client.backup_list()
+
+    def backup_seal(self) -> bytes | str:
+        """Seal the backup so its files can be copied."""
+        return self.client.backup_seal()
+
+    def backup_abort(self) -> bytes | str:
+        """Abort the active backup."""
+        return self.client.backup_abort()
+
+    def backup_cleanup(self) -> bytes | str:
+        """Remove temporary artifacts of the last backup."""
+        return self.client.backup_cleanup()
+
+    def cms_initbydim(self, key: KeyT, width: int, depth: int, *, cell_size: int | None = None) -> bool:
+        """Create a Count-Min Sketch with fixed dimensions and optional counter width."""
+        return self.client.cms().initbydim(key, width, depth, cell_size=cell_size)
+
+    def cms_initbyprob(self, key: KeyT, error: float, probability: float, *, cell_size: int | None = None) -> bool:
+        """Create a Count-Min Sketch sized by error bounds and optional counter width."""
+        return self.client.cms().initbyprob(key, error, probability, cell_size=cell_size)
+
+    _sentinel: Sentinel | None = None
+
+    def __init__(
+        self,
+        redis_config: RedisConfig | None = None,
+        *,
+        cache_config: CacheConfig | None = None,
+        metadata_resolver: MetadataResolver | None = None,
+    ) -> None:
         """Initialize the RedisAdapter with configuration settings.
 
         Args:
             redis_config (RedisConfig, optional): Configuration settings for Redis.
                 If None, retrieves from global config. Defaults to None.
+            cache_config: Client-side cache settings for standalone or cluster mode. Requires RESP3.
+            metadata_resolver: Optional command metadata for cached reads and cluster routing.
         """
         configs: RedisConfig = redis_config or BaseConfig.global_config().REDIS
+        if configs.MODE == RedisMode.SENTINEL and (cache_config is not None or metadata_resolver is not None):
+            raise ConfigurationError(operation="redis_connect", reason="sentinel_cache_or_metadata_unsupported")
+        if cache_config is not None and (configs.PROTOCOL is None or not check_protocol_version(configs.PROTOCOL, 3)):
+            raise ConfigurationError(operation="redis_connect", reason="client_side_cache_requires_explicit_resp3")
         self._configs = configs
+        self._cache_config = cache_config
+        self._metadata_resolver = metadata_resolver
         self._search_client: Redis | RedisCluster | None = None
         self._set_clients(configs)
 
@@ -89,7 +148,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
         Args:
             configs (RedisConfig): Configuration settings for Redis.
         """
-        if redis_master_host := configs.MASTER_HOST:
+        if redis_master_host := configs.MASTER_HOST or configs.UNIX_SOCKET_PATH:
             self.client: Redis | RedisCluster = self._get_client(redis_master_host, configs)
         if redis_slave_host := configs.SLAVE_HOST:
             self.read_only_client: Redis | RedisCluster = self._get_client(redis_slave_host, configs)
@@ -124,6 +183,9 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
             require_full_coverage=configs.CLUSTER.REQUIRE_FULL_COVERAGE,
             protocol=configs.PROTOCOL,
+            topology_refresh_min_interval=configs.CLUSTER.TOPOLOGY_REFRESH_MIN_INTERVAL,
+            cache_config=self._cache_config,
+            metadata_resolver=self._metadata_resolver,
             **_tls_acl_kwargs(configs),
             **_resilience_kwargs(configs, is_async=False),
             **cluster_kwargs,
@@ -151,18 +213,18 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
+        self._sentinel = sentinel_connection
         self.client = sentinel_connection.master_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=False),
         )
 
-        self.read_only_client = sentinel_connection.slave_for(
+        self.read_only_client = sentinel_connection.replica_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=False),
         )
 
-    @staticmethod
-    def _get_client(host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> Redis:
+    def _get_client(self, host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> Redis:
         """Create a Redis client with the specified configuration.
 
         Args:
@@ -177,6 +239,9 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             host=host,
             port=configs.PORT,
             db=configs.DATABASE,
+            unix_socket_path=configs.UNIX_SOCKET_PATH,
+            cache_config=self._cache_config if decode_responses is not False else None,
+            metadata_resolver=self._metadata_resolver if decode_responses is not False else None,
             **_redis_connection_kwargs(configs, decode_responses=decode_responses, is_async=False),
         )
 
@@ -210,6 +275,8 @@ class RedisConnectionMixin(SyncRedisMixinBase):
                 health_check_interval=configs.HEALTH_CHECK_INTERVAL,
                 require_full_coverage=configs.CLUSTER.REQUIRE_FULL_COVERAGE,
                 protocol=configs.PROTOCOL,
+                topology_refresh_min_interval=configs.CLUSTER.TOPOLOGY_REFRESH_MIN_INTERVAL,
+                metadata_resolver=self._metadata_resolver,
                 **_tls_acl_kwargs(configs),
                 **_resilience_kwargs(configs, is_async=False),
                 **cluster_kwargs,
@@ -270,6 +337,8 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             client.close()
             if not isinstance(client, RedisCluster):
                 client.connection_pool.disconnect()
+        if self._sentinel is not None:
+            self._sentinel.close()
         self._search_client = None
 
     def __enter__(self) -> Self:
@@ -329,15 +398,66 @@ class RedisConnectionMixin(SyncRedisMixinBase):
 class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
     """Async Redis mixin for connection operations."""
 
-    def __init__(self, redis_config: RedisConfig | None = None) -> None:
+    async def client_list_iter(
+        self, client_type: str | None = None, *, client_ids: Sequence[EncodableT] = ()
+    ) -> Iterator[dict[str, str]]:
+        """Iterate over parsed records from the server's client list."""
+        return await self.client.client_list_iter(_type=client_type, client_id=list(client_ids))
+
+    async def backup_start(self) -> bytes | str:
+        """Start a coordinated backup on the server."""
+        return await self.client.backup_start()
+
+    async def backup_status(self) -> dict[str | bytes, Any]:
+        """Return the server's current backup status."""
+        return await self.client.backup_status()
+
+    async def backup_list(self) -> list[bytes | str]:
+        """List files generated for the active backup."""
+        return await self.client.backup_list()
+
+    async def backup_seal(self) -> bytes | str:
+        """Seal the backup so its files can be copied."""
+        return await self.client.backup_seal()
+
+    async def backup_abort(self) -> bytes | str:
+        """Abort the active backup."""
+        return await self.client.backup_abort()
+
+    async def backup_cleanup(self) -> bytes | str:
+        """Remove temporary artifacts of the last backup."""
+        return await self.client.backup_cleanup()
+
+    async def cms_initbydim(self, key: KeyT, width: int, depth: int, *, cell_size: int | None = None) -> bool:
+        """Create a Count-Min Sketch with fixed dimensions and optional counter width."""
+        return await self._ensure_async_bool(self.client.cms().initbydim(key, width, depth, cell_size=cell_size))
+
+    async def cms_initbyprob(
+        self, key: KeyT, error: float, probability: float, *, cell_size: int | None = None
+    ) -> bool:
+        """Create a Count-Min Sketch sized by error bounds and optional counter width."""
+        return await self._ensure_async_bool(self.client.cms().initbyprob(key, error, probability, cell_size=cell_size))
+
+    _sentinel: AsyncSentinel | None = None
+
+    def __init__(
+        self,
+        redis_config: RedisConfig | None = None,
+        *,
+        metadata_resolver: AsyncMetadataResolver | None = None,
+    ) -> None:
         """Initialize the AsyncRedisAdapter with configuration settings.
 
         Args:
             redis_config (RedisConfig, optional): Configuration settings for Redis.
                 If None, retrieves from global config. Defaults to None.
+            metadata_resolver: Optional command metadata for asynchronous cluster routing.
         """
         configs: RedisConfig = redis_config or BaseConfig.global_config().REDIS
+        if metadata_resolver is not None and configs.MODE != RedisMode.CLUSTER:
+            raise ConfigurationError(operation="redis_connect", reason="async_metadata_requires_cluster")
         self._configs = configs
+        self._metadata_resolver = metadata_resolver
         self._search_client: AsyncRedis | AsyncRedisCluster | None = None
         self._set_clients(configs)
 
@@ -367,7 +487,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         Args:
             configs (RedisConfig): Configuration settings for Redis.
         """
-        if redis_master_host := configs.MASTER_HOST:
+        if redis_master_host := configs.MASTER_HOST or configs.UNIX_SOCKET_PATH:
             self.client: AsyncRedis | AsyncRedisCluster = self._get_client(redis_master_host, configs)
         if redis_slave_host := configs.SLAVE_HOST:
             self.read_only_client: AsyncRedis | AsyncRedisCluster = self._get_client(redis_slave_host, configs)
@@ -402,6 +522,8 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
             require_full_coverage=configs.CLUSTER.REQUIRE_FULL_COVERAGE,
             protocol=configs.PROTOCOL,
+            topology_refresh_min_interval=configs.CLUSTER.TOPOLOGY_REFRESH_MIN_INTERVAL,
+            metadata_resolver=self._metadata_resolver,
             **_tls_acl_kwargs(configs),
             **_resilience_kwargs(configs, is_async=True),
             **cluster_kwargs,
@@ -429,12 +551,13 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
+        self._sentinel = sentinel_connection
         self.client = sentinel_connection.master_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=True),
         )
 
-        self.read_only_client = sentinel_connection.slave_for(
+        self.read_only_client = sentinel_connection.replica_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=True),
         )
@@ -455,6 +578,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             host=host,
             port=configs.PORT,
             db=configs.DATABASE,
+            unix_socket_path=configs.UNIX_SOCKET_PATH,
             **_redis_connection_kwargs(configs, decode_responses=decode_responses, is_async=True),
         )
 
@@ -488,6 +612,8 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 health_check_interval=configs.HEALTH_CHECK_INTERVAL,
                 require_full_coverage=configs.CLUSTER.REQUIRE_FULL_COVERAGE,
                 protocol=configs.PROTOCOL,
+                topology_refresh_min_interval=configs.CLUSTER.TOPOLOGY_REFRESH_MIN_INTERVAL,
+                metadata_resolver=self._metadata_resolver,
                 **_tls_acl_kwargs(configs),
                 **_resilience_kwargs(configs, is_async=True),
                 **cluster_kwargs,
@@ -623,6 +749,8 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 await client.aclose()
             else:
                 await client.aclose(close_connection_pool=True)
+        if self._sentinel is not None:
+            await self._sentinel.aclose()
         self._search_client = None
 
     async def __aenter__(self) -> Self:

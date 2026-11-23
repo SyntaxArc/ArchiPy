@@ -6,9 +6,12 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
     from redis.asyncio.client import Pipeline as AsyncPipeline
     from redis.asyncio.cluster import ClusterPipeline as AsyncClusterPipeline
     from redis.client import Pipeline
+    from redis.typing import EncodableT, KeyT
 
     from archipy.adapters.redis.search_ports import (
         AsyncRedisSearchHandlePort,
@@ -18,6 +21,53 @@ if TYPE_CHECKING:
 
 class RedisConnectionPort:
     """Sync Redis port for connection operations."""
+
+    @abstractmethod
+    def client_list_iter(
+        self, client_type: str | None = None, *, client_ids: Sequence[EncodableT] = ()
+    ) -> Iterator[dict[str, str]]:
+        """Iterate over parsed records from the server's client list."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def backup_start(self) -> bytes | str:
+        """Start a coordinated backup on the server."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def backup_status(self) -> dict[str | bytes, Any]:
+        """Return the server's current backup status."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def backup_list(self) -> list[bytes | str]:
+        """List files generated for the active backup."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def backup_seal(self) -> bytes | str:
+        """Seal the backup so its files can be copied."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def backup_abort(self) -> bytes | str:
+        """Abort the active backup."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def backup_cleanup(self) -> bytes | str:
+        """Remove temporary artifacts of the last backup."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def cms_initbydim(self, key: KeyT, width: int, depth: int, *, cell_size: int | None = None) -> bool:
+        """Create a Count-Min Sketch with fixed dimensions and optional counter width."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def cms_initbyprob(self, key: KeyT, error: float, probability: float, *, cell_size: int | None = None) -> bool:
+        """Create a Count-Min Sketch sized by error bounds and optional counter width."""
+        raise NotImplementedError
 
     @abstractmethod
     def close(self) -> None:
@@ -130,6 +180,55 @@ class RedisConnectionPort:
 
 class AsyncRedisConnectionPort:
     """Async Redis port for connection operations."""
+
+    @abstractmethod
+    async def client_list_iter(
+        self, client_type: str | None = None, *, client_ids: Sequence[EncodableT] = ()
+    ) -> Iterator[dict[str, str]]:
+        """Iterate over parsed records from the server's client list."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def backup_start(self) -> bytes | str:
+        """Start a coordinated backup on the server."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def backup_status(self) -> dict[str | bytes, Any]:
+        """Return the server's current backup status."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def backup_list(self) -> list[bytes | str]:
+        """List files generated for the active backup."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def backup_seal(self) -> bytes | str:
+        """Seal the backup so its files can be copied."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def backup_abort(self) -> bytes | str:
+        """Abort the active backup."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def backup_cleanup(self) -> bytes | str:
+        """Remove temporary artifacts of the last backup."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def cms_initbydim(self, key: KeyT, width: int, depth: int, *, cell_size: int | None = None) -> bool:
+        """Create a Count-Min Sketch with fixed dimensions and optional counter width."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def cms_initbyprob(
+        self, key: KeyT, error: float, probability: float, *, cell_size: int | None = None
+    ) -> bool:
+        """Create a Count-Min Sketch sized by error bounds and optional counter width."""
+        raise NotImplementedError
 
     @abstractmethod
     async def close(self) -> None:

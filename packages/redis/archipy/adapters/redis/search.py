@@ -11,9 +11,10 @@ from redis.asyncio import RedisCluster as AsyncRedisCluster
 from redis.commands.search import Search
 from redis.commands.search.aggregation import AggregateRequest, Asc, Desc
 from redis.commands.search.field import NumericField, TagField, TextField, VectorField
+from redis.commands.search.hybrid_result import HybridResult
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
-from redis.commands.search.reducers import count as agg_count
+from redis.commands.search.reducers import collect as agg_collect, count as agg_count
 from redis.commands.search.result import Result
 
 from archipy.adapters.redis.error_mapping import map_redis_errors
@@ -39,6 +40,13 @@ from archipy.models.types import JsonValue, RedisIndexType
 if TYPE_CHECKING:
     from redis.asyncio.client import Redis as AsyncRedis
     from redis.client import Redis
+    from redis.commands.search.hybrid_query import (
+        CombineResultsMethod,
+        HybridCursorQuery,
+        HybridPostProcessingConfig,
+        HybridQuery,
+    )
+    from redis.commands.search.hybrid_result import HybridCursorResult
 
     from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
     from archipy.models.dtos.redis.search.document_dto import (
@@ -463,12 +471,27 @@ def _build_range_query(
 def _build_aggregate_request(aggregation: AggregationDTO) -> AggregateRequest:
     """Build a redis-py AggregateRequest from an AggregationDTO."""
     request = AggregateRequest(aggregation.query)
-    if aggregation.group_by:
+    if aggregation.group_by or aggregation.reduce_function == "COLLECT":
         reducers = []
         if aggregation.reduce_function == "COUNT":
             alias = aggregation.reduce_field or "count"
             reducers.append(agg_count().alias(alias))
-        group_by = [_normalize_search_field_ref(field) for field in aggregation.group_by]
+        elif aggregation.reduce_function == "COLLECT":
+            fields = [_normalize_search_field_ref(field) for field in aggregation.collect_fields] or "*"
+            alias = aggregation.reduce_field or "collected"
+            sort_by = None
+            if aggregation.collect_sort_by:
+                sort_cls = Asc if aggregation.collect_sort_direction == "ASC" else Desc
+                sort_by = sort_cls(_normalize_search_field_ref(aggregation.collect_sort_by))
+            if fields == "*":
+                request.load()
+            else:
+                load_fields = [*fields, *[_normalize_search_field_ref(field) for field in aggregation.group_by or []]]
+                if aggregation.collect_sort_by:
+                    load_fields.append(_normalize_search_field_ref(aggregation.collect_sort_by))
+                request.load(*dict.fromkeys(load_fields))
+            reducers.append(agg_collect(fields, sort_by=sort_by, limit=aggregation.collect_limit).alias(alias))
+        group_by = [_normalize_search_field_ref(field) for field in aggregation.group_by or []]
         request.group_by(group_by, *reducers)
     if aggregation.sort_by:
         sort_field = _normalize_search_field_ref(aggregation.sort_by)
@@ -695,6 +718,37 @@ class RedisSearchHandle(RedisSearchHandlePort):
         return _aggregate_result_to_dict(self._search.aggregate(request, **kwargs))
 
     @override
+    def hybrid_search(
+        self,
+        query: HybridQuery,
+        *,
+        combine_method: CombineResultsMethod | None = None,
+        post_processing: HybridPostProcessingConfig | None = None,
+        params_substitution: dict[str, str | int | float | bytes] | None = None,
+        timeout_ms: int | None = None,
+        cursor: HybridCursorQuery | None = None,
+        explain_score: bool = False,
+    ) -> HybridResult | HybridCursorResult:
+        """Search text and vectors together, optionally requesting score explanations."""
+        result = self._client.ft(self._index_name).hybrid_search(
+            query,
+            combine_method=combine_method,
+            post_processing=post_processing,
+            params_substitution=params_substitution,
+            timeout=timeout_ms,
+            cursor=cursor,
+            explain_score=explain_score,
+        )
+        if isinstance(result, dict):
+            return HybridResult(**result)
+        return cast("HybridResult | HybridCursorResult", result)
+
+    @override
+    def list_aliases(self) -> list[str]:
+        """List the aliases assigned to this index."""
+        return sorted(_normalize_index_names(self._search.aliaslist()))
+
+    @override
     def add_alias(self, alias: str) -> bool:
         """Add an alias for the index."""
         return bool(self._search.aliasadd(alias))
@@ -900,6 +954,38 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
                 await self._await_result(self._search.aggregate(request, **kwargs)),
             )
         return _aggregate_result_to_dict(await self._await_result(self._search.aggregate(request, **kwargs)))
+
+    @override
+    async def hybrid_search(
+        self,
+        query: HybridQuery,
+        *,
+        combine_method: CombineResultsMethod | None = None,
+        post_processing: HybridPostProcessingConfig | None = None,
+        params_substitution: dict[str, str | int | float | bytes] | None = None,
+        timeout_ms: int | None = None,
+        cursor: HybridCursorQuery | None = None,
+        explain_score: bool = False,
+    ) -> HybridResult | HybridCursorResult:
+        """Search text and vectors together, optionally requesting score explanations."""
+        result = await self._client.ft(self._index_name).hybrid_search(
+            query,
+            combine_method=combine_method,
+            post_processing=post_processing,
+            params_substitution=params_substitution,
+            timeout=timeout_ms,
+            cursor=cursor,
+            explain_score=explain_score,
+        )
+        if isinstance(result, dict):
+            return HybridResult(**result)
+        return cast("HybridResult | HybridCursorResult", result)
+
+    @override
+    async def list_aliases(self) -> list[str]:
+        """List the aliases assigned to this index."""
+        aliases = await self._client.ft(self._index_name).aliaslist()
+        return sorted(_normalize_index_names(aliases))
 
     @override
     async def add_alias(self, alias: str) -> bool:
