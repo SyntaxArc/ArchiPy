@@ -165,18 +165,24 @@ icon = "fontawesome/brands/github"
 link = "https://github.com/SyntaxArc/ArchiPy"
 
 [project.markdown_extensions]
+abbr = {}
 admonition = {}
 attr_list = {}
 def_list = {}
 footnotes = {}
 md_in_html = {}
 toc.permalink = true
+pymdownx.blocks.caption = {}
+pymdownx.details = {}
 pymdownx.highlight.anchor_linenums = true
 pymdownx.highlight.line_spans = "__span"
 pymdownx.highlight.pygments_lang_class = true
 pymdownx.inlinehilite = {}
+pymdownx.quotes.callouts = true
 pymdownx.snippets = {}
-pymdownx.superfences = {}
+pymdownx.superfences.custom_fences = [
+    { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
 pymdownx.tabbed.alternate_style = true
 pymdownx.tasklist.custom_checkbox = true
 pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
