@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Iterable, Iterator
+from collections.abc import Awaitable, Iterable, Iterator, Sequence
 
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
@@ -16,6 +16,27 @@ from archipy.models.errors import InternalError, InvalidArgumentError
 
 class RedisSetsMixin(SyncRedisMixinBase):
     """Sync Redis mixin for sets operations."""
+
+    def sdiffcard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+    ) -> int:
+        """Return the cardinality of the set difference."""
+        return self._ensure_sync_int(self.read_only_client.sdiffcard(len(keys), list(keys), limit=limit))
+
+    def sunioncard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+        approx: bool = False,
+    ) -> int:
+        """Return the cardinality of the set union."""
+        return self._ensure_sync_int(
+            self.read_only_client.sunioncard(len(keys), list(keys), limit=limit, approx=approx)
+        )
 
     def sscan(
         self,
@@ -157,6 +178,27 @@ class RedisSetsMixin(SyncRedisMixinBase):
 
 class AsyncRedisSetsMixin(AsyncRedisMixinBase):
     """Async Redis mixin for sets operations."""
+
+    async def sdiffcard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+    ) -> int:
+        """Return the cardinality of the set difference."""
+        return await self._ensure_async_int(self.read_only_client.sdiffcard(len(keys), list(keys), limit=limit))
+
+    async def sunioncard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+        approx: bool = False,
+    ) -> int:
+        """Return the cardinality of the set union."""
+        return await self._ensure_async_int(
+            self.read_only_client.sunioncard(len(keys), list(keys), limit=limit, approx=approx)
+        )
 
     async def sscan(
         self,

@@ -179,6 +179,10 @@ async def run() -> None:
         await redis.set("key", "value")
 ```
 
+Sentinel adapters close their data clients and Sentinel discovery pools when the adapter closes. Async standalone
+and cluster clients use redis-py’s automatic RESP3 maintenance notifications on supported deployments.
+The Redis Open Source test image lacks this server capability. See [Redis smart client handoffs](https://redis.io/docs/latest/develop/clients/sch/).
+
 ### Async iteration
 
 On the async adapter, `scan_iter()` and `sscan_iter()` can be iterated directly with `async for key in
@@ -265,6 +269,51 @@ logger.info(f"Second call (cached): {result2}")
 ```
 
 ## Advanced Redis Features
+
+### List batches, set cardinality, streams, and TimeSeries
+
+These operations require Redis 8.10+. They are available on both adapters. Use the same hash tag
+for keys in a multi-key list, set, stream, or `TS.NRANGE` operation on Redis Cluster.
+
+```python
+redis_adapter.rpush("{tasks}:ready", "a", "b", "c")
+redis_adapter.lmovem("{tasks}:ready", "{tasks}:running", count=2, ordering="BULK")
+redis_adapter.blmovem("{tasks}:ready", "{tasks}:running", timeout_seconds=1)
+redis_adapter.sunioncard(["{tasks}:pending", "{tasks}:active"], limit=100)
+redis_adapter.sdiffcard(["{tasks}:pending", "{tasks}:active"])
+
+redis_adapter.xread({"{events}:new": "0-0"}, max_count=100, max_size=65536)
+redis_adapter.xreadgroup("workers", "worker-1", {"{events}:new": ">"}, max_count=100)
+
+redis_adapter.ts_read("{room}:temperature", 0, max_count=10)
+redis_adapter.ts_nrange(["{room}:temperature", "{room}:humidity"], "-", "+")
+redis_adapter.ts_nrevrange(["{room}:temperature", "{room}:humidity"], "-", "+")
+redis_adapter.ts_querylabels(label="location", filters=["type=sensor"])
+redis_adapter.ts_mrange("-", "+", ["type=sensor"], exclude_empty=True)
+redis_adapter.ts_mrevrange("-", "+", ["type=sensor"], exclude_empty=True)
+```
+
+`MAXCOUNT` and `MAXSIZE` apply to the whole stream reply. `MAXSIZE` still permits one oversized entry.
+Create the consumer group before calling `xreadgroup`. Stream reply shapes follow the configured RESP version.
+TimeSeries queries by label are coordinated by Redis across the cluster. `exclude_empty` omits series that have
+no returned samples and is incompatible with `groupby`.
+
+Use real Redis to test stream limits and RediSearch. Fakeredis 2.40.0 lacks those behaviors.
+
+### Experimental hash fieldsets
+
+redis-py 8.1.0 exposes experimental `HIMPORT` fieldsets on Redis 8.10+. The upstream API can change.
+Use the same adapter client to prepare the fieldset, write values in field order, and discard the fieldset.
+Await these calls when using the async adapter.
+
+```python
+client = redis_adapter.client
+client.himport_prepare("profile", ["name", "region"])
+try:
+    client.himport_set("profile:42", "profile", ["Avery", "west"])
+finally:
+    client.himport_discard("profile")
+```
 
 ### Publish/Subscribe
 
@@ -846,6 +895,23 @@ agg = handle.aggregate(
 logger.info(f"Aggregation rows: {agg['rows']}")
 ```
 
+Use `COLLECT` to return field values for each group on Redis 8.10+. `collect_fields` selects which fields to collect.
+Omit it to collect all fields. `collect_sort_by`, `collect_sort_direction`, and `collect_limit` select and order entries
+within each group. `COLLECT` is a preview feature and can require `search-enable-unstable-features` on the server.
+
+```python
+by_category = handle.aggregate(
+    AggregationDTO(
+        group_by=["category"],
+        reduce_function="COLLECT",
+        reduce_field="titles",
+        collect_fields=["title"],
+        collect_sort_by="title",
+        collect_limit=(0, 10),
+    ),
+)
+```
+
 ### Schema Changes, Aliases, and Index Lifecycle
 
 ```python
@@ -870,6 +936,8 @@ handle.drop_index(delete_documents=True)
 handle.delete_alias("products-view")
 ```
 
+Call `handle.list_aliases()` to list the aliases assigned to that index on Redis 8.10+.
+
 ### Untrusted Input and Escaping
 
 `SearchQueryDTO.query`, `filter_expr` and `AggregationDTO.query` are raw RediSearch syntax and are **not** escaped. Never
@@ -885,7 +953,7 @@ hybrid = SearchQueryDTO.from_hybrid(quote_phrase(user_text), [0.1, 0.2, 0.3])
 ```
 
 Identifier-like fields (`vector_field`, `score_field`, `return_fields`, `group_by`, `sort_by`, `reduce_field`,
-`reduce_function`) are validated to letters, digits, `_`, `.`, `$` and `-` (with an optional leading `@`), and
+`collect_fields`) are validated to letters, digits, `_`, `.`, `$` and `-` (with an optional leading `@`), and
 `sort_direction` must be `ASC` or `DESC`; anything else raises a Pydantic `ValidationError`.
 
 ### Asynchronous RediSearch

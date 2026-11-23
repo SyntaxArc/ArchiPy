@@ -1,4 +1,4 @@
-@needs-redis @needs-redis-cluster @needs-apm-server @needs-apm-collector
+@redis @redis-observability @redis-apm @needs-redis @needs-redis-cluster @needs-apm-server @needs-apm-collector
 Feature: Redis Testing with Elastic APM
   As a developer
   I want to test Redis operations with both mocks and real containers
@@ -7,6 +7,7 @@ Feature: Redis Testing with Elastic APM
   Background:
     Given test entities are defined
 
+  @sync
   Scenario Outline: Redis adapter spans reach Elastic APM Server <route>
     Given adapter spans are exported to Elastic APM Server <route>
     When I set and get a key through the Redis adapter

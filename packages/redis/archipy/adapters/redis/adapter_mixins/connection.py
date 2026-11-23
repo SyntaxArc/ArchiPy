@@ -51,6 +51,8 @@ if TYPE_CHECKING:
 class RedisConnectionMixin(SyncRedisMixinBase):
     """Sync Redis mixin for connection operations."""
 
+    _sentinel: Sentinel | None = None
+
     def __init__(self, redis_config: RedisConfig | None = None) -> None:
         """Initialize the RedisAdapter with configuration settings.
 
@@ -151,12 +153,13 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
+        self._sentinel = sentinel_connection
         self.client = sentinel_connection.master_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=False),
         )
 
-        self.read_only_client = sentinel_connection.slave_for(
+        self.read_only_client = sentinel_connection.replica_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=False),
         )
@@ -270,6 +273,8 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             client.close()
             if not isinstance(client, RedisCluster):
                 client.connection_pool.disconnect()
+        if self._sentinel is not None:
+            self._sentinel.close()
         self._search_client = None
 
     def __enter__(self) -> Self:
@@ -328,6 +333,8 @@ class RedisConnectionMixin(SyncRedisMixinBase):
 
 class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
     """Async Redis mixin for connection operations."""
+
+    _sentinel: AsyncSentinel | None = None
 
     def __init__(self, redis_config: RedisConfig | None = None) -> None:
         """Initialize the AsyncRedisAdapter with configuration settings.
@@ -429,12 +436,13 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
+        self._sentinel = sentinel_connection
         self.client = sentinel_connection.master_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=True),
         )
 
-        self.read_only_client = sentinel_connection.slave_for(
+        self.read_only_client = sentinel_connection.replica_for(
             sentinel_service_name,
             **_sentinel_redis_kwargs(configs, is_async=True),
         )
@@ -623,6 +631,8 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 await client.aclose()
             else:
                 await client.aclose(close_connection_pool=True)
+        if self._sentinel is not None:
+            await self._sentinel.aclose()
         self._search_client = None
 
     async def __aenter__(self) -> Self:

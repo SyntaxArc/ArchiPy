@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Iterable
+from typing import Literal
 
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
@@ -13,6 +14,60 @@ from archipy.models.errors import InternalError
 
 class RedisListsMixin(SyncRedisMixinBase):
     """Sync Redis mixin for lists operations."""
+
+    def lmovem(
+        self,
+        first_list: str,
+        second_list: str,
+        *,
+        src: Literal["LEFT", "RIGHT"] = "LEFT",
+        dest: Literal["LEFT", "RIGHT"] = "RIGHT",
+        count: int | None = None,
+        mode: Literal["COUNT", "EXACTLY"] | None = None,
+        ordering: Literal["OBO", "BULK"] | None = None,
+    ) -> list[bytes | str] | None:
+        """Atomically move elements from one list to another.
+
+        A count requires an ordering. In Cluster, both keys must share a slot.
+        """
+        result = self.client.lmovem(
+            first_list,
+            second_list,
+            src=src,
+            dest=dest,
+            count=count,
+            mode=mode,
+            ordering=ordering,
+        )
+        return result
+
+    def blmovem(
+        self,
+        first_list: str,
+        second_list: str,
+        timeout_seconds: float,
+        *,
+        src: Literal["LEFT", "RIGHT"] = "LEFT",
+        dest: Literal["LEFT", "RIGHT"] = "RIGHT",
+        count: int | None = None,
+        mode: Literal["COUNT", "EXACTLY"] | None = None,
+        ordering: Literal["OBO", "BULK"] | None = None,
+    ) -> list[bytes | str] | None:
+        """Wait for a source list and atomically move elements to a destination list.
+
+        A count requires an ordering. In Cluster, both keys must share a slot.
+        """
+        result = self.client.blmovem(
+            first_list,
+            second_list,
+            timeout_seconds,
+            src=src,
+            dest=dest,
+            count=count,
+            mode=mode,
+            ordering=ordering,
+        )
+        return result
 
     def llen(self, name: str) -> int:
         """Get the length of a list.
@@ -122,6 +177,60 @@ class RedisListsMixin(SyncRedisMixinBase):
 
 class AsyncRedisListsMixin(AsyncRedisMixinBase):
     """Async Redis mixin for lists operations."""
+
+    async def lmovem(
+        self,
+        first_list: str,
+        second_list: str,
+        *,
+        src: Literal["LEFT", "RIGHT"] = "LEFT",
+        dest: Literal["LEFT", "RIGHT"] = "RIGHT",
+        count: int | None = None,
+        mode: Literal["COUNT", "EXACTLY"] | None = None,
+        ordering: Literal["OBO", "BULK"] | None = None,
+    ) -> list[bytes | str] | None:
+        """Atomically move elements from one list to another.
+
+        A count requires an ordering. In Cluster, both keys must share a slot.
+        """
+        result = self.client.lmovem(
+            first_list,
+            second_list,
+            src=src,
+            dest=dest,
+            count=count,
+            mode=mode,
+            ordering=ordering,
+        )
+        return await result
+
+    async def blmovem(
+        self,
+        first_list: str,
+        second_list: str,
+        timeout_seconds: float,
+        *,
+        src: Literal["LEFT", "RIGHT"] = "LEFT",
+        dest: Literal["LEFT", "RIGHT"] = "RIGHT",
+        count: int | None = None,
+        mode: Literal["COUNT", "EXACTLY"] | None = None,
+        ordering: Literal["OBO", "BULK"] | None = None,
+    ) -> list[bytes | str] | None:
+        """Wait for a source list and atomically move elements to a destination list.
+
+        A count requires an ordering. In Cluster, both keys must share a slot.
+        """
+        result = self.client.blmovem(
+            first_list,
+            second_list,
+            timeout_seconds,
+            src=src,
+            dest=dest,
+            count=count,
+            mode=mode,
+            ordering=ordering,
+        )
+        return await result
 
     async def llen(self, name: str) -> int:
         """Get the length of a list asynchronously.

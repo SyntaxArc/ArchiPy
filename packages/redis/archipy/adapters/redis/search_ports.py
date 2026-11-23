@@ -106,6 +106,11 @@ class RedisSearchHandlePort:
         raise NotImplementedError
 
     @abstractmethod
+    def list_aliases(self) -> list[str]:
+        """List the aliases assigned to this index."""
+        raise NotImplementedError
+
+    @abstractmethod
     def add_alias(self, alias: str) -> bool:
         """Add an alias for the index."""
         raise NotImplementedError
@@ -204,6 +209,11 @@ class AsyncRedisSearchHandlePort:
     @abstractmethod
     async def aggregate(self, aggregation: AggregationDTO, **kwargs: Any) -> dict[str, Any]:
         """Execute a RediSearch aggregation asynchronously."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_aliases(self) -> list[str]:
+        """List the aliases assigned to this index."""
         raise NotImplementedError
 
     @abstractmethod

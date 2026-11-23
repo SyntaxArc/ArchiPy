@@ -12,6 +12,8 @@ from archipy.adapters.redis.port_mixins import (
     AsyncRedisPubSubPort,
     AsyncRedisSetsPort,
     AsyncRedisSortedSetsPort,
+    AsyncRedisStreamsPort,
+    AsyncRedisTimeSeriesPort,
     RedisArraysPort,
     RedisClusterPort,
     RedisConnectionPort,
@@ -22,6 +24,8 @@ from archipy.adapters.redis.port_mixins import (
     RedisScoreCastType,
     RedisSetsPort,
     RedisSortedSetsPort,
+    RedisStreamsPort,
+    RedisTimeSeriesPort,
 )
 
 __all__ = [
@@ -38,6 +42,8 @@ class RedisPort(
     RedisListsPort,
     RedisSetsPort,
     RedisSortedSetsPort,
+    RedisTimeSeriesPort,
+    RedisStreamsPort,
     RedisArraysPort,
     RedisHashesPort,
     RedisPubSubPort,
@@ -56,6 +62,8 @@ class AsyncRedisPort(
     AsyncRedisListsPort,
     AsyncRedisSetsPort,
     AsyncRedisSortedSetsPort,
+    AsyncRedisTimeSeriesPort,
+    AsyncRedisStreamsPort,
     AsyncRedisArraysPort,
     AsyncRedisHashesPort,
     AsyncRedisPubSubPort,

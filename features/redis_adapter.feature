@@ -1,4 +1,4 @@
-@needs-redis @needs-redis-cluster
+@redis @needs-redis @needs-redis-cluster
 Feature: Redis Testing
   As a developer
   I want to test Redis operations with both mocks and real containers
@@ -7,6 +7,7 @@ Feature: Redis Testing
   Background:
     Given test entities are defined
 
+  @redis-keys @sync
   Scenario Outline: Store and retrieve a simple key-value pair
     Given a configured <adapter_type>
     When I store the key "user-id" with value "12345" in <adapter_type>
@@ -20,6 +21,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @sync
   Scenario Outline: Remove a key
     Given a configured <adapter_type>
     When I store the key "session-token" with value "abcde" in <adapter_type>
@@ -35,6 +37,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-lists @sync
   Scenario Outline: Manage a list of items
     Given a configured <adapter_type>
     When I add "apple, banana, orange" to the list "fruits" in <adapter_type>
@@ -48,6 +51,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-hashes @sync
   Scenario Outline: Handle a hash structure
     Given a configured <adapter_type>
     When I assign "name" to "Alice" in the hash "profile" in <adapter_type>
@@ -61,6 +65,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-sets @sync
   Scenario Outline: Manage a set of colors
     Given a configured <adapter_type>
     When I add "red, blue, green" to the set "colors" in <adapter_type>
@@ -74,7 +79,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: Store and retrieve a key-value pair asynchronously
     Given a configured async <adapter_type>
     When I store the key "order-id" with value "67890" in async <adapter_type>
@@ -88,7 +93,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: Remove a key asynchronously
     Given a configured async <adapter_type>
     When I store the key "cache-key" with value "xyz" in async <adapter_type>
@@ -104,7 +109,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-lists @async
   Scenario Outline: Manage a list of tasks asynchronously
     Given a configured async <adapter_type>
     When I add "task1, task2, task3" to the list "tasks" in async <adapter_type>
@@ -118,7 +123,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-hashes @async
   Scenario Outline: Handle a hash structure asynchronously
     Given a configured async <adapter_type>
     When I assign "email" to "bob@example.com" in the hash "contact" in async <adapter_type>
@@ -132,7 +137,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-sets @async
   Scenario Outline: Manage a set of tags asynchronously
     Given a configured async <adapter_type>
     When I add "tag1, tag2, tag3" to the set "tags" in async <adapter_type>
@@ -146,11 +151,13 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-cluster @sync
   Scenario: Cluster reports healthy state
     Given a configured cluster
     When I query cluster info from the adapter
     Then cluster state should be ok
 
+  @redis-cluster @sync
   Scenario: Cluster mock exposes cluster operations without a real cluster
     Given a configured cluster mock
     When I query cluster info from the adapter
@@ -160,11 +167,13 @@ Feature: Redis Testing
     When I get the cluster slot for key "foo"
     Then the cluster slot should be 12182
 
+  @redis-cluster @async
   Scenario: Async cluster mock exposes the CRC16 key slot
     Given a configured async cluster mock
     When I get the cluster slot for key "foo" from the async adapter
     Then the cluster slot should be 12182
 
+  @redis-keys @redis-cluster @sync
   Scenario Outline: Hash-tagged keys round-trip on cluster
     Given a configured cluster
     When I store the key "<key>" with value "<value>" in cluster
@@ -176,6 +185,7 @@ Feature: Redis Testing
       | {user}:1   | alice   |
       | {order}:99 | shipped |
 
+  @redis-cluster @sync
   Scenario Outline: Slot lookup in valid range on cluster
     Given a configured cluster
     When I get the cluster slot for key "<key>"
@@ -186,11 +196,13 @@ Feature: Redis Testing
       | {user}:1 |
       | order:99 |
 
+  @redis-cluster @sync
   Scenario: Cluster topology has 3 masters and 3 replicas
     Given a configured cluster
     When I query cluster nodes from the adapter
     Then cluster should have 3 masters and 3 replicas
 
+  @redis-cluster @sync
   Scenario Outline: Hash-tagged keys share slot on cluster
     Given a configured cluster
     When I get the cluster slots for keys "<key1>" and "<key2>"
@@ -201,6 +213,7 @@ Feature: Redis Testing
       | {user}:1  | {user}:2  |
       | {order}:1 | {order}:2 |
 
+  @redis-cluster @sync
   Scenario Outline: Slot key inspection on cluster
     Given a configured cluster
     When I store the key "<key>" with value "<value>" in cluster
@@ -213,13 +226,13 @@ Feature: Redis Testing
       | {user}:1   | alice   |
       | {order}:99 | shipped |
 
-  @async
+  @redis-cluster @async
   Scenario: Cluster reports healthy state asynchronously
     Given a configured async cluster
     When I query cluster info from the async adapter
     Then cluster state should be ok
 
-  @async
+  @redis-keys @redis-cluster @async
   Scenario Outline: Hash-tagged keys round-trip on cluster asynchronously
     Given a configured async cluster
     When I store the key "<key>" with value "<value>" in async cluster
@@ -231,7 +244,7 @@ Feature: Redis Testing
       | {user}:1   | alice   |
       | {order}:99 | shipped |
 
-  @async
+  @redis-cluster @async
   Scenario Outline: Slot lookup in valid range on cluster asynchronously
     Given a configured async cluster
     When I get the cluster slot for key "<key>" from the async adapter
@@ -242,13 +255,13 @@ Feature: Redis Testing
       | {user}:1 |
       | order:99 |
 
-  @async
+  @redis-cluster @async
   Scenario: Cluster topology has 3 masters and 3 replicas asynchronously
     Given a configured async cluster
     When I query cluster nodes from the async adapter
     Then cluster should have 3 masters and 3 replicas
 
-  @async
+  @redis-cluster @async
   Scenario Outline: Hash-tagged keys share slot on cluster asynchronously
     Given a configured async cluster
     When I get the cluster slots for keys "<key1>" and "<key2>" from the async adapter
@@ -259,7 +272,7 @@ Feature: Redis Testing
       | {user}:1  | {user}:2  |
       | {order}:1 | {order}:2 |
 
-  @async
+  @redis-cluster @async
   Scenario Outline: Slot key inspection on cluster asynchronously
     Given a configured async cluster
     When I store the key "<key>" with value "<value>" in async cluster
@@ -272,6 +285,7 @@ Feature: Redis Testing
       | {user}:1   | alice   |
       | {order}:99 | shipped |
 
+  @redis-keys @sync
   Scenario Outline: Store key with expiry and verify TTL
     Given a configured <adapter_type>
     When I store the key "bdd-s-ttl-key" with value "expires" and expiry 60 seconds in <adapter_type>
@@ -287,6 +301,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @sync
   Scenario Outline: GetSet returns old value
     Given a configured <adapter_type>
     When I store the key "bdd-s-gs-key" with value "old" in <adapter_type>
@@ -301,6 +316,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @sync
   Scenario Outline: GetDel returns value and removes key
     Given a configured <adapter_type>
     When I store the key "bdd-s-gd-key" with value "gone" in <adapter_type>
@@ -315,6 +331,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @sync
   Scenario Outline: Append extends string value
     Given a configured <adapter_type>
     When I store the key "bdd-s-app-key" with value "hello" in <adapter_type>
@@ -329,6 +346,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @sync
   Scenario Outline: Report key type
     Given a configured <adapter_type>
     When I create a <redis_type> key "bdd-s-<redis_type>-key" in <adapter_type>
@@ -353,6 +371,7 @@ Feature: Redis Testing
       | cluster      | set        |
       | cluster      | zset       |
 
+  @redis-keys @sync
   Scenario Outline: Increment and decrement counter
     Given a configured <adapter_type>
     When I increment key "bdd-s-counter" by 5 in <adapter_type>
@@ -366,6 +385,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @sync
   Scenario Outline: Mset and mget multiple keys
     Given a configured <adapter_type>
     When I mset "{bdd-s-m}:1" to "val1" and "{bdd-s-m}:2" to "val2" in <adapter_type>
@@ -378,6 +398,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @sync
   Scenario Outline: Find keys by pattern and scan
     Given a configured <adapter_type>
     When I mset "{bdd-s-scan}:1" to "a" and "{bdd-s-scan}:2" to "b" in <adapter_type>
@@ -392,6 +413,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-lists @sync
   Scenario Outline: Lpush and lpop preserve order
     Given a configured <adapter_type>
     When I lpush "first, second" to list "bdd-s-mylist" in <adapter_type>
@@ -405,6 +427,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-lists @sync
   Scenario Outline: Rpop and lrem modify list
     Given a configured <adapter_type>
     When I add "a, b, a, c" to the list "bdd-s-rlist" in <adapter_type>
@@ -422,6 +445,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-sets @sync
   Scenario Outline: Set membership and removal
     Given a configured <adapter_type>
     When I add "alpha, beta" to the set "bdd-s-myset" in <adapter_type>
@@ -440,6 +464,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-sets @sync
   Scenario Outline: Set union across hash-tagged sets
     Given a configured <adapter_type>
     When I add "a, b" to the set "{bdd-s-su}:1" in <adapter_type>
@@ -453,6 +478,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-sorted-sets @sync
   Scenario Outline: Manage sorted set members
     Given a configured <adapter_type>
     When I zadd members "alice=10,bob=20" to sorted set "bdd-s-leaderboard" in <adapter_type>
@@ -482,6 +508,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-hashes @sync
   Scenario Outline: Hash field operations
     Given a configured <adapter_type>
     When I hset mapping "name=Alice,email=alice@test.com" in hash "bdd-s-user" in <adapter_type>
@@ -502,6 +529,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-pubsub @sync
   Scenario Outline: Publish message to channel
     Given a configured <adapter_type>
     When I publish "hello" to channel "bdd-s-test-channel" in <adapter_type>
@@ -513,6 +541,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-pubsub @sync
   Scenario Outline: Subscribe and receive published message
     Given a configured <adapter_type>
     When I subscribe to channel "bdd-s-pubsub-<adapter_type>-channel" in <adapter_type>
@@ -524,6 +553,7 @@ Feature: Redis Testing
       | mock         |
       | container    |
 
+  @redis-pipeline @sync
   Scenario Outline: Pipeline executes commands atomically
     Given a configured <adapter_type>
     When I run pipeline setting "{<pipe_tag>}:k" to "v" and incrementing "{<pipe_tag>}:cnt" by 1 in <adapter_type>
@@ -537,7 +567,7 @@ Feature: Redis Testing
       | container    | bdd-s-p-cont  |
       | cluster      | bdd-s-p-clust |
 
-  @async
+  @redis-keys @async
   Scenario Outline: Store key with expiry and verify TTL asynchronously
     Given a configured async <adapter_type>
     When I store the key "bdd-a-ttl-key" with value "expires" and expiry 60 seconds in async <adapter_type>
@@ -553,7 +583,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: GetSet returns old value asynchronously
     Given a configured async <adapter_type>
     When I store the key "bdd-a-gs-key" with value "old" in async <adapter_type>
@@ -568,7 +598,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: GetDel returns value and removes key asynchronously
     Given a configured async <adapter_type>
     When I store the key "bdd-a-gd-key" with value "gone" in async <adapter_type>
@@ -583,7 +613,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: Append extends string value asynchronously
     Given a configured async <adapter_type>
     When I store the key "bdd-a-app-key" with value "hello" in async <adapter_type>
@@ -598,7 +628,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: Report key type asynchronously
     Given a configured async <adapter_type>
     When I create a <redis_type> key "bdd-a-<redis_type>-key" in async <adapter_type>
@@ -623,7 +653,7 @@ Feature: Redis Testing
       | cluster      | set        |
       | cluster      | zset       |
 
-  @async
+  @redis-keys @async
   Scenario Outline: Increment and decrement counter asynchronously
     Given a configured async <adapter_type>
     When I increment key "bdd-a-counter" by 5 in async <adapter_type>
@@ -637,7 +667,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: Mset and mget multiple keys asynchronously
     Given a configured async <adapter_type>
     When I mset "{bdd-a-m}:1" to "val1" and "{bdd-a-m}:2" to "val2" in async <adapter_type>
@@ -650,7 +680,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: Find keys by pattern and scan asynchronously
     Given a configured async <adapter_type>
     When I mset "{bdd-a-scan}:1" to "a" and "{bdd-a-scan}:2" to "b" in async <adapter_type>
@@ -665,6 +695,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @redis-sets @async
   Scenario Outline: Async scan_iter and sscan_iter work with a plain async for
     Given a configured async <adapter_type>
     When I mset "{bdd-a-direct}:1" to "a" and "{bdd-a-direct}:2" to "b" in async <adapter_type>
@@ -678,7 +709,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-lists @async
   Scenario Outline: Lpush and lpop preserve order asynchronously
     Given a configured async <adapter_type>
     When I lpush "first, second" to list "bdd-a-mylist" in async <adapter_type>
@@ -692,7 +723,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-lists @async
   Scenario Outline: Rpop and lrem modify list asynchronously
     Given a configured async <adapter_type>
     When I add "a, b, a, c" to the list "bdd-a-rlist" in async <adapter_type>
@@ -710,7 +741,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-sets @async
   Scenario Outline: Set membership and removal asynchronously
     Given a configured async <adapter_type>
     When I add "alpha, beta" to the set "bdd-a-myset" in async <adapter_type>
@@ -729,7 +760,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-sets @async
   Scenario Outline: Set union across hash-tagged sets asynchronously
     Given a configured async <adapter_type>
     When I add "a, b" to the set "{bdd-a-su}:1" in async <adapter_type>
@@ -743,7 +774,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-sorted-sets @async
   Scenario Outline: Manage sorted set members asynchronously
     Given a configured async <adapter_type>
     When I zadd members "alice=10,bob=20" to sorted set "bdd-a-leaderboard" in async <adapter_type>
@@ -773,7 +804,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-hashes @async
   Scenario Outline: Hash field operations asynchronously
     Given a configured async <adapter_type>
     When I hset mapping "name=Alice,email=alice@test.com" in hash "bdd-a-user" in async <adapter_type>
@@ -794,7 +825,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-pubsub @async
   Scenario Outline: Publish message to channel asynchronously
     Given a configured async <adapter_type>
     When I publish "hello" to channel "bdd-a-test-channel" in async <adapter_type>
@@ -806,7 +837,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-pubsub @async
   Scenario Outline: Subscribe and receive published message asynchronously
     Given a configured async <adapter_type>
     When I subscribe to channel "bdd-a-pubsub-<adapter_type>-channel" in async <adapter_type>
@@ -818,7 +849,7 @@ Feature: Redis Testing
       | mock         |
       | container    |
 
-  @async
+  @redis-pipeline @async
   Scenario Outline: Pipeline executes commands asynchronously
     Given a configured async <adapter_type>
     When I run pipeline setting "{<pipe_tag>}:k" to "v" and incrementing "{<pipe_tag>}:cnt" by 1 in async <adapter_type>
@@ -833,6 +864,7 @@ Feature: Redis Testing
       | cluster      | bdd-a-p-clust |
 
   # Redis 8.8 — Array data structure
+  @redis-arrays @sync
   Scenario Outline: Store and retrieve array elements
     Given a configured <adapter_type>
     When I arset index 0 to "alpha, beta, gamma" in array "bdd-s-array" in <adapter_type>
@@ -849,6 +881,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-arrays @sync
   Scenario Outline: Array ring buffer retains last N elements
     Given a configured <adapter_type>
     When I arring size 2 with "first, second, third" into array "bdd-s-ring" in <adapter_type>
@@ -863,7 +896,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-arrays @async
   Scenario Outline: Store and retrieve array elements asynchronously
     Given a configured async <adapter_type>
     When I arset index 0 to "alpha, beta, gamma" in array "bdd-a-array" in async <adapter_type>
@@ -877,7 +910,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-arrays @async
   Scenario Outline: Array ring buffer retains last N elements asynchronously
     Given a configured async <adapter_type>
     When I arring size 2 with "first, second, third" into array "bdd-a-ring" in async <adapter_type>
@@ -893,6 +926,7 @@ Feature: Redis Testing
       | cluster      |
 
   # Redis 8.8 — INCREX window counter rate limiter (requires Redis 8.8+)
+  @redis-keys @sync
   Scenario Outline: INCREX respects upper bound for rate limiting
     Given a configured <adapter_type>
     When I increx key "bdd-s-rl" by 1 with upper bound 3 and expiry 60 seconds in <adapter_type>
@@ -911,7 +945,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-keys @async
   Scenario Outline: INCREX respects upper bound for rate limiting asynchronously
     Given a configured async <adapter_type>
     When I increx key "bdd-a-rl" by 1 with upper bound 3 and expiry 60 seconds in async <adapter_type>
@@ -930,6 +964,7 @@ Feature: Redis Testing
       | cluster      |
 
   # Redis 8.8 — ZUNION/ZINTER COUNT aggregator (requires Redis 8.8+)
+  @redis-sorted-sets @sync
   Scenario Outline: ZUNION COUNT aggregator scores by set membership
     Given a configured <adapter_type>
     When I zadd members "a=1,b=2" to sorted set "{bdd-s-zc}:1" in <adapter_type>
@@ -943,6 +978,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-sorted-sets @sync
   Scenario Outline: ZINTER COUNT aggregator scores by set membership
     Given a configured <adapter_type>
     When I zadd members "a=1,b=2" to sorted set "{bdd-s-zi}:1" in <adapter_type>
@@ -955,7 +991,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
-  @async
+  @redis-sorted-sets @async
   Scenario Outline: ZUNION COUNT aggregator scores by set membership asynchronously
     Given a configured async <adapter_type>
     When I zadd members "a=1,b=2" to sorted set "{bdd-a-zc}:1" in async <adapter_type>
@@ -969,6 +1005,7 @@ Feature: Redis Testing
       | cluster      |
 
   # Redis 8.8 — Hash subkey notifications (requires Redis 8.8+)
+  @redis-hashes @redis-pubsub @redis-keyspace-notifications @sync
   Scenario Outline: Receive hash subkey notification on field update
     Given a configured <adapter_type>
     When I enable hash subkey notifications in <adapter_type>
@@ -980,7 +1017,7 @@ Feature: Redis Testing
       | adapter_type |
       | container    |
 
-  @async
+  @redis-hashes @redis-pubsub @redis-keyspace-notifications @async
   Scenario Outline: Receive hash subkey notification on field update asynchronously
     Given a configured async <adapter_type>
     When I enable hash subkey notifications in async <adapter_type>
@@ -993,6 +1030,7 @@ Feature: Redis Testing
       | container    |
 
   # RediSearch / vector operations (requires Redis 8+ with query engine — container or cluster)
+  @redis-search @redis-vector-search @sync
   Scenario Outline: Create search index with vector field synchronously
     Given a configured <adapter_type>
     When I create search index "<index_name>" with prefix "<prefix>:" for <index_type> documents
@@ -1005,6 +1043,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-hash | {srch-h} |
       | cluster      | JSON       | cluster-products-json | {srch-j} |
 
+  @redis-search @redis-vector-search @sync
   Scenario Outline: Upsert and KNN search documents synchronously
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1021,6 +1060,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-knn    | {srch} | {srch}:1  | {srch}:2  |
       | cluster      | JSON       | cluster-knn-j  | {srch} | {srch}:j1 | {srch}:j2 |
 
+  @redis-search @sync
   Scenario Outline: Create index upsert and verify document fields synchronously
     Given a configured <adapter_type>
     When I create search index "<index_name>" with prefix "<prefix>:" for <index_type> documents
@@ -1035,6 +1075,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-fields   | {fld}  | {fld}:1  |
       | cluster      | JSON       | cluster-products-fields-j | {fld}  | {fld}:j1 |
 
+  @redis-search @redis-vector-search @sync
   Scenario Outline: Hybrid search synchronously
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1049,6 +1090,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-hybrid   | {hyb}   | {hyb}:1   |
       | cluster      | JSON       | cluster-products-hybrid-j | {hyb}   | {hyb}:j1  |
 
+  @redis-search @redis-vector-search @sync
   Scenario Outline: Text scorer is applied to text and hybrid searches
     Given a configured container
     And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
@@ -1063,6 +1105,7 @@ Feature: Redis Testing
       | scorer-hybrid-ok  | scrhok | scrhok:1 | hybrid | TFIDF  | hits     |
       | scorer-hybrid-bad | scrhbd | scrhbd:1 | hybrid | NOSUCH | rejected |
 
+  @redis-search @redis-search-aggregation @sync
   Scenario Outline: Aggregate documents synchronously
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1078,6 +1121,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-agg   | {agg}  | {agg}:1  | {agg}:2  |
       | cluster      | JSON       | cluster-products-agg-j | {agg}  | {agg}:j1 | {agg}:j2 |
 
+  @redis-search @redis-search-aggregation @async
   Scenario: Aggregate documents asynchronously
     Given a configured async container
     And async search index "products-agg-async" exists with prefix "aggasync:" for HASH documents
@@ -1085,6 +1129,7 @@ Feature: Redis Testing
     And I aggregate search index "products-agg-async" asynchronously grouped by title
     Then the aggregation should return at least 1 row
 
+  @redis-search @sync
   Scenario Outline: Drop search index synchronously
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1098,7 +1143,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-drop   | {drp}  |
       | cluster      | JSON       | cluster-products-drop-j | {drp}  |
 
-  @async
+  @redis-search @redis-vector-search @async
   Scenario Outline: Upsert and KNN search documents asynchronously
     Given a configured async <adapter_type>
     And async search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1113,6 +1158,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-async-products-knn   | {asrch}    | {asrch}:1    |
       | cluster      | JSON       | cluster-async-products-knn-j | {asrch}    | {asrch}:j1   |
 
+  @redis-search @sync
   Scenario Outline: Alter index schema and verify new field
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1126,6 +1172,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-alter   | {alt}  |
       | cluster      | JSON       | cluster-products-alter-j | {alt}  |
 
+  @redis-search @redis-search-aliases @sync
   Scenario Outline: Add alias and search through it
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1144,6 +1191,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-alias   | {als}  | {als}:1  | cluster-products-alias-v  |
       | cluster      | JSON       | cluster-products-alias-j | {als}  | {als}:j1 | cluster-products-alias-jv |
 
+  @redis-search @sync
   Scenario Outline: Delete document from search index
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1158,6 +1206,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-delete   | {del}  | {del}:1  |
       | cluster      | JSON       | cluster-products-delete-j | {del}  | {del}:j1 |
 
+  @redis-search @sync
   Scenario Outline: Upsert document via DTO helper
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1171,6 +1220,7 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-dto-hash | {dto}  | {dto}:1  | DTO Cluster      | [1.0, 0.0, 0.0] |
       | cluster      | JSON       | cluster-products-dto-json | {dto}  | {dto}:j1 | DTO Cluster JSON | [0.0, 0.0, 1.0] |
 
+  @redis-search @redis-vector-search @sync
   Scenario Outline: Create SVS-VAMANA search index synchronously
     Given a configured <adapter_type>
     When I create search index "<index_name>" with prefix "<prefix>:" and algorithm SVS-VAMANA for HASH documents
@@ -1181,6 +1231,7 @@ Feature: Redis Testing
       | container    | products-svs         | svs    |
       | cluster      | cluster-products-svs | {svs}  |
 
+  @redis-search @redis-vector-search @sync
   Scenario Outline: Vector range search synchronously
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" and algorithm FLAT for HASH documents
@@ -1195,6 +1246,7 @@ Feature: Redis Testing
       | container    | products-range         | rng    | rng:1   | rng:2   | 0.5    |
       | cluster      | cluster-products-range | {rng}  | {rng}:1 | {rng}:2 | 0.5    |
 
+  @redis-search @redis-vector-search @sync
   Scenario Outline: Vector range search intersects the filter with the radius
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" and algorithm FLAT for HASH documents
@@ -1211,6 +1263,7 @@ Feature: Redis Testing
       | cluster      | cluster-range-and  | {rf}   | {rf}:1 | {rf}:2 | {rf}:3 | and  | 1     |
       | cluster      | cluster-range-or   | {ro}   | {ro}:1 | {ro}:2 | {ro}:3 | or   | 3     |
 
+  @redis-cluster @redis-search @redis-vector-search @sync
   Scenario Outline: KNN search with shard ratio on cluster
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
@@ -1222,19 +1275,19 @@ Feature: Redis Testing
       | adapter_type | index_name        | prefix | doc_id   | ratio |
       | cluster      | cluster-shard-knn | {srch} | {srch}:1 | 0.5   |
 
-  @needs-otel-collector
+  @redis-observability @sync @needs-otel-collector
   Scenario: Redis adapter commands emit spans
     Given adapter spans are exported to the collector
     When I set and get a key through the Redis adapter
     Then the collector should have a span with attribute "db.system" containing "redis"
 
-  @async @needs-otel-collector
+  @redis-observability @async @needs-otel-collector
   Scenario: Async Redis adapter commands emit spans
     Given adapter spans are exported to the collector
     When I set and get a key through the async Redis adapter
     Then the collector should have a span with attribute "db.system" containing "redis"
 
-  @needs-otel-collector
+  @redis-search @redis-vector-search @redis-observability @sync @needs-otel-collector
   Scenario: Redis search with the instrumentor bound returns results and emits a span
     Given adapter spans are exported to the collector
     And a configured container
@@ -1245,7 +1298,7 @@ Feature: Redis Testing
     And the top hit id should be "otelsrch:1"
     And the collector should have a span with attribute "redis.search.index" containing "otel-search"
 
-  @async @needs-otel-collector
+  @redis-search @redis-vector-search @redis-observability @async @needs-otel-collector
   Scenario: Async Redis search with the instrumentor bound returns results and emits a span
     Given adapter spans are exported to the collector
     And a configured async container
@@ -1255,6 +1308,7 @@ Feature: Redis Testing
     Then the async search should return at least 1 hit
     And the collector should have a span with attribute "db.statement" containing "FT.SEARCH"
 
+  @redis-hashes @sync
   Scenario Outline: Read a whole hash and list its values
     Given a configured <adapter_type>
     When I hset mapping "name=Alice,city=Paris" in hash "bdd-s-hot-hash" in <adapter_type>
@@ -1271,6 +1325,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-sets @sync
   Scenario Outline: Scan and pop set members
     Given a configured <adapter_type>
     When I add "apple, apricot, banana, cherry" to the set "bdd-s-hot-set" in <adapter_type>
@@ -1288,6 +1343,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @sync
   Scenario Outline: Count and delete several keys
     Given a configured <adapter_type>
     When I mset "{bdd-s-hot-keys}:1" to "a" and "{bdd-s-hot-keys}:2" to "b" in <adapter_type>
@@ -1304,6 +1360,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-connection @sync
   Scenario Outline: Ping the server
     Given a configured <adapter_type>
     When I ping the server in <adapter_type>
@@ -1315,6 +1372,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-hashes @async
   Scenario Outline: Read a whole hash and list its values asynchronously
     Given a configured async <adapter_type>
     When I hset mapping "name=Alice,city=Paris" in hash "bdd-a-hot-hash" in async <adapter_type>
@@ -1331,6 +1389,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-sets @async
   Scenario Outline: Scan and pop set members asynchronously
     Given a configured async <adapter_type>
     When I add "apple, apricot, banana, cherry" to the set "bdd-a-hot-set" in async <adapter_type>
@@ -1348,6 +1407,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @async
   Scenario Outline: Count and delete several keys asynchronously
     Given a configured async <adapter_type>
     When I mset "{bdd-a-hot-keys}:1" to "a" and "{bdd-a-hot-keys}:2" to "b" in async <adapter_type>
@@ -1364,6 +1424,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-connection @async
   Scenario Outline: Ping the server asynchronously
     Given a configured async <adapter_type>
     When I ping the server in async <adapter_type>
@@ -1375,6 +1436,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-sorted-sets @redis-protocol @sync
   Scenario Outline: The mock follows the configured RESP protocol when shaping ZPOPMAX replies
     Given a Redis mock configured with RESP protocol <protocol>
     When I pop the highest member of sorted set "mock-proto" holding "alice" with score 3.0
@@ -1385,11 +1447,13 @@ Feature: Redis Testing
       | 2        | pairs |
       | 3        | flat  |
 
+  @redis-connection @redis-acl @sync
   Scenario: A Redis ACL user can connect with its username
     Given a configured container
     When I create the ACL user "acl-reader" with password "acl-secret" and connect as that user
     Then the connected Redis user should be "acl-reader"
 
+  @redis-connection @redis-tls @redis-config @sync
   Scenario Outline: TLS settings reach the <mode> client
     Given a Redis config in <mode> mode with TLS and the username "acl-tls-user"
     When I build the Redis adapter from that config
@@ -1401,6 +1465,7 @@ Feature: Redis Testing
       | standalone |
       | sentinel   |
 
+  @redis-connection @redis-config @sync
   Scenario Outline: Retry, keepalive and client name settings reach the <mode> client
     Given a Redis config in <mode> mode with 3 retries, TCP keepalive, the client name "archipy-app" and the sentinel username "sentinel-user"
     When I build the Redis adapter from that config
@@ -1412,6 +1477,7 @@ Feature: Redis Testing
       | standalone |
       | sentinel   |
 
+  @redis-connection @redis-config @sync
   Scenario Outline: Database and health check interval reach the <mode> client
     Given a Redis config in <mode> mode with database 3 and a health check interval of 7 seconds
     When I build the Redis adapter from that config
@@ -1422,11 +1488,13 @@ Feature: Redis Testing
       | standalone |
       | sentinel   |
 
+  @redis-connection @redis-config @sync
   Scenario: Unset retry settings keep the redis-py defaults
     Given a Redis config in standalone mode with default resilience settings
     When I build the Redis adapter from that config
     Then the client connection should not carry a client name or extra retry errors
 
+  @redis-tls @redis-config @validation
   Scenario Outline: Invalid TLS settings are rejected
     When I create a Redis config with <settings>
     Then the Redis config should be rejected
@@ -1436,6 +1504,7 @@ Feature: Redis Testing
       | a client certificate but no key   |
       | a CA bundle while TLS is disabled |
 
+  @redis-keys @redis-hashes @redis-sets @sync
   Scenario Outline: Bytes keys, fields and members are stored as plain text
     Given a configured <adapter_type>
     When I write bytes keys, fields and members tagged "{bdd-bytes}" in <adapter_type>
@@ -1447,6 +1516,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-keys @redis-hashes @redis-sets @async
   Scenario Outline: Async bytes keys, fields and members are stored as plain text
     Given a configured async <adapter_type>
     When I write bytes keys, fields and members tagged "{bdd-bytes-a}" in async <adapter_type>
@@ -1458,32 +1528,42 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-connection @sync
   Scenario: Closing the sync adapter releases its client and search client
     Given a configured container
     When I use the container adapter as a context manager and create its search client
     Then the client pool and the search client pool should be closed
 
+  @redis-connection @async
   Scenario: Closing the async adapter releases its client and search client
     Given a configured async container
     When I use the async container adapter as a context manager and create its search client
     Then the async client pool and the search client pool should be closed
 
+  @redis-connection @async
   Scenario: Closing the async adapter directly uses the same method name as the sync adapter
     Given a configured async container
     When I close the async container adapter directly
     Then the async client pool and the search client pool should be closed
 
+  @redis-cluster
   Scenario Outline: The mock cluster uses the real CRC16 key slot
     When I ask the mock cluster for the slot of key "<key>" using the <mode> client
     Then the mock cluster slot should be <slot>
 
-    Examples: Keys
-      | mode  | key      | slot  |
-      | sync  | foo      | 12182 |
-      | sync  | {foo}bar | 12182 |
-      | async | bar      | 5061  |
-      | async | {bar}baz | 5061  |
+    @sync
+    Examples: Sync
+      | mode | key      | slot  |
+      | sync | foo      | 12182 |
+      | sync | {foo}bar | 12182 |
 
+    @async
+    Examples: Async
+      | mode  | key      | slot |
+      | async | bar      | 5061 |
+      | async | {bar}baz | 5061 |
+
+  @redis-config @validation
   Scenario Outline: Invalid node addresses are rejected
     When I create a Redis <mode> config with the node "<node>"
     Then the Redis config should be rejected
@@ -1495,6 +1575,7 @@ Feature: Redis Testing
       | cluster  | host:abc  |
       | cluster  | :7000     |
 
+  @redis-tls @redis-config @validation
   Scenario Outline: Credentials stay out of the config repr and risky TLS settings warn
     When I create a Redis config with the password "s3cr3t-pw" and <settings>
     Then the Redis config repr should not contain the password
@@ -1505,12 +1586,14 @@ Feature: Redis Testing
       | TLS disabled                        | without SSL        |
       | TLS enabled without hostname checks | TLS.CHECK_HOSTNAME |
 
+  @redis-hashes @redis-search @sync
   Scenario: Upserting a hash document preserves fields outside the update
     Given a configured container
     And search index "upsert-merge" exists with prefix "upm:" for HASH documents
     When I upsert a hash document "upm:1" twice with different fields
     Then the hash document "upm:1" contains both fields
 
+  @redis-errors @sync
   Scenario Outline: Server errors surface as CacheError and stay redis-py errors
     Given a configured <adapter_type>
     When I increment the non-numeric key "{bdd-s-err}:k" in <adapter_type>
@@ -1522,6 +1605,7 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-errors @async
   Scenario Outline: Async server errors surface as CacheError and stay redis-py errors
     Given a configured async <adapter_type>
     When I increment the non-numeric key "{bdd-a-err}:k" in async <adapter_type>
@@ -1533,14 +1617,17 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  @redis-connection @redis-errors @sync
   Scenario: Connection failures surface as CacheError
     When I read a key from an unreachable Redis server
     Then the Redis failure should be a CacheError and still a redis-py ConnectionError
 
+  @redis-connection @redis-errors @async
   Scenario: Async connection failures surface as CacheError
     When I read a key from an unreachable Redis server asynchronously
     Then the Redis failure should be a CacheError and still a redis-py ConnectionError
 
+  @redis-search @sync
   Scenario Outline: Untrusted text is matched literally by escaped queries
     Given a configured container
     And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
@@ -1554,6 +1641,7 @@ Feature: Redis Testing
       | inj-text-bad | injbd  | injbd:1 | from_text    | foo) PIPE (* | 0     |
       | inj-hyb-bad  | injhb  | injhb:1 | quote_phrase | foo) PIPE (* | 0     |
 
+  @redis-search @validation
   Scenario Outline: Unsafe identifiers and directions are rejected by the search DTOs
     When I build the search DTO "<kind>" with the value "<value>"
     Then the DTO outcome should be "<outcome>"
@@ -1571,3 +1659,92 @@ Feature: Redis Testing
       | sort_direction  | DESC; DROP              | rejected |
       | reduce_function | COUNT                   | accepted |
       | reduce_function | COUNT) x                | rejected |
+
+  @redis-lists @redis-sets
+  Scenario Outline: Move list batches and count set combinations
+    Given a configured <adapter>
+    When I move a list batch and count overlapping sets through the Redis adapter
+    Then the batch move and set counts match the stored values
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | mock      |
+      | container |
+      | cluster   |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async mock      |
+      | async container |
+      | async cluster   |
+
+  @redis-streams
+  Scenario Outline: Limit stream reads across the entire Redis reply
+    Given a configured <adapter>
+    When I read a stream and a consumer group with total count and size limits
+    Then each stream limit returns the first entry only
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | container |
+      | cluster   |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async container |
+      | async cluster   |
+
+  @redis-timeseries
+  Scenario Outline: Query TimeSeries samples and label metadata
+    Given a configured <adapter>
+    When I query populated and empty time series through the Redis adapter
+    Then the TimeSeries queries return aligned samples and exclude empty series when requested
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | container |
+      | cluster   |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async container |
+      | async cluster   |
+
+  @redis-search @redis-search-aggregation @redis-search-aliases
+  Scenario Outline: List search aliases and collect grouped fields
+    Given a configured <adapter>
+    When I alias a search index and collect the top values for one group
+    Then Redis lists the alias and returns the top values
+
+    @sync
+    Examples: Sync
+      | adapter   |
+      | container |
+      | cluster   |
+
+    @async
+    Examples: Async
+      | adapter         |
+      | async container |
+      | async cluster   |
+
+  @redis-search @redis-search-aggregation @validation
+  Scenario: Unsupported search reducers fail validation
+    When I build a search aggregation with the unsupported reducer "MEDIAN"
+    Then the search aggregation is rejected
+
+  @redis-connection @redis-sentinel @sync @async
+  Scenario: Closing a Sentinel adapter releases its discovery connections
+    When I use and close sync and async adapters through a real Redis Sentinel
+    Then the Sentinel discovery connections are released
+
+  @redis-cluster @redis-connection @redis-protocol @redis-maintenance @async
+  Scenario: An asynchronous Redis client refreshes slots on a maintenance notification
+    When I migrate a cluster slot while an async RESP3 adapter is connected
+    Then the adapter learns the new owner and can read the migrated key

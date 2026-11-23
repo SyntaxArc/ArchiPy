@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
 
     from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 
@@ -15,6 +15,27 @@ _set = set
 
 class RedisSetsPort:
     """Sync Redis port for sets operations."""
+
+    @abstractmethod
+    def sdiffcard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+    ) -> int:
+        """Return the cardinality of the set difference."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sunioncard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+        approx: bool = False,
+    ) -> int:
+        """Return the cardinality of the set union."""
+        raise NotImplementedError
 
     @abstractmethod
     def sscan(
@@ -175,6 +196,27 @@ class RedisSetsPort:
 
 class AsyncRedisSetsPort:
     """Async Redis port for sets operations."""
+
+    @abstractmethod
+    async def sdiffcard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+    ) -> int:
+        """Return the cardinality of the set difference."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def sunioncard(
+        self,
+        keys: Sequence[bytes | str],
+        *,
+        limit: int = 0,
+        approx: bool = False,
+    ) -> int:
+        """Return the cardinality of the set union."""
+        raise NotImplementedError
 
     @abstractmethod
     async def sscan(
