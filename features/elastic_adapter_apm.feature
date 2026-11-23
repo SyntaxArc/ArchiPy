@@ -12,7 +12,7 @@ Feature: Elasticsearch Operations Testing with Elastic APM
   Scenario Outline: Elasticsearch adapter spans reach Elastic APM Server <route>
     Given adapter spans are exported to Elastic APM Server <route>
     When I index and search a document through the Elasticsearch adapter
-    Then Elastic APM Server should store a span of type "external" with subtype "http"
+    Then Elastic APM Server should store a span of type "db" with subtype "elasticsearch"
 
     Examples:
       | route                 |
