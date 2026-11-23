@@ -22,5 +22,9 @@ jobs:
 
       - uses: lycheeverse/lychee-action@v2
         with:
-          args: --no-progress --max-retries 2 --accept 200,429 --exclude 'localhost' --exclude '127\.0\.0\.1' 'README.md' 'docs/**/*.md'
+          args: >-
+            --no-progress --max-retries 2 --accept 200,429
+            --exclude 'localhost' --exclude '127\.0\.0\.1'
+            --remap '^https://github\.com/SyntaxArc/ArchiPy/blob/master/ file://${{ github.workspace }}/'
+            'README.md' 'docs/**/*.md'
           fail: true
