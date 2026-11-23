@@ -187,6 +187,12 @@ def explain_hybrid_search(context):
         assert await _call(handle.create_index, schema, prefix)
         try:
             assert await _call(handle.upsert_hash, prefix + "doc", {"title": "Redis database", "vector": vector})
+            deadline = monotonic() + 3
+            while True:
+                index_info = await _call(handle.info)
+                if int(index_info["num_docs"]) == 1 and not int(index_info["indexing"]):
+                    break
+                assert monotonic() < deadline, index_info
             query = HybridQuery(
                 HybridSearchQuery("redis"),
                 HybridVsimQuery("@vector", "$vector", VectorSearchMethods.KNN, {"K": 1}),
