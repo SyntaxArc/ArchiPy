@@ -164,18 +164,23 @@ def alias_and_collect(context):
         prefix = f"{{{token}}}:doc:"
         handle = adapter.search_index(token)
         schema = IndexSchemaDTO(
-            fields=[TagFieldConfig(name="kind"), TextFieldConfig(name="value"), NumericFieldConfig(name="rank")]
+            fields=[
+                TagFieldConfig(name="kind"),
+                TextFieldConfig(name="value"),
+                NumericFieldConfig(name="rank"),
+            ]
         )
+        values = ("article", "audiobook", "video")
+        for rank, value in enumerate(values):
+            assert await _call(handle.upsert_hash, prefix + str(rank), {"kind": "book", "value": value, "rank": rank})
         assert await _call(handle.create_index, schema, prefix)
         try:
-            values = ("article", "audiobook", "video")
-            for rank, value in enumerate(values):
-                assert await _call(
-                    handle.upsert_hash, prefix + str(rank), {"kind": "book", "value": value, "rank": rank}
-                )
             deadline = monotonic() + 3
-            while int((await _call(handle.info))["num_docs"]) < len(values):
-                assert monotonic() < deadline, "RediSearch did not index all three documents"
+            while True:
+                index_info = await _call(handle.info)
+                if int(index_info["num_docs"]) == len(values) and not int(index_info["indexing"]):
+                    break
+                assert monotonic() < deadline, index_info
             alias = f"alias-{token}"
             assert await _call(handle.add_alias, alias)
             aliases = await _call(handle.list_aliases)
@@ -185,7 +190,7 @@ def alias_and_collect(context):
                     group_by=["kind"],
                     reduce_field="entries",
                     reduce_function="COLLECT",
-                    collect_fields=["value"],
+                    collect_fields=["value", "rank"],
                     collect_sort_by="rank",
                     collect_sort_direction="DESC",
                     collect_limit=(0, 2),
@@ -206,7 +211,7 @@ def verify_alias_and_collection(context):
     (row,) = result["rows"]
     attributes = row.get(b"extra_attributes", row)
     entries = attributes[b"entries"]
-    assert [entry[b"value"] for entry in entries] == [b"video", b"audiobook"], result
+    assert [(entry[b"value"], int(entry[b"rank"])) for entry in entries] == [(b"video", 2), (b"audiobook", 1)], result
 
 
 @when(r'I build a search aggregation with the unsupported reducer "(?P<reducer>[^"]+)"')
