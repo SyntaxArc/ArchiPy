@@ -548,9 +548,9 @@ dev = [
     { name = "pre-commit-hooks", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.17.6" },
     { name = "ty", specifier = ">=0.0.108" },
-    { name = "types-grpcio", specifier = ">=1.85.0.20261028" },
-    { name = "types-protobuf", specifier = ">=7.35.1.20260906" },
-    { name = "types-pymysql", specifier = ">=1.2.4.20261116" },
+    { name = "types-grpcio", specifier = ">=1.85.0.20261122" },
+    { name = "types-protobuf", specifier = ">=7.35.1.20261122" },
+    { name = "types-pymysql", specifier = ">=1.2.4.20261122" },
     { name = "validate-pyproject", specifier = ">=0.27" },
 ]
 docs = [
@@ -709,7 +709,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "archipy", editable = "." },
-    { name = "redis", extras = ["hiredis"], specifier = ">=8.1.0" },
+    { name = "redis", extras = ["hiredis"], specifier = ">=8.2.0" },
 ]
 
 [[package]]
@@ -3789,11 +3789,11 @@ wheels = [
 
 [[package]]
 name = "redis"
-version = "8.1.0"
+version = "8.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a8/99/604f0b666d4c616d891cf77ebb9db6bb21601344c051aebf1b72b9ff915f/redis-8.1.0.tar.gz", hash = "sha256:6e1a19beef9225c83efd689c7e6b7da2d5215b1f42cd13b7fc3714d0a09c7b25", size = 5254356, upload-time = "2026-07-30T08:51:00.269Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/10/8a/408dd829367bb62972bd5d91bd8cc283c24c8344f80a880d4b3901ce43fd/redis-8.2.0.tar.gz", hash = "sha256:58b1493d83ba8f0e3ffe6bd781194ca5c01c91267ae03d29c1087b0b3c7d79c9", size = 5809579, upload-time = "2026-11-23T08:31:56.692Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/9d/c5731f6e3608663d4d3656fd8d3aecee8b509c3082818f5a13eae925baea/redis-8.1.0-py3-none-any.whl", hash = "sha256:a4fe1aac3d3b3cc791d4b3d5931c5a956045dc951ee74d1c913ee3ac4d2ee9fb", size = 560618, upload-time = "2026-07-30T08:50:58.497Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/8f/98458650cca985032598a59caca0641e7889cf4d536dc12dc032bef7df47/redis-8.2.0-py3-none-any.whl", hash = "sha256:4ff649f10fae5e7e97798fb2a84e84a0a66e98310d75cad2b5a572ce0f9f15a7", size = 732892, upload-time = "2026-11-23T08:31:55.011Z" },
 ]
 
 [package.optional-dependencies]
@@ -4321,29 +4321,29 @@ wheels = [
 
 [[package]]
 name = "types-grpcio"
-version = "1.85.0.20261028"
+version = "1.85.0.20261122"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/01/6b/5248f1b10df2c02ffbd99f3c913259bf73cabd2bee0ca1c28d6f3e66c3f4/types_grpcio-1.85.0.20261028.tar.gz", hash = "sha256:4ea4f36a54cf9a62fcb09515f7305e89c01f4edca54b32de24f6b1204b84522c", size = 16127, upload-time = "2026-10-28T07:38:58.025Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e6/0f/61dc0d3fa50011cfae5a3247ff92558e53925ab1bef9792d061c1d91a481/types_grpcio-1.85.0.20261122.tar.gz", hash = "sha256:2541b5f1093b15649ba6621fa8ebfe18de1c0b6d75c5ebd3529c7d0d359efccf", size = 16156, upload-time = "2026-11-22T08:58:14.928Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c5/ee/e2b2f2d677478456869ca922c1d5bb68f64052c9dfd9ad6c2a91a1122269/types_grpcio-1.85.0.20261028-py3-none-any.whl", hash = "sha256:2c2684330ae57ab64ffb43183ac652e73d2609024e6076e3e9d2b8ae06816207", size = 16076, upload-time = "2026-10-28T07:38:57.193Z" },
+    { url = "https://files.pythonhosted.org/packages/00/ad/2fe9e5f0ece134e650838f2c3673e6af64c666ab4f8310326566779c0140/types_grpcio-1.85.0.20261122-py3-none-any.whl", hash = "sha256:8e204a0760dbfa41b0b9066abad584027a032cc5930e13a6a772801771c4b942", size = 16101, upload-time = "2026-11-22T08:58:14.116Z" },
 ]
 
 [[package]]
 name = "types-protobuf"
-version = "7.35.1.20260906"
+version = "7.35.1.20261122"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e1/6c/e3e5b3e10bc328126a39637c138f9ebfd734bf14342b9f3540039b4ab995/types_protobuf-7.35.1.20260906.tar.gz", hash = "sha256:efd1a3862d4c967dad5512ef8d56b1530ac84f182c41735b94004756518c4998", size = 69895, upload-time = "2026-09-06T06:35:28.308Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/01/2b04865447656eeb92eb075e42c221d6a2262aef89ccc2053d556381404a/types_protobuf-7.35.1.20261122.tar.gz", hash = "sha256:705644f0c8618252eacf878047dc649b875eb8f4b7518df336513173334a1976", size = 69901, upload-time = "2026-11-22T08:57:48.005Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/4e/f63e826c68f77ef875506d72f225918800346545ee99847bc28f3394f18d/types_protobuf-7.35.1.20260906-py3-none-any.whl", hash = "sha256:5155e48569e0dabff303fdf578db96cd31ea9a4a63b18018a4ceac6b0ae17462", size = 86419, upload-time = "2026-09-06T06:35:27.247Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/9c/1f3c4f73b50db06a1ec4f1c76d696738d5bbe3c85966abfc3f7ac8bdd83c/types_protobuf-7.35.1.20261122-py3-none-any.whl", hash = "sha256:b4e002599d9d7e8e377dd0faa5e70d133081148a0e370ba920f93c402526ed90", size = 86471, upload-time = "2026-11-22T08:57:46.937Z" },
 ]
 
 [[package]]
 name = "types-pymysql"
-version = "1.2.4.20261116"
+version = "1.2.4.20261122"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9b/5f/5c75921a6347614498a5a7ba9e8d0bd511eafcfcffd69d346508765b421b/types_pymysql-1.2.4.20261116.tar.gz", hash = "sha256:f3ac18c67025589cb9118afe58d0c46ea50dae9ffac6f7c83030a2456b39c549", size = 23084, upload-time = "2026-11-16T08:43:05.42Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/bc/76d0dd75c73f9de9924b79551a2d926041aab02485ac4382a1ec8b8cba95/types_pymysql-1.2.4.20261122.tar.gz", hash = "sha256:fcd8a185893a81358154647645f2990d8fef45a31c7bc99446f57bb54c891418", size = 23145, upload-time = "2026-11-22T08:57:18.28Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/be/ad88550f6aa77c3497c522d02ea08f9f634b673e03497ad4a1b908f43570/types_pymysql-1.2.4.20261116-py3-none-any.whl", hash = "sha256:9bfa6dad28311fa1f674ce7d26c3435c7f33c86a636d4d6a28a1097dd42cc750", size = 23462, upload-time = "2026-11-16T08:43:04.383Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/7b/01cabf1c90ab0c7d4444ca40c1583e8d54662ae024b9b7aab99b6f256775/types_pymysql-1.2.4.20261122-py3-none-any.whl", hash = "sha256:e37bd5b3e187973e983e29a8d522bd9e3d71569d1c2abab24374745fe2696f7e", size = 23497, upload-time = "2026-11-22T08:57:17.498Z" },
 ]
 
 [[package]]

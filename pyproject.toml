@@ -125,9 +125,9 @@ dev = [
     "pre-commit>=4.7.0",
     "ruff>=0.17.6",
     "ty>=0.0.108",
-    "types-grpcio>=1.85.0.20261028",
-    "types-protobuf>=7.35.1.20260906",
-    "types-pymysql>=1.2.4.20261116",
+    "types-grpcio>=1.85.0.20261122",
+    "types-protobuf>=7.35.1.20261122",
+    "types-pymysql>=1.2.4.20261122",
     "validate-pyproject>=0.27",
 ]
 
