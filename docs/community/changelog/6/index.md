@@ -9,6 +9,7 @@ description: "Release history for the ArchiPy 6.x series"
 
 | Version | Date | Summary |
 |---------|------|---------|
+| [6.2.0](6.2.0.md) | 2026-11-23 | Exposes Redis 8.10 and redis-py 8.2 commands, client-side caching, and new connection options. |
 | [6.1.2](6.1.2.md) | 2026-11-23 | Restores Mermaid diagrams and expands Markdown rendering support. |
 | [6.1.1](6.1.1.md) | 2026-11-23 | Updates ty and sets 21 type-checking rules to error. |
 | [6.1.0](6.1.0.md) | 2026-11-23 | Redesigns the documentation and defers more configuration and error imports on Python 3.15. |
