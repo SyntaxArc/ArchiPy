@@ -11,6 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
+import docker
 import httpx2
 from opentelemetry.instrumentation.utils import suppress_instrumentation
 import requests
@@ -123,6 +124,39 @@ TAG_CONTAINER_MAP: dict[str, str] = {
 }
 
 
+# Docker Hub answers 429 when many CI jobs pull the same new tag at once, and one rate-limited pull fails the
+# whole feature because testcontainers raises it out of ``start()``. Pulls here retry with backoff instead.
+DOCKER_PULL_ATTEMPTS = 5
+DOCKER_PULL_BASE_DELAY_SECONDS = 5.0
+
+
+def pull_image_with_retry(image: str) -> None:
+    """Make sure ``image`` is in the local image store, retrying transient registry failures.
+
+    Args:
+        image: Image reference with tag, for example ``elastic/elasticsearch:9.5.7``.
+    """
+    client = docker.from_env()
+    try:
+        client.images.get(image)
+        return
+    except docker.errors.ImageNotFound:
+        logger.info("Image %s is not present locally, pulling it", image)
+    for attempt in range(1, DOCKER_PULL_ATTEMPTS + 1):
+        try:
+            client.images.pull(image)
+            return
+        except docker.errors.APIError as error:
+            response = error.response
+            status = response.status_code if response is not None else None
+            transient = status is None or status == 429 or status >= 500
+            if attempt == DOCKER_PULL_ATTEMPTS or not transient:
+                raise
+            delay = min(DOCKER_PULL_BASE_DELAY_SECONDS * 2 ** (attempt - 1), 60.0)
+            logger.warning("Pulling %s failed (%s); retrying in %.0fs", image, error, delay)
+            time.sleep(delay)
+
+
 def _wait_for_log(container: DockerContainer, pattern: str, timeout: int) -> None:
     """Block until the container logs ``pattern`` (a regex), failing after ``timeout`` seconds.
 
@@ -166,6 +200,7 @@ class ContainerManager:
             instance = cls._container_instances[name]
             # Start container if not already running (lazy startup)
             if name not in cls._started_containers:
+                pull_image_with_retry(instance.image)
                 instance.start()
                 cls._started_containers.add(name)
             return instance
@@ -175,6 +210,7 @@ class ContainerManager:
         instance = container_class(**kwargs)
         cls._container_instances[name] = instance
         # Start container lazily
+        pull_image_with_retry(instance.image)
         instance.start()
         cls._started_containers.add(name)
         return instance
@@ -189,6 +225,7 @@ class ContainerManager:
             logger.info(f"Starting {name} container...")
             container = container_class()
             cls._container_instances[name] = container
+            pull_image_with_retry(container.image)
             container.start()
             cls._started_containers.add(name)
 
@@ -2134,6 +2171,7 @@ class ApmServerTestContainer(metaclass=Singleton, thread_safe=True):
             return None
 
         self._elasticsearch = _build_elasticsearch_container(BaseConfig.global_config().ELASTIC__IMAGE)
+        pull_image_with_retry(BaseConfig.global_config().ELASTIC__IMAGE)
         self._elasticsearch.start()
         elasticsearch_host = self._elasticsearch.get_container_host_ip()
         elasticsearch_port = int(self._elasticsearch.get_exposed_port(9200))
