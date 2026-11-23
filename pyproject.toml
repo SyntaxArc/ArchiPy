@@ -30,7 +30,7 @@ cache = [
 dependency-injection = ["dependency-injector>=4.49.1"]
 elasticsearch = ["archipy-elasticsearch==0.1.0"]  # Pinned to core version on publish flow!
 elasticsearch-async = ["archipy-elasticsearch==0.1.0", "elasticsearch[async]>=9.5.1"]  # Pinned to core version on publish flow!
-fakeredis = ["fakeredis>=2.40.0"]
+fakeredis = ["fakeredis>=2.41.0"]
 fastapi = [
     "fastapi[all]>=0.165.0",
 ]
@@ -125,9 +125,9 @@ dev = [
     "pre-commit>=4.7.0",
     "ruff>=0.17.6",
     "ty>=0.0.108",
-    "types-grpcio>=1.85.0.20261028",
-    "types-protobuf>=7.35.1.20260906",
-    "types-pymysql>=1.2.4.20261116",
+    "types-grpcio>=1.85.0.20261122",
+    "types-protobuf>=7.35.1.20261122",
+    "types-pymysql>=1.2.4.20261122",
     "validate-pyproject>=0.27",
 ]
 
