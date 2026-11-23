@@ -298,7 +298,7 @@ Create the consumer group before calling `xreadgroup`. Stream reply shapes follo
 TimeSeries queries by label are coordinated by Redis across the cluster. `exclude_empty` omits series that have
 no returned samples and is incompatible with `groupby`.
 
-Use real Redis to test stream limits and RediSearch. Fakeredis 2.40.0 lacks those behaviors.
+The stream-limit and RediSearch integration scenarios run against real Redis.
 
 ### Experimental hash fieldsets
 
