@@ -109,55 +109,6 @@ def verify_stream_limits(context):
     assert result == [["1-0"]] * 4, result
 
 
-def _series_names(reply):
-    if isinstance(reply, dict):
-        return set(reply)
-    return {name for series in reply for name in series}
-
-
-@when("I query populated and empty time series through the Redis adapter")
-def query_time_series(context):
-    async def exercise(adapter, token):
-        a, b, c, empty = f"{{a}}:{token}:ts:a", f"{{a}}:{token}:ts:b", f"{{b}}:{token}:ts:c", f"{{b}}:{token}:ts:empty"
-        series = adapter.client.ts()
-        await _call(series.add, a, 10, 2, labels={"probe": token, "signal": "first"})
-        await _call(series.add, a, 20, 3)
-        await _call(series.add, b, 10, 4, labels={"probe": token, "signal": "second"})
-        await _call(series.add, b, 20, 5)
-        await _call(series.add, c, 10, 6, labels={"probe": token, "signal": "third"})
-        await _call(series.create, empty, labels={"probe": token, "signal": "empty"})
-        filters = [f"probe={token}"]
-        sample = await _call(adapter.ts_read, a, 0, max_count=1)
-        values = await _call(adapter.ts_querylabels, label="signal", filters=filters)
-        forward = await _call(adapter.ts_nrange, [a, b], 0, 100)
-        reverse = await _call(adapter.ts_nrevrange, [a, b], 0, 100)
-        all_series = await _call(adapter.ts_mrange, 0, 100, filters)
-        without_empty = await _call(adapter.ts_mrange, 0, 100, filters, exclude_empty=True)
-        reverse_without_empty = await _call(adapter.ts_mrevrange, 0, 100, filters, exclude_empty=True)
-        return (
-            list(sample[0]),
-            values,
-            forward,
-            reverse,
-            empty in _series_names(all_series),
-            _series_names(without_empty) == {a, b, c},
-            _series_names(reverse_without_empty) == {a, b, c},
-        )
-
-    _run(context, exercise)
-
-
-@then("the TimeSeries queries return aligned samples and exclude empty series when requested")
-def verify_time_series(context):
-    result = get_current_scenario_context(context).get("redis81")
-    head, labels, forward, reverse, *series_checks = result
-    assert head == [10, 2.0], result
-    assert labels == {"first", "second", "third", "empty"}, result
-    assert forward == [[10, [2.0, 4.0]], [20, [3.0, 5.0]]], result
-    assert reverse == list(reversed(forward)), result
-    assert all(series_checks), result
-
-
 @when("I alias a search index and collect the top values for one group")
 def alias_and_collect(context):
     async def exercise(adapter, token):
@@ -168,7 +119,7 @@ def alias_and_collect(context):
                 TagFieldConfig(name="kind"),
                 TextFieldConfig(name="value"),
                 NumericFieldConfig(name="rank"),
-            ]
+            ],
         )
         values = ("article", "audiobook", "video")
         for rank, value in enumerate(values):
@@ -270,7 +221,7 @@ def use_and_close_sentinel(context):
         async_during = asyncio.run(check_async_sentinel())
         async_after = len(observer.client_list())
     get_current_scenario_context(context).store(
-        "sentinel_clients", (initial, sync_during, sync_after, async_during, async_after)
+        "sentinel_clients", (initial, sync_during, sync_after, async_during, async_after),
     )
 
 

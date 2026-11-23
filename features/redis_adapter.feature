@@ -1698,24 +1698,6 @@ Feature: Redis Testing
       | async container |
       | async cluster   |
 
-  @redis-timeseries
-  Scenario Outline: Query TimeSeries samples and label metadata
-    Given a configured <adapter>
-    When I query populated and empty time series through the Redis adapter
-    Then the TimeSeries queries return aligned samples and exclude empty series when requested
-
-    @sync
-    Examples: Sync
-      | adapter   |
-      | container |
-      | cluster   |
-
-    @async
-    Examples: Async
-      | adapter         |
-      | async container |
-      | async cluster   |
-
   @redis-search @redis-search-aggregation @redis-search-aliases
   Scenario Outline: List search aliases and collect grouped fields
     Given a configured <adapter>

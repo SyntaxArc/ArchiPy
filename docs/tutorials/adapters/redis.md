@@ -304,10 +304,10 @@ logger.info(f"Second call (cached): {result2}")
 
 ## Advanced Redis Features
 
-### List batches, set cardinality, streams, and TimeSeries
+### List batches, set cardinality, and streams
 
 These operations require Redis 8.10+. They are available on both adapters. Use the same hash tag
-for keys in a multi-key list, set, stream, or `TS.NRANGE` operation on Redis Cluster.
+for keys in a multi-key list, set, or stream operation on Redis Cluster.
 
 ```python
 redis_adapter.rpush("{tasks}:ready", "a", "b", "c")
@@ -318,19 +318,10 @@ redis_adapter.sdiffcard(["{tasks}:pending", "{tasks}:active"])
 
 redis_adapter.xread({"{events}:new": "0-0"}, max_count=100, max_size=65536)
 redis_adapter.xreadgroup("workers", "worker-1", {"{events}:new": ">"}, max_count=100)
-
-redis_adapter.ts_read("{room}:temperature", 0, max_count=10)
-redis_adapter.ts_nrange(["{room}:temperature", "{room}:humidity"], "-", "+")
-redis_adapter.ts_nrevrange(["{room}:temperature", "{room}:humidity"], "-", "+")
-redis_adapter.ts_querylabels(label="location", filters=["type=sensor"])
-redis_adapter.ts_mrange("-", "+", ["type=sensor"], exclude_empty=True)
-redis_adapter.ts_mrevrange("-", "+", ["type=sensor"], exclude_empty=True)
 ```
 
 `MAXCOUNT` and `MAXSIZE` apply to the whole stream reply. `MAXSIZE` still permits one oversized entry.
 Create the consumer group before calling `xreadgroup`. Stream reply shapes follow the configured RESP version.
-TimeSeries queries by label are coordinated by Redis across the cluster. `exclude_empty` omits series that have
-no returned samples and is incompatible with `groupby`.
 
 The stream-limit and RediSearch integration scenarios run against real Redis.
 

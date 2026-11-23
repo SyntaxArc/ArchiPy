@@ -37,7 +37,6 @@ from archipy.adapters.redis.adapter_mixins.sorted_sets import (
     RedisSortedSetsMixin,
 )
 from archipy.adapters.redis.adapter_mixins.streams import AsyncRedisStreamsMixin, RedisStreamsMixin
-from archipy.adapters.redis.adapter_mixins.time_series import AsyncRedisTimeSeriesMixin, RedisTimeSeriesMixin
 
 __all__ = [
     "AsyncRedisArraysMixin",
@@ -50,7 +49,6 @@ __all__ = [
     "AsyncRedisSetsMixin",
     "AsyncRedisSortedSetsMixin",
     "AsyncRedisStreamsMixin",
-    "AsyncRedisTimeSeriesMixin",
     "RedisArraysMixin",
     "RedisClusterMixin",
     "RedisConnectionMixin",
@@ -61,5 +59,4 @@ __all__ = [
     "RedisSetsMixin",
     "RedisSortedSetsMixin",
     "RedisStreamsMixin",
-    "RedisTimeSeriesMixin",
 ]
