@@ -9,6 +9,7 @@ description: "Release history for the ArchiPy 6.x series"
 
 | Version | Date | Summary |
 |---------|------|---------|
+| [6.2.1](6.2.1.md) | 2026-11-24 | Aligns minimum dependency versions with `uv.lock`, fixes the `ty` lint rule name, and pulls Redis from Docker Hub. |
 | [6.2.0](6.2.0.md) | 2026-11-23 | Exposes Redis 8.10 and redis-py 8.2 commands, client-side caching, and new connection options. |
 | [6.1.2](6.1.2.md) | 2026-11-23 | Restores Mermaid diagrams and expands Markdown rendering support. |
 | [6.1.1](6.1.1.md) | 2026-11-23 | Updates ty and sets 21 type-checking rules to error. |
